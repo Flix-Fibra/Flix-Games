@@ -1,16 +1,40 @@
 {
   "version": 1,
   "_nota": "PLACEHOLDER da fase 1. Os números finais (corpos, cabelos, roupas) serão definidos com o designer.",
-  "bodies": ["b01", "b02"],
-  "eyes": ["e01", "e02"],
-  "mouths": ["m01", "m02"],
-  "hairStyles": ["h01_short", "h02_long", "h03_spiky"],
-  "tops": ["t01_tee", "t02_hoodie"],
-  "bottoms": ["p01_pants"],
-  "shoes": ["s01_sneaker"],
-  "hats": ["hat01_cap"],
+  "bodies": [
+    "b01",
+    "b02"
+  ],
+  "eyes": [
+    "e01",
+    "e02"
+  ],
+  "mouths": [
+    "m01",
+    "m02"
+  ],
+  "hairStyles": [
+    "h01_short",
+    "h02_long",
+    "h03_spiky"
+  ],
+  "tops": [
+    "t01_tee",
+    "t02_hoodie"
+  ],
+  "bottoms": [
+    "p01_pants"
+  ],
+  "shoes": [
+    "s01_sneaker"
+  ],
+  "hats": [
+    "hat01_cap"
+  ],
   "accessories": [],
-  "skinPresets": ["flix_tech"],
+  "skinPresets": [
+    "flix_tech"
+  ],
   "defaults": {
     "body": "b01",
     "eyes": "e01",
@@ -22,5 +46,23 @@
     "skinTone": "sk01",
     "hairColor": "hc01",
     "clothColor": "c01"
-  }
+  },
+  "labels": {
+    "b01": "Corpo A",
+    "b02": "Corpo B",
+    "e01": "Olhos 1",
+    "e02": "Olhos 2",
+    "m01": "Boca 1",
+    "m02": "Boca 2",
+    "h01_short": "Curto",
+    "h02_long": "Longo",
+    "h03_spiky": "Espetado",
+    "t01_tee": "Camiseta",
+    "t02_hoodie": "Moletom",
+    "p01_pants": "Calça",
+    "s01_sneaker": "Tênis",
+    "hat01_cap": "Boné",
+    "flix_tech": "Técnico Flix"
+  },
+  "_nota_labels": "Nomes mostrados no editor do portal (hub). Peça nova no catálogo: acrescentar o nome aqui."
 }

@@ -1,4 +1,4 @@
-import type { Aparelho, Jogo, LinhaRanking, Perfil, ResultadoPartida, Sessao } from './tipos';
+import type { Aparelho, AvatarConfig, CatalogoAvatar, Jogo, LinhaRanking, Perfil, ResultadoPartida, Sessao } from './tipos';
 
 /** Erro da API com a mensagem já pronta para mostrar ao cliente. */
 export class ErroApi extends Error {
@@ -63,6 +63,9 @@ export const servico = {
   iniciarPartida: (jogoId: string, runId: string) => api<{ runId: string }>('POST', '/partidas/inicio', { jogoId, runId }),
   finalizarPartida: (runId: string, pontos: number, duracaoMs: number) =>
     api<ResultadoPartida>('POST', '/partidas/fim', { runId, pontos, duracaoMs }),
+
+  catalogoAvatar: () => api<CatalogoAvatar>('GET', '/avatar/catalogo'),
+  salvarAvatar: (perfilId: string, avatar: AvatarConfig) => api<Perfil>('PUT', `/perfis/${encodeURIComponent(perfilId)}/avatar`, avatar),
 
   aparelhos: () => api<Aparelho[]>('GET', '/aparelhos'),
   desconectarAparelho: (id: string) => api<void>('DELETE', `/aparelhos/${encodeURIComponent(id)}`),

@@ -27,7 +27,8 @@ services:
 
   api:
     build:
-      context: ./api
+      context: .                # raiz: a API precisa do catálogo em packages/flix-avatar
+      dockerfile: api/Dockerfile
       args:
         INSTALAR_DEV: "1"
     environment:

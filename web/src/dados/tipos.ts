@@ -35,6 +35,7 @@ export interface Perfil {
   apelido: string;
   cor: string;
   oculto: boolean;
+  avatar: AvatarConfig | null; // null = personagem padrão
   desde: string;         // MM/AAAA
   partidas: number;
   nivel: number;
@@ -68,4 +69,40 @@ export interface Aparelho {
   nome: string;          // ex.: "Chrome · Android"
   vistoEm: string;       // ISO
   atual: boolean;
+}
+
+// ---------- Personagem (AvatarConfig v1, seção 9.3 do prompt dos minigames) ----------
+// Só IDs do catálogo. A API valida contra o catálogo antes de gravar.
+export interface AvatarConfig {
+  v: 1;
+  body: { type: string; skinTone: string };
+  face: { eyes: string; mouth: string };
+  hair: { style: string; color: string } | null;
+  top: { item: string; primary: string; secondary?: string | null } | null;
+  bottom: { item: string; primary: string; secondary?: string | null } | null;
+  shoes: { item: string; primary: string } | null;
+  hat: { item: string; primary?: string | null } | null;
+  accessories: string[];
+  skinPreset: string | null;
+}
+
+export interface CorCatalogo { id: string; hex: string; tipo?: 'realista' | 'fantasia' }
+export interface ItemCatalogo { id: string; nome: string }
+
+/** Catálogo servido pela API, lido de packages/flix-avatar (fonte única, a mesma dos jogos). */
+export interface CatalogoAvatar {
+  versao: number;
+  provisorio: boolean;
+  paletas: { pele: CorCatalogo[]; cabelo: CorCatalogo[]; roupa: CorCatalogo[] };
+  corpos: ItemCatalogo[];
+  olhos: ItemCatalogo[];
+  bocas: ItemCatalogo[];
+  cabelos: ItemCatalogo[];
+  camisetas: ItemCatalogo[];
+  calcas: ItemCatalogo[];
+  calcados: ItemCatalogo[];
+  chapeus: ItemCatalogo[];
+  acessorios: ItemCatalogo[];
+  skins: ItemCatalogo[];
+  padrao: AvatarConfig; // personagem padrão, o mesmo do packages/flix-avatar
 }

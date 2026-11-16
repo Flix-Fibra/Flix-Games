@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatarPontos } from '../dados/formatar';
 import { ErroApi, servico } from '../dados/servico';
-import type { Jogo, ResultadoPartida } from '../dados/tipos';
+import type { AvatarConfig, Jogo, ResultadoPartida } from '../dados/tipos';
 import { Trofeu } from './Icones';
 
 /**
@@ -26,6 +26,7 @@ type Fase =
 
 interface Props {
   jogo: Jogo;
+  avatar: AvatarConfig | null;
   onFechar: (houvePartida: boolean) => void;
 }
 
@@ -46,7 +47,7 @@ function lerMensagem(d: unknown): MsgJogo | null {
   return null;
 }
 
-export function Jogando({ jogo, onFechar }: Props) {
+export function Jogando({ jogo, avatar, onFechar }: Props) {
   const quadro = useRef<HTMLIFrameElement>(null);
   const [fase, setFase] = useState<Fase>({ tipo: 'carregando' });
   const [mudo, setMudo] = useState(false);
@@ -67,7 +68,7 @@ export function Jogando({ jogo, onFechar }: Props) {
       const m = lerMensagem(e.data);
       if (!m) return;
       if (m.type === 'ready') {
-        enviar({ type: 'init', avatar: null, muted: mudo, locale: 'pt-BR' }); // personagem: etapa futura (seção 9)
+        enviar({ type: 'init', avatar, muted: mudo, locale: 'pt-BR' }); // null = jogo usa o personagem padrão
         setFase((f) => (f.tipo === 'carregando' ? { tipo: 'jogando' } : f));
       } else if (m.type === 'started') {
         runAtual.current = m.runId;
@@ -88,7 +89,7 @@ export function Jogando({ jogo, onFechar }: Props) {
     };
     window.addEventListener('message', ouvir);
     return () => window.removeEventListener('message', ouvir);
-  }, [enviar, jogo.id, mudo]);
+  }, [enviar, jogo.id, mudo, avatar]);
 
   // Se o jogo não se apresentar, avisa em vez de ficar travado
   useEffect(() => {

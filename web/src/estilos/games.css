@@ -315,3 +315,29 @@ main{padding-bottom:16px}
 .gx-jogo-cartao .gx-chip{justify-content:center;--gold:#F5C04A}
 .gx-jogo-acoes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
 .gx-jogo-acoes .btn.light{background:rgba(255,255,255,.08);color:#F5F5F7;border-color:rgba(255,255,255,.12)}
+
+/* ---------- Editor do personagem ---------- */
+.gx-av{position:fixed;inset:0;z-index:80;display:flex;flex-direction:column;background:var(--bg);color:var(--ink)}
+.gx-av .gx-jogo-barra{background:transparent;color:var(--ink)}
+.gx-av .gx-jogo-btn{background:var(--hover);color:var(--ink)}
+.gx-av-corpo{flex:1;overflow-y:auto;display:grid;align-content:start;gap:12px;padding:0 16px 16px}
+.gx-av-palco{position:relative;display:grid;justify-items:center;align-content:start;align-self:start;gap:10px;padding:14px 0 6px;border-radius:24px;
+  background:radial-gradient(70% 70% at 50% 40%,rgba(var(--red-rgb),.18),transparent 70%)}
+.gx-av-previa{display:block}
+.gx-av-painel h4{margin:14px 0 8px;font-size:13px;font-weight:600;color:var(--muted)}
+.gx-av-aba{padding:8px 16px}
+.gx-av-cores{display:grid;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:8px;max-width:520px}
+.gx-av-cor{aspect-ratio:1;min-height:40px;border-radius:50%;border:2px solid var(--line);padding:0}
+.gx-av-cor.ativo{outline:3px solid var(--ink);outline-offset:2px}
+.gx-av-itens{display:flex;flex-wrap:wrap;gap:8px}
+.gx-av-item{min-height:40px;padding:8px 14px;border-radius:99px;border:1px solid var(--line);background:var(--card);font-weight:600;font-size:13px}
+.gx-av-item.ativo{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.gx-av-item:disabled{opacity:.4}
+.gx-av-rodape{display:grid;grid-template-columns:1fr 1.4fr;gap:10px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--bg)}
+.perfil-avatar #p-avatar canvas{width:100%!important;height:100%!important}
+@media (min-width:900px){
+  .gx-av-corpo{grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:28px;padding:0 32px 24px;max-width:1100px;margin:0 auto;width:100%}
+  .gx-av-palco{position:sticky;top:0}
+  .gx-av-rodape{grid-template-columns:auto auto;justify-content:end}
+}
+
