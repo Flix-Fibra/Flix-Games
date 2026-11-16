@@ -36,7 +36,7 @@
   var tela = document.getElementById('tela'), ctx = tela.getContext('2d');
   var info = document.getElementById('info'), msg = document.getElementById('msg');
   var estado = 'aguardando'; // aguardando | jogando | fim
-  var pausado = false, mudo = false, cor = '#D4142C';
+  var pausado = false, mudo = false, cor = '#D4142C'; // cor fixa: o teste não desenha o personagem
   var y, vy, pontos, inicio, runId, ultimo;
 
   function uuid() {
@@ -87,7 +87,12 @@
     if (noIframe || e.source !== window.parent || e.origin !== HUB) return;
     var m = e.data;
     if (!m || m.source !== 'flix-hub' || m.v !== 2) return;
-    if (m.type === 'init') { mudo = !!m.muted; if (m.avatar && /^#[0-9a-f]{6}$/i.test(m.avatar.cor || '')) cor = m.avatar.cor; }
+    if (m.type === 'init') {
+      mudo = !!m.muted;
+      // Só mostra o que recebeu (texto, nunca HTML). Jogo real desenha com o compositor do flix-avatar.
+      var pele = m.avatar && m.avatar.body && typeof m.avatar.body.skinTone === 'string' ? m.avatar.body.skinTone : null;
+      msg.textContent = pele ? 'Personagem recebido (' + pele.slice(0, 40) + '). Toque para começar' : 'Personagem padrão. Toque para começar';
+    }
     else if (m.type === 'restart') preparar();
     else if (m.type === 'pause') pausado = true;
     else if (m.type === 'resume') { pausado = false; ultimo = performance.now(); }

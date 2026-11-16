@@ -142,7 +142,7 @@ function Portal() {
                 {aba === 'ranking' && <Ranking jogos={jogos} perfil={perfil} jogoId={rankingJogo} onJogo={setRankingJogo} />}
                 {aba === 'perfil' && (
                   <Perfil jogos={jogos} perfil={perfil} perfis={perfis} onSalvar={salvar}
-                    onTrocarPerfil={() => setQuemAberto(true)} onSair={sair} />
+                    onTrocarPerfil={() => setQuemAberto(true)} onSair={sair} onAtualizado={trocarPerfil} />
                 )}
               </>
             )}
@@ -150,7 +150,7 @@ function Portal() {
           {import.meta.env.DEV && <p className="gx-aviso-prototipo">Desenvolvimento · conta de teste e dados fictícios</p>}
         </>
       )}
-      {jogando && perfil && <Jogando jogo={jogando} onFechar={fecharJogo} />}
+      {jogando && perfil && <Jogando jogo={jogando} avatar={perfil.avatar} onFechar={fecharJogo} />}
       {(quemAberto || !perfil) && (
         <QuemVaiJogar perfis={perfis} maxPerfis={maxPerfis} atualId={perfilId} onEntrar={entrar} onCriar={criar} onExcluir={excluir} />
       )}

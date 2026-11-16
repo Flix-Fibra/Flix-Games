@@ -2,7 +2,9 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { iniciais, limparApelido, validarApelido } from '../dados/apelido';
 import { formatarPontos, tipoAparelho, vistoHa } from '../dados/formatar';
 import { servico } from '../dados/servico';
-import type { Aparelho, Jogo, Perfil as TPerfil } from '../dados/tipos';
+import type { Aparelho, CatalogoAvatar, Jogo, Perfil as TPerfil } from '../dados/tipos';
+import { Editor } from './avatar/Editor';
+import { Previa } from './avatar/Previa';
 import { useAviso } from './Aviso';
 import { Camera, IconeAparelho, Mini, Trocar, Trofeu } from './Icones';
 
@@ -13,13 +15,18 @@ interface Props {
   onSalvar: (dados: { apelido?: string; oculto?: boolean }) => Promise<void>;
   onTrocarPerfil: () => void;
   onSair: () => Promise<void>;
+  onAtualizado: (p: TPerfil) => void;
 }
 
-export function Perfil({ jogos, perfil, perfis, onSalvar, onTrocarPerfil, onSair }: Props) {
+export function Perfil({ jogos, perfil, perfis, onSalvar, onTrocarPerfil, onSair, onAtualizado }: Props) {
   const avisar = useAviso();
   const [apelido, setApelido] = useState(perfil.apelido);
   const [msg, setMsg] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
   const [aparelhos, setAparelhos] = useState<Aparelho[] | null>(null);
+  const [editor, setEditor] = useState(false);
+  const [cat, setCat] = useState<CatalogoAvatar | null>(null);
+  // Catálogo só para desenhar a prévia (quando o perfil já tem personagem)
+  useEffect(() => { if (perfil.avatar && !cat) servico.catalogoAvatar().then(setCat).catch(() => {}); }, [perfil.avatar, cat]);
 
   useEffect(() => { setApelido(perfil.apelido); setMsg(null); }, [perfil.id, perfil.apelido]);
   useEffect(() => { servico.aparelhos().then(setAparelhos).catch(() => setAparelhos([])); }, []);
@@ -68,9 +75,9 @@ export function Perfil({ jogos, perfil, perfis, onSalvar, onTrocarPerfil, onSair
       <div className="perfil">
         <section className="card perfil-conta">
           <div className="perfil-foto">
-            <button className="perfil-avatar" type="button" aria-label="Trocar avatar" style={{ background: perfil.cor, color: '#fff' }}
-              onClick={() => avisar('Em breve: escolha do personagem')}>
-              <span id="p-avatar">{iniciais(perfil.apelido)}</span>
+            <button className="perfil-avatar" type="button" aria-label="Editar personagem" style={{ background: perfil.cor, color: '#fff' }}
+              onClick={() => setEditor(true)}>
+              <span id="p-avatar">{perfil.avatar && cat ? <Previa avatar={perfil.avatar} cat={cat} tamanho={96} /> : iniciais(perfil.apelido)}</span>
               <span className="perfil-avatar-trocar" aria-hidden="true"><Camera />Trocar</span>
             </button>
           </div>
@@ -151,6 +158,7 @@ export function Perfil({ jogos, perfil, perfis, onSalvar, onTrocarPerfil, onSair
           </section>
         </div>
       </div>
+      {editor && <Editor perfil={perfil} onSalvo={onAtualizado} onFechar={() => setEditor(false)} />}
     </section>
   );
 }

@@ -5,7 +5,7 @@ Complementa a seção 6 do [prompt dos minigames](prompt-inicio-minigames-flix.m
 ## O que o hub faz
 
 1. Abre `/games/<pasta>/?hubOrigin=<origem do portal>` num iframe em tela cheia. `pasta` vem da coluna `jogos.pasta` na API (NULL = "em breve").
-2. Ao receber `ready`, responde `init` (`avatar: null` por enquanto, `muted`, `locale: 'pt-BR'`).
+2. Ao receber `ready`, responde `init` com o `AvatarConfig` v1 do perfil (ou `null` = personagem padrão), `muted` e `locale: 'pt-BR'`. Os IDs vêm do catálogo provisório `api/app/avatar_catalogo.json` (`GET /api/avatar/catalogo`) até chegar o `catalog.json` do `packages/flix-avatar`; quando chegar, a API passa a validar contra ele.
 3. `started` → `POST /api/partidas/inicio` com o `runId`. `gameover` → `POST /api/partidas/fim` com `score` e `durationMs`, e mostra o resultado (pontos, posição, recorde) ou o motivo da recusa.
 4. "Jogar de novo" → `restart` (sem anúncio). App em segundo plano → `pause`; voltou → `resume`. Botão de som → `mute`.
 5. Só aceita mensagens vindas do próprio iframe e no formato do contrato (`source: 'flix-game'`, `v: 2`, `runId` UUID, `score` e `durationMs` inteiros ≥ 0). `gameover` de um `runId` que não foi registrado é ignorado.

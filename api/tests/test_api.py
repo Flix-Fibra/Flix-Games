@@ -165,3 +165,46 @@ def test_limite_de_partidas_por_minuto(app_ativo):
     c, _ = com_perfil(app_ativo, "Spammer")
     codigos = [c.post("/api/partidas/inicio", json={"jogoId": "g01", "runId": str(uuid.uuid4())}).status_code for _ in range(22)]
     assert codigos.count(201) == 20 and codigos[-1] == 429
+
+
+# ---------- Personagem (AvatarConfig v1, seção 9.3) ----------
+AVATAR_OK = {
+    "v": 1,
+    "body": {"type": "corpo-a", "skinTone": "pele-06"},
+    "face": {"eyes": "olhos-redondos", "mouth": "boca-sorriso"},
+    "hair": {"style": "cabelo-cacheado", "color": "cab-castanho"},
+    "top": {"item": "camiseta-basica", "primary": "cor-vermelho-flix"},
+    "bottom": {"item": "calca-jeans", "primary": "cor-azul"},
+    "shoes": {"item": "calcado-tenis", "primary": "cor-branco"},
+    "hat": None,
+    "accessories": ["oculos"],
+    "skinPreset": None,
+}
+
+
+def test_salva_e_devolve_o_personagem(app_ativo):
+    c, pid = com_perfil(app_ativo, "Estiloso")
+    r = c.put(f"/api/perfis/{pid}/avatar", json=AVATAR_OK)
+    assert r.status_code == 200, r.text
+    assert r.json()["avatar"]["body"]["skinTone"] == "pele-06"
+    assert c.get("/api/sessao").json()["perfis"][0]["avatar"]["hair"]["style"] == "cabelo-cacheado"
+
+
+def test_personagem_so_aceita_ids_do_catalogo(app_ativo):
+    c, pid = com_perfil(app_ativo, "Criativo")
+    ruins = [
+        {**AVATAR_OK, "body": {"type": "corpo-a", "skinTone": "#FF0000"}},        # cor livre
+        {**AVATAR_OK, "hat": {"item": "<script>", "primary": None}},              # fora do catálogo
+        {**AVATAR_OK, "accessories": ["oculos", "fone", "oculos-sol", "oculos"]},  # mais de 3
+        {**AVATAR_OK, "accessories": ["oculos", "oculos"]},                         # repetido
+        {**AVATAR_OK, "foto": "data:image/png;base64,AAAA"},                        # campo extra (imagem)
+        {**AVATAR_OK, "v": 2},
+    ]
+    for corpo in ruins:
+        assert c.put(f"/api/perfis/{pid}/avatar", json=corpo).status_code == 422, corpo
+
+
+def test_nao_altera_personagem_de_outra_conta(app_ativo):
+    _, pid_alheio = com_perfil(app_ativo, "Alvo")
+    invasor = novo_cliente(app_ativo)
+    assert invasor.put(f"/api/perfis/{pid_alheio}/avatar", json=AVATAR_OK).status_code == 404

@@ -56,7 +56,7 @@ def ranking_do_jogo(c: Connection, jogo_id: str, eu: UUID, limite: int = 10) -> 
 
 
 def montar_perfil(c: Connection, perfil_id: UUID) -> dict[str, Any]:
-    p = c.execute("SELECT id, apelido, cor, oculto, criado_em FROM perfis WHERE id = %s", (perfil_id,)).fetchone()
+    p = c.execute("SELECT id, apelido, cor, oculto, criado_em, avatar FROM perfis WHERE id = %s", (perfil_id,)).fetchone()
     assert p is not None
     posicoes = c.execute(f"SELECT jogo_id, melhor, posicao FROM ({SQL_POSICOES}) r WHERE perfil_id = %(eu)s", {"eu": perfil_id}).fetchall()
     tot = c.execute(
@@ -86,6 +86,7 @@ def montar_perfil(c: Connection, perfil_id: UUID) -> dict[str, Any]:
         "apelido": p["apelido"],
         "cor": p["cor"],
         "oculto": p["oculto"],
+        "avatar": p["avatar"],  # AvatarConfig v1 ou None (personagem padrão)
         "desde": p["criado_em"].strftime("%m/%Y"),
         "partidas": tot["partidas"],
         "nivel": 1 + tot["partidas"] // 25,  # [H] regra provisória (Q20)
