@@ -1,6 +1,6 @@
 # FLIX Games — andamento
 
-Situação inicial: 13/11/2026. Última conferência: 16/11/2026.
+Situação inicial: 13/11/2026. Última conferência: 16/11/2026 (jogos, portal e API conferidos pelos registros de “Onde parou”).
 
 Painel do estado atual, bloqueios e próxima entrega para qualquer pessoa ou IA continuar sem depender da conversa original.
 
@@ -22,43 +22,45 @@ Uma parte só está ✅ com todos os critérios aplicáveis ✅; qualquer crité
 
 ## 2. Próxima fase
 
-**Fase 0 — fechar descoberta e escopo da primeira versão [H].** Entrega: definir catálogo inicial, regras de acesso e ranking, selecionar uma arquitetura e registrar critérios de aceite. O conceito está confirmado; essas decisões ainda não [C/D].
+**Fase 3 — jogos, em andamento [F].** Entrega imediata [H]: levar o G03 (Fibra Conecta) a “testado em celular e integrado ao hub real” e abrir a onda 1 (G01 Runner, G02 Flappy-like e G15 Cesta de um toque) com o mesmo fluxo de cada jogo: ficha de gameplay → código → teste → revisão do jurídico → publicação (tabela por jogo na [Fase 3](#fase-3--jogos-e-ranking)). A Fase 0 segue parcial: faltam escopo e aceite da v1 (Q43), documentação da API de login (Q01–Q10) e conferência de licenças (Q12) [D].
 
-**Pré-requisitos:** acesso de leitura ao repositório [F]; [contexto registrado](#fase-0--descoberta-e-escopo), parte F0.1, ainda parcial. Obter informações de FLIX e fornecedor para Q01–Q10 e catálogo Q11–Q15; isso bloqueia a decisão de integração, mas permite avançar nas outras perguntas [D]. Não iniciar implementação de funcionalidades antes da aprovação do escopo [C].
+**Pré-requisitos:** Node.js e npm (usados Node 26 e npm 11) [F]; ler o [prompt dos minigames](prompt-inicio-minigames-flix.md) (decisões de 16/11 no topo), [DECISIONS](DECISIONS.md), [HUB_CONTRACT](HUB_CONTRACT.md) e [hub-iframe](hub-iframe.md); escrever a ficha de gameplay do jogo antes de codar [C]. O designer do kit do personagem ainda não foi definido [D].
 
-**Ler:** [visão e alternativas](visao-projeto.md), [perguntas em aberto](#9-perguntas-em-aberto) e [como manter este painel](como-manter-andamento.md).
+**Ler:** [visão e alternativas](visao-projeto.md), [perguntas em aberto](#9-perguntas-em-aberto), [como manter este painel](como-manter-andamento.md), [AVATAR_SPEC](AVATAR_SPEC.md) e o [relatório de teste do G03](TEST_REPORTS/snake-01.md).
 
-**Comandos para começar, em uma pasta nova com Git instalado e acesso ao GitHub:**
+**Comandos para começar, com Git, Node e acesso ao GitHub:**
 
 ```bash
-git clone --branch Principal https://github.com/Flix-Fibra/Flix-Games-.git
-cd Flix-Games-
-git status --short --branch
-git log -5 --oneline
-git ls-files
-cat docs/andamento.md
-cat docs/visao-projeto.md
-cat docs/como-manter-andamento.md
+git clone --branch Principal https://github.com/Flix-Fibra/Flix-Games.git
+cd Flix-Games
+git status --short --branch && git log -5 --oneline
+npm install              # jogos e pacotes (workspaces da raiz)
+npm test                 # testes dos jogos e dos pacotes (Vitest)
+npm run typecheck        # TypeScript
+npm run dev:snake        # G03 em modo desenvolvimento; abrir /dev-host.html para simular o hub
+npm run build:snake      # gera games/snake/dist (estático, funciona em subcaminho)
 ```
 
-**Execução e testes:** [F] desde 16/11 existe o jogo G03 em `games/snake` (comandos em `games/snake/README.md`: `npm install`, `npm test`, `npm run dev:snake`, `npm run build:snake`). Portal, API, migrações e serviços continuam sem código [F]; não inventar `uvicorn` ou comandos deles. Nesta fase, validar respostas com sua fonte, links dos documentos e consistência entre resumo e tabelas. Se usar um checkout existente, verificar alterações locais antes de trocar de branch ou atualizar; não descartar trabalho de terceiros.
+Portal (`web/`) e API (`api/`): comandos no README e nas entradas de “Onde parou”. Não inventar comandos que não existam nos `package.json`.
 
-**Armadilhas:** branch principal chama-se `Principal` [F]; repositório é público [F]; fornecedor e jogos não foram informados [D]; print do site não comprova integração com o app [F/D]; alternativas A/B e recursos extras são propostas [H]. Não publicar dados de clientes, credenciais ou documentação confidencial. Nenhum dado deve ser recarregado e nenhuma migração deve ser aplicada: não existem no repositório inspecionado [F].
+**Armadilhas:** branch principal chama-se `Principal` [F]; repositório ainda público (Q44 pede privado) [F]. O hub abre o jogo em iframe com `sandbox` sem `allow-same-origin`: o jogo não pode depender de `localStorage` (o G03 usa dentro de `try/catch`), precisa receber `?hubOrigin=` e a pasta `/games/` precisa de `Access-Control-Allow-Origin: *` [F, ver hub-iframe]. Nenhum jogo com arte, som ou fonte de terceiros sem linha em `ASSETS.md`; GPL, CC BY-SA e “NC” só com o jurídico [C]. Jogos G02, G03, G04, G05, G10, G13, G14 e G15 exigem revisão do jurídico antes de publicar; o G10 (Tetris-like) pode ser feito, mas só é publicado após o parecer [C]. Phaser fixado em 3.90.0 (existe Phaser 4; não atualizar sem decisão) [F]. Não publicar dados de clientes, credenciais ou documentação confidencial.
 
 ## 3. Resumo
 
-[H] Unidade de entrega adotada para organizar o plano: fluxo verificável; na fase de descoberta, documento com decisão verificável. Ordem proposta sujeita ao fechamento da fase 0. Contagens conferidas nas tabelas abaixo em 13/11/2026 [F].
+[H] Unidade de entrega adotada para organizar o plano: fluxo verificável; na fase de descoberta, documento com decisão verificável. Ordem proposta sujeita ao fechamento da fase 0. Contagens conferidas nas tabelas abaixo em 16/11/2026 [F]; nenhuma parte está ✅ porque falta validação, teste em dispositivo real ou entrega no ambiente de uso.
 
 | Fase | Entrega | Partes prontas | Situação |
 |---|---|---|---|
-| 0 | Descoberta e escopo | 0/3 partes | 🟡 Contexto registrado; catálogo, integração e aceite pendentes [C/D] |
-| 1 | Base técnica reproduzível | 0/3 partes | ⬜ Depende da escolha técnica; não há código [F/D] |
-| 2 | Acesso do cliente e portal | 0/3 partes | ⬜ Depende de integração, elegibilidade e UX aprovadas [D] |
-| 3 | Jogos e ranking | 0/3 partes | ⬜ Depende da lista de jogos e regras verificáveis [D] |
+| 0 | Descoberta e escopo | 0/3 partes | 🟡 Contexto e perguntas Q01–Q49 registrados; aceite da v1 e integração real pendentes [C/D] |
+| 1 | Base técnica reproduzível | 0/3 partes | 🟡 `web/`, `api/` e o monorepo dos jogos existem e têm testes; faltam verificações automáticas em conjunto, homologação e deploy [F/D] |
+| 2 | Acesso do cliente e portal | 0/3 partes | 🟡 Portal com login simulado, perfis e catálogo; login real depende da API do App Flix [F/D] |
+| 3 | Jogos e ranking | 0/5 partes | 🟡 G03 jogável e testado no simulador; 14 jogos do catálogo ainda sem código; kit do designer e jurídico pendentes [F/D] |
 | 4 | Piloto e lançamento | 0/3 partes | ⬜ Depende dos fluxos anteriores e aceite operacional [D] |
-| **Total** | **Plano preliminar** | **0/15 partes** | **[F] Jogo G03 jogável em teste local; nenhuma parte validada nem entregável (16/11)** |
+| **Total** | **Plano preliminar** | **0/17 partes** | **[F] Fluxos parciais em portal, API e jogo G03; nenhuma parte validada nem entregável (16/11)** |
 
 ## 4. Onde parou
+
+**16/11/2026 — [F]** Painel reestruturado para os jogos: a Fase 3 ganhou as partes F3.4 (identidade visual e personagem) e F3.5 (jogos no portal real), a tabela “Jogos do catálogo (G01–G15)” com o estado de cada jogo, itens de teste em celular, jurídico, fichas e nome, e os totais passaram de 0/15 para 0/17 partes. As seções “Próxima fase” (agora a Fase 3, com comandos reais), Resumo, Fase 2, Plataforma e Documentação foram atualizadas com os registros do portal e da API; Q50–Q52 abertas. Próximo [H]: teste do G03 em celular real e hub real, ficha e código do G01.
 
 **16/11/2026 — [F]** Hub abre os jogos em iframe isolado (`sandbox` sem `allow-same-origin`) e segue o contrato v2: `ready`→`init`, `started`→`/api/partidas/inicio`, `gameover`→`/api/partidas/fim` com resultado na tela, `restart`/`pause`/`resume`/`mute`. Coluna `jogos.pasta` (migração 003). Jogo de teste `games/_teste-hub` e regras para os jogos em [hub-iframe.md](hub-iframe.md) (sem storage no jogo; `/games/` precisa de `Access-Control-Allow-Origin: *`). Conferido no navegador: partida curta recusada, partida de 31 pontos aceita com posição e recorde, pontuação absurda recusada, contagem de partidas do perfil atualizada só com a válida; 19 testes da API passando; tentativas de sair da pasta do jogo com `..` recusadas. Próximo [H]: avatar/personagem (seção 9) e PIN por perfil, ou começar a produção (nginx, deploy).
 
@@ -113,9 +115,9 @@ cat docs/como-manter-andamento.md
 
 | Parte | Funciona | Validado | Testado | Entregável | Data | Obs. |
 |---|---|---|---|---|---|---|
-| F2.1 Login, elegibilidade e encerramento de sessão | ⬜ | ⬜ | ⬜ | ⬜ | 13/11 | [D] Depende de F0.2; validar cliente permitido/negado, revogação e indisponibilidade. |
-| F2.2 Entrada no site/app e catálogo adaptável | ⬜ | ⬜ | ⬜ | ⬜ | 13/11 | [C] Experiência desejada; [D] integração real e dispositivos não definidos. |
-| F2.3 Identidade pública do jogador | ⬜ | ⬜ | ⬜ | ⬜ | 13/11 | [H] Apelido/avatar; [D] quantidade de perfis e visibilidade dependem de Q23–Q25. |
+| F2.1 Login, elegibilidade e encerramento de sessão | 🟡 | ⬜ | 🟡 | ⬜ | 16/11 | [F] API com sessão por aparelho (cookie HttpOnly, hash no banco) e login simulado só em desenvolvimento, conforme os registros de 16/11. [D] Login real e elegibilidade dependem de F0.2; validar cliente permitido/negado, revogação e indisponibilidade. |
+| F2.2 Entrada no site/app e catálogo adaptável | 🟡 | ⬜ | ⬜ | ⬜ | 16/11 | [F] `web/` com Início, Ranking, Perfil e catálogo G01–G15 vindo da API; abre os jogos em iframe isolado. [D] Entrada real no site/app e dispositivos (Q13) não definidos. |
+| F2.3 Identidade pública do jogador | 🟡 | ⬜ | 🟡 | ⬜ | 16/11 | [F] Até 2 perfis por conta, com apelido validado pela API. [D] Editor de personagem no hub ainda não existe (ver F3.4); PIN por perfil e visibilidade dependem de Q23–Q25. |
 
 | Item | Situação | Data | Obs. |
 |---|---|---|---|
@@ -124,17 +126,51 @@ cat docs/como-manter-andamento.md
 
 ### Fase 3 — jogos e ranking
 
+Fluxo de cada jogo [C]: ficha de gameplay (`docs/GAMEPLAY_SHEETS/`) → código em `games/<id>/` → testes e relatório (`docs/TEST_REPORTS/`) → registro de assets e licenças (`ASSETS.md`, `LICENSES/`) → revisão do jurídico → publicação em `/games/<id>/` e registro no catálogo da API.
+
 | Parte | Funciona | Validado | Testado | Entregável | Data | Obs. |
 |---|---|---|---|---|---|---|
-| F3.1 Catálogo aprovado e jogo integrado | 🟡 | ⬜ | 🟡 | ⬜ | 16/11 | [C] Catálogo de trabalho com 15 jogos (G01–G15) no prompt dos minigames; meta de 20. [F] G03 (Fibra Conecta) jogável, com o contrato do hub testado no simulador `dev-host.html` ([relatório](TEST_REPORTS/snake-01.md)). [D] Falta teste em celular, aprovação do catálogo, licença/aprovação por título e integração com o portal real. |
-| F3.2 Partida, progresso e resultado verificável | ⬜ | ⬜ | ⬜ | ⬜ | 13/11 | [D] Depende de suporte de cada título e Q15/Q29; progresso é opcional até decisão. |
-| F3.3 Ranking de clientes | ⬜ | ⬜ | ⬜ | ⬜ | 13/11 | [C] Ranking solicitado; [D] regras, desempate e revisão ainda não definidos. |
+| F3.1 Catálogo aprovado e jogos integrados | 🟡 | ⬜ | 🟡 | ⬜ | 16/11 | [C] Catálogo de trabalho G01–G15, meta de 20. [F] 1 de 15 com código (G03, `games/snake`); ver tabela por jogo abaixo. [D] Falta aprovação do catálogo, licença/aprovação por título e teste em celular. |
+| F3.2 Partida, progresso e resultado verificável | 🟡 | ⬜ | 🟡 | ⬜ | 16/11 | [F] G03 envia `ready`/`started`/`gameover` com `runId`, `score` inteiro e `durationMs`; a API recusa partida curta, pontuação absurda e `runId` repetido (registro de 16/11). [D] Faixa plausível do G03 na API é provisória; salvamento de progresso por jogo não implementado (Q26); sem prevenção de fraude além disso (Q29). |
+| F3.3 Ranking de clientes | 🟡 | ⬜ | 🟡 | ⬜ | 16/11 | [F] API com ranking por jogo (`maior`/`menor` vence) e perfis ocultos; `web/` exibe. [D] Desempate por jogo (Q19) e revisão no painel (Q35) pendentes; o G03 ainda não gravou partida real pelo hub. |
+| F3.4 Identidade visual e personagem dos jogos | 🟡 | ⬜ | 🟡 | ⬜ | 16/11 | [F] `packages/flix-avatar` com personagem placeholder (retrato; inicial careca com brilho) validado por catálogo; G03 com arte própria em pixel art feita por código ([DECISIONS](DECISIONS.md)). [D] Kit do designer (rig 32x32, visões `side`/`top`/`fp_hands`), cores e logo oficiais e editor de personagem no hub não existem ([AVATAR_SPEC](AVATAR_SPEC.md)). |
+| F3.5 Jogos publicados no portal real | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [D] Falta registrar a pasta `snake` no catálogo, servir `/games/snake/` com CORS, abrir pelo hub com `?hubOrigin=` e testar em celular e no App Flix (Q13). O simulador `dev-host.html` já cobre o contrato v2 ([relatório](TEST_REPORTS/snake-01.md)). |
 
 | Item | Situação | Data | Obs. |
 |---|---|---|---|
-| Confirmar distribuição e integração por título | ⛔ | 13/11 | [D] Sem lista e permissões; desbloqueia com ficha de cada jogo em Q11–Q12/Q15. |
+| Confirmar distribuição e integração por título | ⛔ | 16/11 | [D] Só o G03 tem ficha; desbloqueia com a ficha de cada jogo e a conferência de licença em Q11–Q12/Q15. |
 | Especificar validação e prevenção de reenvio | ⬜ | 13/11 | [H] Registrar por jogo; token válido não comprova resultado verdadeiro. |
 | Decidir recursos opcionais | ⬜ | 13/11 | [H] Avaliar Q18–Q22/Q26–Q28; aprovação atual não existe. |
+| Teste do G03 em celular real (Android simples e iPhone) | ⬜ | 16/11 | [D] Meta de 30 FPS estáveis, toque/deslize, retomada ao trocar de aba; registrar em `docs/TEST_REPORTS/`. |
+| Rever o visual novo do G03 rodando | ⬜ | 16/11 | [D] Conector RJ45 nas duas pontas, travessia da parede e emblema sem fundo foram verificados só por testes e imagem gerada; conferir no navegador. |
+| Ficha de gameplay revisada do G03 | 🟡 | 16/11 | [F] Rascunho em [snake.md](GAMEPLAY_SHEETS/snake.md); [D] falta observador jogar uma referência e segunda pessoa revisar. |
+| Fichas de gameplay G01–G15 | 🟡 | 16/11 | [F] 1 de 15 (rascunho). [H] Começar por G01, G02 e G15 (onda 1). |
+| Validar o nome “Fibra Conecta” com o marketing | ⬜ | 16/11 | [D] Nome de trabalho; sem validação (Q50). |
+| Frases de game over | 🟡 | 16/11 | [F] Três causas em `GameOverScene.ts` (`CAUSE_TEXT`); [C] o solicitante vai sugerir alternativas (Q52). |
+| Revisão do jurídico por jogo (G02, G03, G04, G05, G10, G13, G14, G15) | ⬜ | 16/11 | [C] Obrigatória antes de publicar; apresentar o jogo pronto. |
+| Tetris-like (G10): desenvolver e apresentar ao jurídico | ⬜ | 16/11 | [C] Pode ser desenvolvido agora; a API o mantém bloqueado até o parecer. |
+
+#### Jogos do catálogo (G01–G15)
+
+Colunas: **Ficha** = ficha de gameplay revisada; **Código** = jogo executa o ciclo completo; **Testado** = testes e relatório; **Arte Flix** = identidade visual própria sem assets de terceiros não registrados; **Jurídico** = parecer recebido; **No portal** = abre pelo hub real e grava partida. Ondas e riscos vêm do [prompt dos minigames](prompt-inicio-minigames-flix.md), seção 10 (estimativa interna, não parecer jurídico) [H].
+
+| ID | Jogo (nome de trabalho) | Onda | Risco | Ficha | Código | Testado | Arte Flix | Jurídico | No portal | Data | Obs. |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| G01 | Runner infinito de um botão | 1 | baixo | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Próximo da onda 1; referências no prompt (seção 3). |
+| G02 | Flappy-like (voo com um toque) | 1 | médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Evitar pássaro, canos e paleta do original. |
+| G03 | Fibra Conecta (tipo Snake) | 1 | baixo | 🟡 | 🟡 | 🟡 | 🟡 | ⬜ | 🟡 | 16/11 | [F] Jogável: cabo de rede azul com RJ45 nas duas pontas, parede que atravessa, onda vermelha e LEVEL UP, globo de sinal, emblema de planeta. Ficha é rascunho; testes 61 passam; simulador do hub ok; falta celular, jurídico e hub real. |
+| G04 | Arkanoid-like (quebra-blocos) | 2 | médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Evitar nome, raquete e cápsulas do original. |
+| G05 | Frogger-like (travessia clássica) | 2 | médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Usa a visão `top` do personagem (kit do designer). |
+| G06 | Minigolfe em pixel art | 2 | baixo | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Ranking pelo menor número de tacadas. |
+| G07 | Plataforma com mapas | 3 | baixo a médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Mapas no Tiled; precisa de `docs/ADDING_LEVELS.md`. |
+| G08 | Plataforma com tiro (run and gun curto) | 3 | médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Inimigos temáticos, sem violência gráfica. |
+| G09 | Travessia infinita em grade | 3 | médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Diferenciar bem do G05. |
+| G10 | Tetris-like (blocos que encaixam) | 3 | alto | ⬜ | ⬜ | ⬜ | ⬜ | ⛔ | ⛔ | 16/11 | [C] Pode ser desenvolvido; publicar só após o parecer do jurídico (a API o mantém bloqueado). |
+| G11 | Arena em primeira pessoa (Doom-like com menos violência) | 4 | médio a alto | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [C] Inimigo e projétil diferentes, sem arma de fogo; sem assets nem nome do original. |
+| G12 | Corrida top-down em pixel art | 3 | baixo a médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Referência com GPL/CC BY-SA: só gameplay. |
+| G13 | Futebol de cabeça 1 contra 1 | 2 | médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Adversário por IA; sem multiplayer na v1 (Q28). |
+| G14 | Descida em espiral | 2 | médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Pixel art 2D em pseudo-3D. |
+| G15 | Cesta de um toque (de aro em aro) | 1 | médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Personagem do jogador no lugar da bola. |
 
 ### Fase 4 — piloto e lançamento
 
@@ -154,14 +190,15 @@ cat docs/como-manter-andamento.md
 | Item | Situação | Data | Obs. |
 |---|---|---|---|
 | Provedor de identidade e consulta de elegibilidade | ⛔ | 13/11 | [D] Sem fornecedor/contrato técnico; desbloqueia com F0.2 e Q01–Q10. |
-| Sessões, revogação e permissões administrativas | ⬜ | 13/11 | [H] Implementar/testar após definição de integração e perfis administrativos. |
+| Sessões, revogação e permissões administrativas | 🟡 | 16/11 | [F] Sessão por aparelho com cookie HttpOnly na API (registro de 16/11). [D] Revogação por elegibilidade e painel administrativo ainda não existem; depende de F0.2 e Q35–Q36. |
 | Homologação, domínio, HTTPS e publicação | ⬜ | 13/11 | [D] Q39–Q42 definem destino; não há deploy existente. |
-| Segredos e isolamento dos jogos | ⬜ | 13/11 | [H] Definir privilégios mínimos; nenhum jogo deve receber a sessão principal do portal. |
+| Segredos e isolamento dos jogos | 🟡 | 16/11 | [F] Jogos abertos em iframe com `sandbox` sem `allow-same-origin`; o jogo só recebe `init`, não a sessão; o G03 valida a origem do hub e não faz requisição externa. [D] Segredos, CORS de `/games/` e privilégios do servidor ainda por definir. |
 | Backup completo, integridade e restauração | ⬜ | 13/11 | [C] Obrigatório antes de alterações no sistema/servidor; [D] rotina operacional ainda não existe. |
 | Monitoramento, alertas e incidentes | ⬜ | 13/11 | [D] Definir métricas, limites e canal operacional em Q38/Q40/Q42. |
 | Capacidade, banda e controle de custos | ⬜ | 13/11 | [D] Sem títulos, concorrência ou medições; não estimar capacidade sem teste. |
 | Agendamentos | ⬜ | 13/11 | [D] Necessidade depende de sincronização e eventuais temporadas; não há tarefas existentes. |
 | Proteção de dados e retenção | ⬜ | 13/11 | [D] Q30–Q34 definem tratamento e públicos; validar com setor competente. |
+| Atribuições, licenças e créditos dos jogos | 🟡 | 16/11 | [F] `ASSETS.md` e `LICENSES/README.md` criados; o G03 não usa asset de terceiros. [D] Textos de licença das dependências não copiados e página de créditos do jogo não criada. |
 
 ## 7. Documentação e repositório
 
@@ -170,14 +207,16 @@ cat docs/como-manter-andamento.md
 | Contexto e alternativas acessíveis | 🟡 | 13/11 | [F] Conteúdo preparado em [visão](visao-projeto.md); [D] decisões e homologação pendentes. |
 | Referências visuais e ativos oficiais | ⬜ | 13/11 | [F] Prints só na conversa; [D] falta destino acessível e aprovação de uso. |
 | Arquitetura, requisitos e aceite aprovados | ⬜ | 13/11 | [D] Ainda não existem decisões técnicas executáveis. |
-| Convenções e comandos reproduzíveis | ⬜ | 13/11 | [F] Apenas documentação; [D] definir quando houver implementação. |
+| Convenções e comandos reproduzíveis | 🟡 | 16/11 | [F] Comandos dos jogos em `games/snake/README.md` e nesta seção 2; decisões técnicas em [DECISIONS](DECISIONS.md). [D] Convenções de revisão (Q45) e padrão de nomes de jogos ainda não registrados. |
+| Documentos dos jogos | 🟡 | 16/11 | [F] [DECISIONS](DECISIONS.md), [HUB_CONTRACT](HUB_CONTRACT.md) (contrato v2, convive com [hub-iframe](hub-iframe.md)), [AVATAR_SPEC](AVATAR_SPEC.md), [ficha do G03](GAMEPLAY_SHEETS/snake.md), [relatório de teste](TEST_REPORTS/snake-01.md), `ASSETS.md` e `LICENSES/`. [D] Falta `ADDING_LEVELS.md` (G07) e revisar `HUB_CONTRACT.md` junto com o Rafael para não divergir de `hub-iframe.md`. |
+| Briefing e kit do designer (personagem) | ⬜ | 16/11 | [D] Briefing descrito na seção 9 do prompt dos minigames; designer, cores e logo oficiais ainda não definidos (Q51). |
 | Continuidade do andamento no mesmo commit | 🟡 | 13/11 | [F] Procedimento documentado em [manutenção](como-manter-andamento.md); [D] sem mecanismo automatizado de conferência. |
 | Visibilidade e regras de contribuição | ⬜ | 13/11 | [F] Repositório público, branch `Principal` sem proteção indicada pela API em 13/11; [D] confirmar política em Q44–Q45. Nenhuma configuração foi alterada. |
 | Situação de checkouts e servidores | ⬜ | 13/11 | [D] Não inspecionados; leitura remota não comprova `git status` de colaboradores. |
 
 ## 8. Como atualizar
 
-Siga [como-manter-andamento.md](como-manter-andamento.md). Atualizar tabelas, totais, próxima fase, evidências e “Onde parou” no mesmo commit que alterar um estado [C: instrução do solicitante]. Não atribuir tarefas a pessoas; “Quem pode responder” identifica fonte da informação. Manter respostas e pendências resolvidas com data.
+Siga [como-manter-andamento.md](como-manter-andamento.md). Atualizar tabelas, totais, próxima fase, evidências e “Onde parou” no mesmo commit que alterar um estado [C: instrução do solicitante]. Não atribuir tarefas a pessoas; “Quem pode responder” identifica fonte da informação. Manter respostas e pendências resolvidas com data. Ao avançar um jogo, atualizar a linha dele na tabela “Jogos do catálogo” da Fase 3 e, se o estado de uma parte mudar, as partes F3.x e os totais do Resumo no mesmo commit.
 
 ## 9. Perguntas em aberto
 
@@ -234,3 +273,6 @@ Siga [como-manter-andamento.md](como-manter-andamento.md). Atualizar tabelas, to
 | Q47. O Tetris-like (G10) pode ser desenvolvido antes do parecer do jurídico? | Solicitante, jurídico FLIX | [C: solicitante, 16/11] Sim: será feito, apresentado pronto e depois avaliado pelo jurídico. [H] Não publicar sem o parecer. [D] Data e responsável do parecer. | 16/11 |
 | Q48. Como o time deve usar o código dos jogos de referência e identificar os assets para trocar pela identidade Flix? | Solicitante e equipe técnica | [C: solicitante, 16/11] Pode usar e colar trechos pontuais de código das referências, sem copiar grande parte ou toda a obra. A IA deve explicar onde ficam os assets de cada jogo para o time trocá-los. Ver decisões no início do prompt dos minigames. | 16/11 |
 | Q49. Quem cuida de cada área, em especial do hub? | Solicitante | [C: solicitante, 16/11] Não há donos fixos por área; o Rafael foi originalmente encarregado do hub, mas qualquer pessoa pode atuar em qualquer área. | 16/11 |
+| Q50. Qual o nome final do jogo G03 (hoje “Fibra Conecta”) e dos demais jogos? | Marketing FLIX e solicitante | [D] Pendente. [H] Nomes de trabalho são próprios (sem nomes de jogos de terceiros); validar antes de publicar. | 16/11 |
+| Q51. Quem é o designer do kit do personagem e quais são as cores e o logo oficiais da Flix? | Marketing e produto FLIX | [D] Pendente. O briefing está na seção 9 do prompt dos minigames; até lá o personagem é um placeholder desenhado por código. | 16/11 |
+| Q52. Quais frases devem aparecer no game over (hoje: “O cabo bateu na obra”, “O cabo se enrolou”, “Tempo esgotado!”)? Pode haver várias por causa, sorteadas? | Solicitante | [C: solicitante, 16/11] Vai sugerir alternativas. [D] Lista final pendente. | 16/11 |
