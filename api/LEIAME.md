@@ -1,4 +1,24 @@
-# api/ — backend (ainda não criado)
+# api/ — backend
+
+## Rodar localmente
+
+Precisa de Docker. Na raiz do repositório:
+
+```bash
+cp .env.exemplo .env      # e troque a senha (o .env não vai para o git)
+docker compose up -d --build
+docker compose exec api python -m app.semear   # dados fictícios (só em MODO=desenvolvimento)
+docker compose run --rm api pytest -q          # testes, num banco separado (flixgames_teste)
+```
+
+API em http://127.0.0.1:8000 · documentação em http://127.0.0.1:8000/api/docs (só em desenvolvimento) · saúde em `/api/saude`.
+
+- `app/rotas_conta.py`: sessão por aparelho, login simulado (`/api/dev/entrar`, só desenvolvimento), aparelhos, perfis (limite de 2), favoritos.
+- `app/rotas_jogos.py`: catálogo, ranking (maior ou menor vence, por jogo) e partidas (`/api/partidas/inicio` e `/fim`).
+- `migracoes/`: SQL numerado, aplicado em ordem por `python -m app.migracoes`. Nunca editar uma migração já aplicada; criar a próxima.
+- Toda requisição que altera dados exige o cabeçalho `X-Flix-Games: 1` (proteção contra outro site agir em nome do cliente).
+
+## Desenho
 
 Stack decidida (Q46): **Python + FastAPI + Uvicorn**, banco **PostgreSQL**.
 

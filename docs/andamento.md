@@ -60,6 +60,8 @@ cat docs/como-manter-andamento.md
 
 ## 4. Onde parou
 
+**16/11/2026 — [F]** API criada em `api/` (FastAPI 0.162 + PostgreSQL 16.16, Docker): sessão por aparelho com cookie HttpOnly e hash no banco; login simulado só em desenvolvimento; até 2 perfis com trava contra corrida; partidas pelo contrato do hub (seção 6 do prompt dos minigames) com runId único, faixa plausível por jogo, duração mínima e duração limitada ao tempo real; ranking por jogo com `maior`/`menor` vence e perfis ocultos. Conferido: 19 testes passando; API local com migrações e dados fictícios; porta só em 127.0.0.1. [H] Limites de pontuação por jogo são provisórios. [D] Plugin `docker compose` não instalado no Mac do Rafael (Colima); validado com `docker run`. Próximo: ligar `web/` à API e ler o catálogo real.
+
 **16/11/2026 — [F]** Interface migrada para `web/` (React + TS + Vite), mesmas telas do protótipo: Início, Ranking, Perfil e "Quem vai jogar?" (2 perfis). Conferido localmente: tipos e build sem erros; build de produção com JS de 79 KB comprimido; fluxos de perfil (entrar, trocar, criar, excluir, apelido repetido recusado), favoritar, ranking pelo botão e links `#ranking`/`#perfil`. Próximo: `api/` FastAPI + Postgres com Compose local, trocando `servicoSimulado` por chamadas HTTP.
 
 **16/11/2026 — [C]** Decisões do solicitante após a leitura dos documentos: sem anúncios por enquanto (Q34); catálogo começa com 15 jogos e a meta é 20 (Q11); conta Flix com perfis ligados ao cliente (Q23); público igual à Q30; Doom-like com menos violência (inimigo e projétil diferentes); sem donos fixos por área, com o hub originalmente com o Rafael; trechos pontuais de código de referência permitidos; Tetris-like pode ser feito e vai ao jurídico depois de pronto (Q47–Q49). O prompt `prompt-inicio-minigames-flix.md` (v2.2) foi atualizado com essas decisões. Documentação movida para `docs/` e enviada ao GitHub no commit `ad9bc1e`. `visao-projeto.md` corrigido na seção 7 (catálogo de 15 jogos, meta 20). Gerar código só quando solicitado; commit e push só quando pedido.
@@ -91,7 +93,7 @@ cat docs/como-manter-andamento.md
 | Parte | Funciona | Validado | Testado | Entregável | Data | Obs. |
 |---|---|---|---|---|---|---|
 | F1.1 Projeto local e comandos documentados | 🟡 | ⬜ | ⬜ | ⬜ | 16/11 | [F] `web/` em React 19 + TypeScript 5.9 + Vite 6.4 com versões fixas e `package-lock.json`; `npm run verificar` e `npm run build` sem erros; comandos no README. Dados simulados atrás de `ServicoGames`. [D] `api/`, `tarefas/` e Compose ainda não criados. |
-| F1.2 Persistência e evolução de dados | ⬜ | ⬜ | ⬜ | ⬜ | 13/11 | [D] Modelo, banco e migrações não definidos. |
+| F1.2 Persistência e evolução de dados | 🟡 | ⬜ | 🟡 | ⬜ | 16/11 | [F] PostgreSQL 16 com migrações SQL numeradas (`api/migracoes/`), catálogo G01–G15 (todos não publicados; G10 bloqueado até o jurídico), perfis, sessões por aparelho, partidas, favoritos e progresso. [C] 19 testes automáticos passando em banco real. [D] Backup/restauração ainda não ensaiados. |
 | F1.3 Verificações e homologação | ⬜ | ⬜ | ⬜ | ⬜ | 13/11 | [F] Sem automação; [D] ambiente depende de Q39–Q42. |
 
 | Item | Situação | Data | Obs. |

@@ -17,7 +17,7 @@ Qualquer pessoa ou IA pode continuar a próxima fase. Não há responsáveis fix
 |---|---|---|
 | `docs/` | Andamento, visão, manutenção do painel e prompt dos minigames | Fonte do estado do projeto |
 | `web/` | Interface: React + TypeScript + Vite | Funciona com dados simulados (`web/src/dados/servico.ts`) |
-| `api/` | Backend: Python + FastAPI + Uvicorn + PostgreSQL | Ainda não criado (ver `api/LEIAME.md`) |
+| `api/` | Backend: Python + FastAPI + Uvicorn + PostgreSQL | Funciona localmente com login simulado e 19 testes (ver `api/LEIAME.md`) |
 | `tarefas/` | Processo separado: revalidar clientes no CRM | Ainda não criado (ver `tarefas/LEIAME.md`) |
 | `prototipo/` | Protótipo estático original (HTML/CSS/JS) | Referência; será removido quando a versão React for aprovada |
 
