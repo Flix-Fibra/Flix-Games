@@ -5,84 +5,114 @@ import { Perfil } from './componentes/Perfil';
 import { QuemVaiJogar } from './componentes/QuemVaiJogar';
 import { Ranking } from './componentes/Ranking';
 import { Topo } from './componentes/Topo';
-import { servico } from './dados/servico';
-import type { Aba, JogoId, Perfil as TPerfil } from './dados/tipos';
+import { ErroApi, servico } from './dados/servico';
+import type { Aba, Jogo, Perfil as TPerfil } from './dados/tipos';
 
 const ABAS: Aba[] = ['inicio', 'ranking', 'perfil'];
-const CHAVE_PERFIL_APARELHO = 'flixgames-perfil'; // perfil escolhido NESTE aparelho (Q09: uma pessoa por aparelho)
 
-function lerHash(): string { return window.location.hash.slice(1); }
-function perfilDoAparelho(): string | null {
-  try { return localStorage.getItem(CHAVE_PERFIL_APARELHO); } catch { return null; }
-}
-function lembrarPerfil(id: string | null): void {
-  try { if (id) localStorage.setItem(CHAVE_PERFIL_APARELHO, id); else localStorage.removeItem(CHAVE_PERFIL_APARELHO); } catch { /* sem storage */ }
-}
+type Carga =
+  | { estado: 'carregando' }
+  | { estado: 'sem-sessao' }
+  | { estado: 'erro' }
+  | { estado: 'pronto'; jogos: Jogo[]; perfis: TPerfil[]; perfilId: string | null; maxPerfis: number };
 
 function Portal() {
   const avisar = useAviso();
-  const [perfis, setPerfis] = useState<TPerfil[] | null>(null);
-  const [atualId, setAtualId] = useState<string | null>(null);
+  const [carga, setCarga] = useState<Carga>({ estado: 'carregando' });
   const [aba, setAba] = useState<Aba>('inicio');
   const [quemAberto, setQuemAberto] = useState(false);
-  const [rankingJogo, setRankingJogo] = useState<JogoId>('voo');
+  const [rankingJogo, setRankingJogo] = useState<string | null>(null);
 
-  // Abertura: carrega perfis e decide se pergunta "Quem vai jogar?".
-  // Links diretos: #perfis abre a escolha; #inicio, #ranking e #perfil entram no perfil salvo (ou no 1º).
+  // Abertura: sessão deste aparelho + catálogo. Links diretos: #perfis abre a escolha;
+  // #inicio, #ranking e #perfil abrem a aba (se já houver perfil escolhido neste aparelho).
   useEffect(() => {
-    servico.listarPerfis().then((lista) => {
-      const hash = lerHash();
-      const salvo = lista.find((p) => p.id === perfilDoAparelho())?.id ?? null;
-      const direto = (ABAS as string[]).includes(hash);
-      setPerfis(lista);
-      setAtualId(salvo ?? (direto ? lista[0]!.id : null));
-      if (direto) setAba(hash as Aba);
-      setQuemAberto(hash === 'perfis' || (!salvo && !direto));
-    }).catch(() => setPerfis([]));
+    Promise.all([servico.sessao(), servico.jogos()])
+      .then(([s, jogos]) => {
+        const hash = window.location.hash.slice(1);
+        setCarga({ estado: 'pronto', jogos, perfis: s.perfis, perfilId: s.perfilId, maxPerfis: s.maxPerfis });
+        if ((ABAS as string[]).includes(hash)) setAba(hash as Aba);
+        setQuemAberto(hash === 'perfis' || !s.perfilId);
+      })
+      .catch((e) => setCarga({ estado: e instanceof ErroApi && e.status === 401 ? 'sem-sessao' : 'erro' }));
+  }, []);
+
+  // Troca de # sem recarregar (link direto, botão voltar do celular): segue a aba
+  useEffect(() => {
+    const seguir = () => {
+      const h = window.location.hash.slice(1);
+      if ((ABAS as string[]).includes(h)) { setAba(h as Aba); window.scrollTo(0, 0); }
+      else if (h === 'perfis') setQuemAberto(true);
+    };
+    window.addEventListener('hashchange', seguir);
+    return () => window.removeEventListener('hashchange', seguir);
   }, []);
 
   const irPara = useCallback((a: Aba) => {
     setAba(a);
     window.scrollTo(0, 0);
-    history.replaceState(null, '', '#' + a);
+    if (window.location.hash !== '#' + a) history.pushState(null, '', '#' + a); // "voltar" do celular volta de aba
   }, []);
 
-  const perfil = perfis?.find((p) => p.id === atualId) ?? null;
-
-  async function salvarPerfil(p: TPerfil) {
-    await servico.atualizarPerfil(p);
-    setPerfis((lista) => lista?.map((x) => (x.id === p.id ? p : x)) ?? lista);
+  if (carga.estado === 'carregando') return null;
+  if (carga.estado === 'sem-sessao' || carga.estado === 'erro') {
+    return (
+      <section className="gx-quem" aria-live="polite">
+        <img className="gx-quem-logo" src="/logo-flix-chapada.png" alt="Flix" width={218} height={84} />
+        <h1>{carga.estado === 'sem-sessao' ? 'Entre pelo App Flix' : 'Não foi possível abrir o Flix Games'}</h1>
+        <p className="gx-quem-sub">
+          {carga.estado === 'sem-sessao' ? 'Abra o Flix Games pelo botão Games do App Flix ou do site.' : 'Verifique sua conexão e tente de novo.'}
+        </p>
+        <button className="btn" type="button" onClick={() => window.location.reload()}>Tentar de novo</button>
+      </section>
+    );
   }
 
-  function entrar(id: string) {
-    setAtualId(id);
-    lembrarPerfil(id);
+  const pronto = carga; // já estreitado para 'pronto' (as funções abaixo usam esta constante)
+  const { jogos, perfis, perfilId, maxPerfis } = pronto;
+  const perfil = perfis.find((p) => p.id === perfilId) ?? null;
+  const trocarPerfil = (p: TPerfil) => setCarga({ ...pronto, perfis: perfis.map((x) => (x.id === p.id ? p : x)) });
+
+  async function entrar(id: string) {
+    await servico.escolherPerfil(id);
+    setCarga({ ...pronto, perfilId: id });
     setQuemAberto(false);
     irPara('inicio');
-    const p = perfis?.find((x) => x.id === id);
+    const p = perfis.find((x) => x.id === id);
     if (p) avisar(`Olá, ${p.apelido}!`);
   }
 
   async function criar(apelido: string) {
     const novo = await servico.criarPerfil(apelido);
-    setPerfis((lista) => [...(lista ?? []), novo]);
-    setAtualId(novo.id);
-    lembrarPerfil(novo.id);
+    await servico.escolherPerfil(novo.id);
+    setCarga({ ...pronto, perfis: [...perfis, novo], perfilId: novo.id });
     setQuemAberto(false);
     irPara('inicio');
     avisar(`Olá, ${novo.apelido}!`);
   }
 
   async function excluir(id: string) {
-    const nome = perfis?.find((p) => p.id === id)?.apelido ?? '';
+    const nome = perfis.find((p) => p.id === id)?.apelido ?? '';
     await servico.excluirPerfil(id);
-    setPerfis((lista) => lista?.filter((p) => p.id !== id) ?? lista);
-    if (atualId === id) { setAtualId(null); lembrarPerfil(null); }
+    setCarga({ ...pronto, perfis: perfis.filter((p) => p.id !== id), perfilId: perfilId === id ? null : perfilId });
     avisar(`Perfil ${nome} excluído`);
   }
 
-  if (perfis === null) return null; // carregando (instantâneo na simulação)
-  if (!perfis.length) return <p className="gx-aviso-prototipo">Não foi possível carregar os perfis. Tente de novo.</p>;
+  async function favoritar(j: Jogo) {
+    if (!perfil) return;
+    const sim = !perfil.favoritos.includes(j.id);
+    await servico.favoritar(perfil.id, j.id, sim);
+    trocarPerfil({ ...perfil, favoritos: sim ? [...perfil.favoritos, j.id] : perfil.favoritos.filter((f) => f !== j.id) });
+  }
+
+  async function salvar(dados: { apelido?: string; oculto?: boolean }) {
+    if (!perfil) return;
+    trocarPerfil(await servico.alterarPerfil(perfil.id, dados));
+  }
+
+  async function sair() {
+    await servico.sairDesteAparelho();
+    window.location.reload(); // sem sessão: mostra "Entre pelo App Flix"
+  }
 
   return (
     <>
@@ -91,24 +121,25 @@ function Portal() {
         <>
           <Topo aba={aba} perfil={perfil} onAba={irPara} onTrocarPerfil={() => setQuemAberto(true)} />
           <main>
-            {aba === 'inicio' && (
-              <Inicio
-                perfil={perfil}
-                onFavoritar={(j) => {
-                  const favs = perfil.favoritos.includes(j.id) ? perfil.favoritos.filter((f) => f !== j.id) : [...perfil.favoritos, j.id];
-                  void salvarPerfil({ ...perfil, favoritos: favs });
-                }}
-                onVerRanking={(j) => { setRankingJogo(j.id); irPara('ranking'); }}
-              />
+            {jogos.length === 0 ? <p className="perfil-dica">Nenhum jogo publicado ainda.</p> : (
+              <>
+                {aba === 'inicio' && (
+                  <Inicio jogos={jogos} perfil={perfil} onFavoritar={favoritar}
+                    onVerRanking={(j) => { setRankingJogo(j.id); irPara('ranking'); }} />
+                )}
+                {aba === 'ranking' && <Ranking jogos={jogos} perfil={perfil} jogoId={rankingJogo} onJogo={setRankingJogo} />}
+                {aba === 'perfil' && (
+                  <Perfil jogos={jogos} perfil={perfil} perfis={perfis} onSalvar={salvar}
+                    onTrocarPerfil={() => setQuemAberto(true)} onSair={sair} />
+                )}
+              </>
             )}
-            {aba === 'ranking' && <Ranking perfil={perfil} jogoId={rankingJogo} onJogo={setRankingJogo} />}
-            {aba === 'perfil' && <Perfil perfil={perfil} perfis={perfis} onSalvar={salvarPerfil} onTrocarPerfil={() => setQuemAberto(true)} />}
           </main>
-          <p className="gx-aviso-prototipo">Protótipo · jogos e números são exemplos</p>
+          {import.meta.env.DEV && <p className="gx-aviso-prototipo">Desenvolvimento · conta de teste e dados fictícios</p>}
         </>
       )}
       {(quemAberto || !perfil) && (
-        <QuemVaiJogar perfis={perfis} atualId={atualId} onEntrar={entrar} onCriar={criar} onExcluir={excluir} />
+        <QuemVaiJogar perfis={perfis} maxPerfis={maxPerfis} atualId={perfilId} onEntrar={entrar} onCriar={criar} onExcluir={excluir} />
       )}
     </>
   );

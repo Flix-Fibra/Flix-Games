@@ -1,19 +1,19 @@
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { iniciais, limparApelido, validarApelido } from '../dados/apelido';
-import { MAX_PERFIS } from '../dados/catalogo';
 import type { Perfil } from '../dados/tipos';
 import { Lixeira } from './Icones';
 
 interface Props {
   perfis: Perfil[];
+  maxPerfis: number;
   atualId: string | null;
-  onEntrar: (id: string) => void;
+  onEntrar: (id: string) => Promise<void>;
   onCriar: (apelido: string) => Promise<void>;
   onExcluir: (id: string) => Promise<void>;
 }
 
 /** Tela "Quem vai jogar?": até 2 perfis por conta (Q23). */
-export function QuemVaiJogar({ perfis, atualId, onEntrar, onCriar, onExcluir }: Props) {
+export function QuemVaiJogar({ perfis, maxPerfis: MAX_PERFIS, atualId, onEntrar, onCriar, onExcluir }: Props) {
   const [gerenciando, setGerenciando] = useState(false);
   const [confirmarId, setConfirmarId] = useState<string | null>(null);
   const [criando, setCriando] = useState(false);
@@ -29,12 +29,17 @@ export function QuemVaiJogar({ perfis, atualId, onEntrar, onCriar, onExcluir }: 
   useEffect(() => { if (criando) campo.current?.focus(); }, [criando]);
 
   async function tocar(p: Perfil) {
-    if (!gerenciando) { onEntrar(p.id); return; }
-    if (perfis.length < 2) return; // a conta precisa de pelo menos um perfil
-    if (confirmarId !== p.id) { setConfirmarId(p.id); return; } // exclusão em dois toques, sem janela de confirmação
-    await onExcluir(p.id);
-    setConfirmarId(null);
-    setGerenciando(false);
+    setErro('');
+    try {
+      if (!gerenciando) { await onEntrar(p.id); return; }
+      if (perfis.length < 2) return; // a conta precisa de pelo menos um perfil
+      if (confirmarId !== p.id) { setConfirmarId(p.id); return; } // exclusão em dois toques, sem janela de confirmação
+      await onExcluir(p.id);
+      setConfirmarId(null);
+      setGerenciando(false);
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Não foi possível completar.');
+    }
   }
 
   async function criar(e: FormEvent) {
@@ -76,6 +81,7 @@ export function QuemVaiJogar({ perfis, atualId, onEntrar, onCriar, onExcluir }: 
         )}
       </div>
 
+      {erro && !criando && <p className="perfil-msg erro" role="alert">{erro}</p>}
       {criando && !gerenciando && (
         <form className="gx-quem-novo" onSubmit={criar} noValidate>
           <label htmlFor="in-novo">Apelido do novo perfil</label>

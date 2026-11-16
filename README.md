@@ -1,7 +1,7 @@
 # Flix-Games-
 Jogos da Flix fibra para clientes
 
-Portal de jogos para clientes FLIX, com entrada pelo App Flix e pelo site, navegação inspirada em consoles, até 2 perfis por conta e rankings por jogo. Em desenvolvimento: a interface roda com **dados simulados**; a API e a integração com o login do App Flix ainda não existem.
+Portal de jogos para clientes FLIX, com entrada pelo App Flix e pelo site, navegação inspirada em consoles, até 2 perfis por conta e rankings por jogo. Em desenvolvimento: interface e API funcionam localmente com **login simulado e dados fictícios**; a integração com o login do App Flix (Q02) ainda não existe.
 
 ## Por onde continuar
 
@@ -16,14 +16,14 @@ Qualquer pessoa ou IA pode continuar a próxima fase. Não há responsáveis fix
 | Pasta | O que é | Situação |
 |---|---|---|
 | `docs/` | Andamento, visão, manutenção do painel e prompt dos minigames | Fonte do estado do projeto |
-| `web/` | Interface: React + TypeScript + Vite | Funciona com dados simulados (`web/src/dados/servico.ts`) |
+| `web/` | Interface: React + TypeScript + Vite | Ligada à API (`web/src/dados/servico.ts`); catálogo G01–G15 vem do banco |
 | `api/` | Backend: Python + FastAPI + Uvicorn + PostgreSQL | Funciona localmente com login simulado e 19 testes (ver `api/LEIAME.md`) |
 | `tarefas/` | Processo separado: revalidar clientes no CRM | Ainda não criado (ver `tarefas/LEIAME.md`) |
 | `prototipo/` | Protótipo estático original (HTML/CSS/JS) | Referência; será removido quando a versão React for aprovada |
 
 ## Rodar a interface localmente
 
-Requer Node 20 ou mais novo.
+Requer Node 20 ou mais novo e a API rodando (`docker compose up -d`, ver `api/LEIAME.md`): o Vite repassa `/api` para `127.0.0.1:8000`. Em desenvolvimento, sem sessão, a interface entra sozinha na conta de teste `DEV-0001`.
 
 ```bash
 cd web

@@ -1,53 +1,61 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { iniciais, limparApelido, validarApelido } from '../dados/apelido';
-import { CONQUISTAS, JOGOS } from '../dados/catalogo';
+import { formatarPontos, tipoAparelho, vistoHa } from '../dados/formatar';
 import { servico } from '../dados/servico';
-import type { Aparelho, Perfil as TPerfil } from '../dados/tipos';
+import type { Aparelho, Jogo, Perfil as TPerfil } from '../dados/tipos';
 import { useAviso } from './Aviso';
 import { Camera, IconeAparelho, Mini, Trocar, Trofeu } from './Icones';
 
 interface Props {
+  jogos: Jogo[];
   perfil: TPerfil;
   perfis: TPerfil[];
-  onSalvar: (p: TPerfil) => Promise<void>;
+  onSalvar: (dados: { apelido?: string; oculto?: boolean }) => Promise<void>;
   onTrocarPerfil: () => void;
+  onSair: () => Promise<void>;
 }
 
-const num = (n: number) => n.toLocaleString('pt-BR');
-
-export function Perfil({ perfil, perfis, onSalvar, onTrocarPerfil }: Props) {
+export function Perfil({ jogos, perfil, perfis, onSalvar, onTrocarPerfil, onSair }: Props) {
   const avisar = useAviso();
   const [apelido, setApelido] = useState(perfil.apelido);
   const [msg, setMsg] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
-  const [aparelhos, setAparelhos] = useState<Aparelho[]>([]);
+  const [aparelhos, setAparelhos] = useState<Aparelho[] | null>(null);
 
   useEffect(() => { setApelido(perfil.apelido); setMsg(null); }, [perfil.id, perfil.apelido]);
-  useEffect(() => { servico.listarAparelhos().then(setAparelhos).catch(() => setAparelhos([])); }, []);
+  useEffect(() => { servico.aparelhos().then(setAparelhos).catch(() => setAparelhos([])); }, []);
 
-  const comRanking = JOGOS.filter((j) => j.ranking);
+  const comRanking = jogos.filter((j) => j.ranking);
   const comPosicao = comRanking.filter((j) => perfil.jogos[j.id]?.posicao);
-  const melhor = [...comPosicao].sort((a, b) => (perfil.jogos[a.id]!.posicao! - perfil.jogos[b.id]!.posicao!))[0];
-  const feitas = perfil.conquistas.filter(Boolean).length;
+  const melhor = [...comPosicao].sort((a, b) => perfil.jogos[a.id]!.posicao! - perfil.jogos[b.id]!.posicao!)[0];
+  const feitas = perfil.conquistas.filter((c) => c.feita).length;
 
   async function salvar(e: FormEvent) {
     e.preventDefault();
     const v = limparApelido(apelido);
-    const erro = validarApelido(v, perfis, perfil.id);
+    const erro = validarApelido(v, perfis, perfil.id); // ajuda rápida; quem decide é a API
     if (erro) { setMsg({ tipo: 'erro', texto: erro }); return; }
-    await onSalvar({ ...perfil, apelido: v });
-    setMsg({ tipo: 'ok', texto: 'Salvo (protótipo: só neste navegador).' });
+    try {
+      await onSalvar({ apelido: v });
+      setMsg({ tipo: 'ok', texto: 'Apelido salvo.' });
+    } catch (err) {
+      setMsg({ tipo: 'erro', texto: err instanceof Error ? err.message : 'Não foi possível salvar.' });
+    }
   }
 
   async function ocultar(valor: boolean) {
-    await onSalvar({ ...perfil, oculto: valor });
-    avisar(valor ? 'Seu perfil está oculto no ranking' : 'Seu perfil voltou a aparecer no ranking');
+    try {
+      await onSalvar({ oculto: valor });
+      avisar(valor ? 'Seu perfil está oculto no ranking' : 'Seu perfil voltou a aparecer no ranking');
+    } catch (err) { avisar(err instanceof Error ? err.message : 'Não foi possível salvar.'); }
   }
 
   async function desconectar(a: Aparelho) {
-    if (a.atual) { avisar('Protótipo: aqui sairia só deste aparelho'); return; }
-    await servico.desconectarAparelho(a.id);
-    setAparelhos((lista) => lista.filter((x) => x.id !== a.id));
-    avisar(`${a.nome} desconectado`);
+    try {
+      if (a.atual) { await onSair(); return; }
+      await servico.desconectarAparelho(a.id);
+      setAparelhos((lista) => lista?.filter((x) => x.id !== a.id) ?? null);
+      avisar(`${a.nome} desconectado`);
+    } catch (err) { avisar(err instanceof Error ? err.message : 'Não foi possível desconectar.'); }
   }
 
   return (
@@ -61,7 +69,7 @@ export function Perfil({ perfil, perfis, onSalvar, onTrocarPerfil }: Props) {
         <section className="card perfil-conta">
           <div className="perfil-foto">
             <button className="perfil-avatar" type="button" aria-label="Trocar avatar" style={{ background: perfil.cor, color: '#fff' }}
-              onClick={() => avisar('Protótipo: aqui abre a escolha de avatar')}>
+              onClick={() => avisar('Em breve: escolha do personagem')}>
               <span id="p-avatar">{iniciais(perfil.apelido)}</span>
               <span className="perfil-avatar-trocar" aria-hidden="true"><Camera />Trocar</span>
             </button>
@@ -73,8 +81,8 @@ export function Perfil({ perfil, perfis, onSalvar, onTrocarPerfil }: Props) {
             <button className="btn light gx-trocar" type="button" onClick={onTrocarPerfil}><Trocar />Trocar perfil</button>
           </div>
           <dl className="perfil-fatos">
-            <div><dt>Partidas</dt><dd>{num(perfil.partidas)}</dd></div>
-            <div><dt>Conquistas</dt><dd>{feitas} de {CONQUISTAS.length}</dd></div>
+            <div><dt>Partidas</dt><dd>{perfil.partidas.toLocaleString('pt-BR')}</dd></div>
+            <div><dt>Conquistas</dt><dd>{feitas} de {perfil.conquistas.length}</dd></div>
             <div><dt>Melhor posição</dt><dd>{melhor ? `${perfil.jogos[melhor.id]!.posicao}º · ${melhor.nome}` : '—'}</dd></div>
           </dl>
         </section>
@@ -105,7 +113,7 @@ export function Perfil({ perfil, perfis, onSalvar, onTrocarPerfil }: Props) {
                 return (
                   <li key={j.id}>
                     <Mini jogo={j} />
-                    <span><strong>{j.nome}</strong><small>{s?.posicao ? `Recorde: ${num(s.melhor ?? 0)} ${j.unidade}` : 'Ainda não jogou'}</small></span>
+                    <span><strong>{j.nome}</strong><small>{s?.posicao ? `Recorde: ${formatarPontos(s.melhor ?? 0, j.unidade)}` : 'Ainda não jogou'}</small></span>
                     <span className="gx-pos-grande">{s?.posicao ? `${s.posicao}º` : '—'}</span>
                   </li>
                 );
@@ -116,8 +124,8 @@ export function Perfil({ perfil, perfis, onSalvar, onTrocarPerfil }: Props) {
           <section className="card">
             <h3>Conquistas</h3>
             <div className="gx-conquistas">
-              {CONQUISTAS.map((c, i) => (
-                <div key={c.nome} className={'gx-conquista' + (perfil.conquistas[i] ? '' : ' bloq')}>
+              {perfil.conquistas.map((c) => (
+                <div key={c.nome} className={'gx-conquista' + (c.feita ? '' : ' bloq')}>
                   <div className="gx-conquista-ic"><Trofeu /></div>
                   <strong>{c.nome}</strong><small>{c.desc}</small>
                 </div>
@@ -129,12 +137,12 @@ export function Perfil({ perfil, perfis, onSalvar, onTrocarPerfil }: Props) {
             <h3>Aparelhos conectados</h3>
             <p className="perfil-dica">Sair desconecta só o aparelho escolhido. Os outros continuam conectados.</p>
             <ul className="aparelhos">
-              {aparelhos.map((a) => (
+              {aparelhos === null ? <li className="perfil-dica">Carregando…</li> : aparelhos.map((a) => (
                 <li key={a.id} className={'aparelho' + (a.atual ? ' atual' : '')}>
-                  <span className="aparelho-icone"><IconeAparelho tipo={a.tipo} /></span>
+                  <span className="aparelho-icone"><IconeAparelho tipo={tipoAparelho(a.nome)} /></span>
                   <span className="aparelho-texto">
                     <strong>{a.nome}{a.atual && <span className="selo-aparelho">Este aparelho</span>}</strong>
-                    <span>{a.detalhe}</span>
+                    <span>{a.atual ? 'agora' : vistoHa(a.vistoEm)}</span>
                   </span>
                   <button className="btn light aparelho-sair" type="button" onClick={() => desconectar(a)}>{a.atual ? 'Sair' : 'Desconectar'}</button>
                 </li>

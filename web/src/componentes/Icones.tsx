@@ -1,11 +1,11 @@
 import type { CSSProperties, ReactNode } from 'react';
-import type { Jogo, JogoId } from '../dados/tipos';
+import type { Jogo } from '../dados/tipos';
 
 export function Svg({ children }: { children: ReactNode }) {
   return <svg viewBox="0 0 24 24" aria-hidden="true">{children}</svg>;
 }
 
-const ICONES: Record<JogoId, ReactNode> = {
+const DESENHOS: Record<string, ReactNode> = {
   voo: <><path d="M4 13c3-5 8-6 12-4l4-2-1 4c0 4-4 7-9 7-3 0-5-1-6-2l3-1c-2 0-3-1-3-2z" /><circle cx="15" cy="10" r="1.2" fill="#000" /></>,
   labirinto: <path d="M3 3h18v18H3zm3 3v12h12V6zm3 3h6v6H9z" fillRule="evenodd" />,
   soma: <path d="M3 3h8v8H3zm10 0h8v8h-8zM3 13h8v8H3zm10 0h8v8h-8z" opacity=".95" />,
@@ -14,14 +14,22 @@ const ICONES: Record<JogoId, ReactNode> = {
   corrida: <path d="M13 4a2 2 0 1 1 0 .01zM8 21l3-7 3 2v5h2v-6l-3-3 1-3c1 2 3 3 5 3v-2c-2 0-3-1-4-3l-1-1c-1 0-2 0-3 1L7 10v4h2v-3l2-1-4 11z" />,
   paciencia: <path d="M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm5 4c-2 2-4 3-4 5a2 2 0 0 0 3.5 1.3L11 16h2l-.5-2.7A2 2 0 0 0 16 12c0-2-2-3-4-5z" />,
   memoria: <><path d="M3 5h8v14H3zm10 0h8v14h-8z" opacity=".95" /><path d="M7 10l1 2-1 2-1-2zm10 0l1 2-1 2-1-2z" fill="#000" /></>,
+  golfe: <><path d="M11 3v15h2V9l6-3-6-3z" /><ellipse cx="12" cy="20" rx="6" ry="1.6" /></>,
+  bola: <><circle cx="12" cy="12" r="8" /><path d="M12 7l3 2-1 4h-4l-1-4z" fill="#000" opacity=".55" /></>,
 };
 
-export const IconeJogo = ({ id }: { id: JogoId }) => <Svg>{ICONES[id]}</Svg>;
+// Desenho de cada jogo do catálogo (G01–G15). Jogo novo sem desenho usa 'blocos'.
+const DESENHO_DO_JOGO: Record<string, string> = {
+  g01: 'corrida', g02: 'voo', g03: 'cobrinha', g04: 'soma', g05: 'labirinto', g06: 'golfe', g07: 'blocos', g08: 'labirinto',
+  g09: 'soma', g10: 'blocos', g11: 'labirinto', g12: 'corrida', g13: 'bola', g14: 'memoria', g15: 'bola',
+};
+
+export const IconeJogo = ({ id }: { id: string }) => <Svg>{DESENHOS[DESENHO_DO_JOGO[id] ?? 'blocos']}</Svg>;
 
 /** Quadradinho colorido com o ícone do jogo */
 export function Mini({ jogo }: { jogo: Jogo }) {
   return (
-    <span className="gx-mini" style={{ '--t1': jogo.c1, '--t2': jogo.c2 } as CSSProperties}>
+    <span className="gx-mini" style={{ '--t1': jogo.cor1, '--t2': jogo.cor2 } as CSSProperties}>
       <IconeJogo id={jogo.id} />
     </span>
   );
