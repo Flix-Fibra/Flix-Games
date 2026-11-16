@@ -16,7 +16,8 @@
   "hairStyles": [
     "h01_short",
     "h02_long",
-    "h03_spiky"
+    "h03_spiky",
+    "h04_curly"
   ],
   "tops": [
     "t01_tee",
@@ -48,12 +49,12 @@
     "clothColor": "c01"
   },
   "labels": {
-    "b01": "Corpo A",
-    "b02": "Corpo B",
-    "e01": "Olhos 1",
-    "e02": "Olhos 2",
-    "m01": "Boca 1",
-    "m02": "Boca 2",
+    "b01": "Masculino",
+    "b02": "Feminino",
+    "e01": "Olhos abertos",
+    "e02": "Olhos felizes",
+    "m01": "Sorriso",
+    "m02": "Sorriso aberto",
     "h01_short": "Curto",
     "h02_long": "Longo",
     "h03_spiky": "Espetado",
@@ -62,7 +63,8 @@
     "p01_pants": "Calça",
     "s01_sneaker": "Tênis",
     "hat01_cap": "Boné",
-    "flix_tech": "Técnico Flix"
+    "flix_tech": "Técnico Flix",
+    "h04_curly": "Cacheado"
   },
   "_nota_labels": "Nomes mostrados no editor do portal (hub). Peça nova no catálogo: acrescentar o nome aqui."
 }

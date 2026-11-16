@@ -87,7 +87,7 @@ export function Editor({ perfil, onSalvo, onFechar }: Props) {
 
       <div className="gx-av-corpo">
         <div className="gx-av-palco">
-          <Previa avatar={av} cat={cat} tamanho={180} />
+          <Previa avatar={av} cat={cat} tamanho={300} />
         </div>
 
         <div className="gx-av-painel">
@@ -172,7 +172,7 @@ export function Editor({ perfil, onSalvo, onFechar }: Props) {
                 </div>
               </>
             )}
-            {cat.provisorio && <p className="perfil-dica">Este é o personagem como aparece nos jogos. A arte final está sendo desenhada; suas escolhas já ficam salvas.</p>}
+            {cat.provisorio && <p className="perfil-dica">Escolha Masculino ou Feminino na aba Pele e monte o seu personagem.</p>}
           </div>
       </div>
 

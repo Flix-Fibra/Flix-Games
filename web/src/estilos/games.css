@@ -35,8 +35,9 @@ header.rolado{--ink:#F5F5F7;--muted:#A1A1A6;--hover:rgba(255,255,255,.1);--line:
 header.rolado::before{background:rgba(11,11,13,.8);border-bottom-color:rgba(255,255,255,.1);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px)}
 :root[data-theme=dark] header.rolado::before{background:rgba(11,11,13,.5)}
 .barra{max-width:1550px;margin:0 auto;padding:0 16px;height:56px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;color:var(--ink)}
-.marca{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:0;padding:4px;border-radius:10px}
-.marca img{height:26px;width:auto;display:block}
+.marca{display:flex;flex-direction:row;align-items:center;gap:9px;background:none;border:0;padding:4px;border-radius:10px;color:#F5F5F7}
+.marca img{height:30px;width:auto;display:block}
+.marca .logo-games{display:block;color:var(--ink)}
 .marca span{font-size:10px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);line-height:1}
 .acoes{justify-self:end;display:flex;align-items:center;gap:10px}
 .avatar{width:34px;height:34px;border-radius:50%;border:0;padding:0;background:#D2232A;color:#fff;font-size:12px;font-weight:600;display:inline-grid;place-items:center}
@@ -334,10 +335,79 @@ main{padding-bottom:16px}
 .gx-av-item.ativo{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .gx-av-item:disabled{opacity:.4}
 .gx-av-rodape{display:grid;grid-template-columns:1fr 1.4fr;gap:10px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--bg)}
-.perfil-avatar #p-avatar canvas{width:100%!important;height:100%!important}
+.perfil-avatar #p-avatar svg{width:100%!important;height:100%!important}
 @media (min-width:900px){
   .gx-av-corpo{grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:28px;padding:0 32px 24px;max-width:1100px;margin:0 auto;width:100%}
   .gx-av-palco{position:sticky;top:0}
   .gx-av-rodape{grid-template-columns:auto auto;justify-content:end}
 }
 
+
+/* ---------- Foco estilo PS5 na fileira de jogos ---------- */
+.gx-tile{overflow:visible;transition:width .35s var(--ease),height .35s var(--ease),box-shadow .35s,transform .25s var(--ease)}
+/* capa em foco: contorno branco com brilho na cor do jogo, e um reflexo de luz que atravessa a capa */
+.gx-tile.ativo{box-shadow:0 0 0 3px #fff,0 0 22px 4px color-mix(in srgb,var(--t1) 70%,transparent),0 14px 30px rgba(0,0,0,.45);animation:gx-foco .45s var(--ease)}
+.gx-tile::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;
+  background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.45) 50%,transparent 65%);background-size:250% 100%;background-position:120% 0}
+.gx-tile.ativo::before{animation:gx-reflexo .75s .12s var(--ease) both}
+.gx-tile.ativo svg{animation:gx-pulo .45s var(--ease)}
+@keyframes gx-foco{0%{transform:scale(.94)}60%{transform:scale(1.04)}100%{transform:scale(1)}}
+@keyframes gx-reflexo{0%{opacity:1;background-position:120% 0}100%{opacity:1;background-position:-30% 0}}
+@keyframes gx-pulo{0%{transform:scale(1)}40%{transform:scale(1.18) translateY(-3px)}100%{transform:scale(1.08)}}
+/* com mouse: as outras capas sobem um pouco ao passar por cima */
+@media (hover:hover){
+  .gx-tile:not(.ativo):hover{transform:translateY(-5px);box-shadow:0 0 0 2px rgba(255,255,255,.55),0 16px 28px rgba(0,0,0,.45)}
+}
+/* nome e descrição entram suavemente quando o jogo muda */
+.gx-hero{animation:gx-hero .4s var(--ease) both}
+@keyframes gx-hero{from{opacity:0;transform:translateX(-12px)}}
+
+/* ---------- Barra de rolagem: invisível parada; fina e discreta só enquanto rola ---------- */
+html{scrollbar-width:none}
+html::-webkit-scrollbar{width:0;height:0;background:transparent}
+html.rolando{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.35) transparent}
+html.rolando::-webkit-scrollbar{width:6px}
+html.rolando::-webkit-scrollbar-thumb{background:rgba(255,255,255,.35);border-radius:6px}
+html.rolando::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- Editor Universal LPC ---------- */
+.lpc-palco{gap:12px}
+.lpc-previa{display:block;background:radial-gradient(circle at 50% 60%,rgba(255,255,255,.07),transparent 70%);border-radius:24px}
+.lpc-girar{display:flex;align-items:center;gap:10px}
+.lpc-girar .btn{min-height:40px;padding:6px 14px;border-radius:99px;font-size:18px}
+.lpc-acoes{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:min(320px,100%)}
+.lpc-acoes .btn{min-height:42px;border-radius:12px}
+.lpc-acoes .btn[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+.lpc-no{display:grid;gap:6px}
+.lpc-filhos{display:grid;gap:6px;padding:4px 0 8px 10px;border-left:2px solid var(--line);margin-left:6px}
+.lpc-sub,.lpc-cab{display:flex;align-items:center;gap:10px;width:100%;min-height:42px;padding:6px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card);
+  font-weight:600;font-size:14px;text-align:left;cursor:pointer;transition:background .2s}
+.lpc-sub::after,.lpc-cab::after{content:"▸";margin-left:auto;color:var(--muted);transition:transform .2s}
+.lpc-sub.aberto::after,.lpc-cab.aberto::after{transform:rotate(90deg)}
+.lpc-cab.escolhido{border-color:var(--red);box-shadow:0 0 0 1px var(--red)}
+.lpc-cab.com-mini{padding:4px 12px 4px 4px}
+.lpc-item{display:grid;gap:8px}
+.lpc-grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
+.lpc-op{display:grid;justify-items:center;gap:4px;padding:6px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-size:11px;font-weight:600;cursor:pointer}
+.lpc-op span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lpc-op.texto{justify-items:start;padding:10px 12px;font-size:13px}
+.lpc-op.ativo{border-color:var(--red);box-shadow:0 0 0 2px var(--red);background:rgba(var(--red-rgb),.1)}
+.lpc-mini{width:64px;height:64px;image-rendering:pixelated;border-radius:8px;background:rgba(255,255,255,.05)}
+.lpc-paleta h5{margin:6px 0;font-size:12px;color:var(--muted)}
+.lpc-paleta>div{display:grid;gap:6px;margin-bottom:6px}
+.lpc-cores{display:grid;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:6px}
+.lpc-cor{padding:3px;border-radius:10px;border:1px solid var(--line);background:var(--card);cursor:pointer}
+.lpc-cor span{display:block;height:26px;border-radius:7px}
+.lpc-cor.ativo{box-shadow:0 0 0 2px var(--red);border-color:var(--red)}
+.lpc-creditos ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.lpc-creditos li{display:grid;gap:2px;padding:10px 12px;border-radius:12px;background:var(--card);border:1px solid var(--line);font-size:13px}
+.lpc-creditos a{color:var(--red)}
+.perfil-avatar #p-avatar canvas{width:100%!important;height:100%!important;image-rendering:pixelated}
+
+/* ---------- Créditos e Licenças ---------- */
+.creditos a{color:var(--red)}
+.creditos .btn.light{display:inline-flex;align-items:center;color:var(--ink);text-decoration:none}
+.creditos-lic{margin:6px 0 10px;padding-left:18px;display:grid;gap:4px;font-size:14px}
+.creditos-autores{font-size:13px;line-height:1.6;color:var(--ink)}
+.creditos code{font-size:12px;padding:1px 5px;border-radius:5px;background:var(--hover)}
+.gx-aviso-prototipo a{color:inherit;text-decoration:underline}

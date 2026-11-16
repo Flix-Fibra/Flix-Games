@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ProvedorAviso, useAviso } from './componentes/Aviso';
+import { Creditos } from './componentes/Creditos';
 import { Inicio } from './componentes/Inicio';
 import { Jogando } from './componentes/Jogando';
 import { Perfil } from './componentes/Perfil';
@@ -9,7 +10,7 @@ import { Topo } from './componentes/Topo';
 import { ErroApi, servico } from './dados/servico';
 import type { Aba, Jogo, Perfil as TPerfil } from './dados/tipos';
 
-const ABAS: Aba[] = ['inicio', 'ranking', 'perfil'];
+const ABAS: Aba[] = ['inicio', 'ranking', 'perfil', 'creditos'];
 
 type Carga =
   | { estado: 'carregando' }
@@ -140,6 +141,7 @@ function Portal() {
                     onVerRanking={(j) => { setRankingJogo(j.id); irPara('ranking'); }} onJogar={setJogando} />
                 )}
                 {aba === 'ranking' && <Ranking jogos={jogos} perfil={perfil} jogoId={rankingJogo} onJogo={setRankingJogo} />}
+                {aba === 'creditos' && <Creditos />}
                 {aba === 'perfil' && (
                   <Perfil jogos={jogos} perfil={perfil} perfis={perfis} onSalvar={salvar}
                     onTrocarPerfil={() => setQuemAberto(true)} onSair={sair} onAtualizado={trocarPerfil} />
@@ -147,7 +149,9 @@ function Portal() {
               </>
             )}
           </main>
-          {import.meta.env.DEV && <p className="gx-aviso-prototipo">Desenvolvimento · conta de teste e dados fictícios</p>}
+          <p className="gx-aviso-prototipo">
+            <a href="#creditos">Créditos e Licenças</a> · código-fonte sob GPL-3.0{import.meta.env.DEV && ' · desenvolvimento: conta de teste e dados fictícios'}
+          </p>
         </>
       )}
       {jogando && perfil && <Jogando jogo={jogando} avatar={perfil.avatar} onFechar={fecharJogo} />}

@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { iniciais } from '../dados/apelido';
 import type { Aba, Perfil } from '../dados/tipos';
 import { Barras, Casa, Pessoa } from './Icones';
+import { LogoGames } from './LogoGames';
 
 interface Props {
   aba: Aba;
@@ -39,7 +40,7 @@ export function Topo({ aba, perfil, onAba, onTrocarPerfil }: Props) {
       <div className="barra">
         <button className="marca" onClick={() => onAba('inicio')} aria-label="Flix Games, início">
           <img src="/logo-flix-chapada.png" alt="Flix" width={218} height={84} />
-          <span>Games</span>
+          <LogoGames altura={13} />
         </button>
         <nav className="gx-nav" aria-label="Seções">
           {ITENS.map(({ aba: a, rotulo, Icone }) => (

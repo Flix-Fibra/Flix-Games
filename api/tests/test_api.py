@@ -221,3 +221,35 @@ def test_personagem_com_peca_retirada_volta_como_padrao(app_ativo):
     c, pid = com_perfil(app_ativo, "Antigo")
     sql("UPDATE perfis SET avatar = %s::jsonb WHERE id = %s", '{"v": 1, "body": {"type": "corpo-a"}}', pid)
     assert c.get("/api/sessao").json()["perfis"][0]["avatar"] is None
+
+
+# ---------- Personagem do editor Universal LPC ----------
+LPC_OK = {
+    "v": 2, "motor": "lpc", "bodyType": "female",
+    "selections": {
+        "body": {"itemId": "body", "name": "Body color (light)", "variant": "", "recolor": "light"},
+        "head": {"itemId": "heads_human_male", "name": "Human Male (light)", "variant": "", "recolor": "light"},
+        "expression": {"itemId": "face_neutral", "name": "Neutral (light)", "variant": "", "recolor": "light"},
+    },
+}
+
+
+def test_salva_personagem_lpc(app_ativo):
+    c, pid = com_perfil(app_ativo, "Pixelado")
+    r = c.put(f"/api/perfis/{pid}/personagem", json=LPC_OK)
+    assert r.status_code == 200, r.text
+    assert r.json()["personagem"]["selections"]["body"]["recolor"] == "light"
+
+
+def test_personagem_lpc_recusa_peca_fora_da_licenca_ou_corpo(app_ativo):
+    c, pid = com_perfil(app_ativo, "Recusado")
+    import copy
+    ruins = []
+    p = copy.deepcopy(LPC_OK); p["selections"]["feet"] = {"itemId": "feet_slippers", "name": "x", "variant": "", "recolor": ""}; ruins.append(p)  # licença fora
+    p = copy.deepcopy(LPC_OK); p["bodyType"] = "muscular"; ruins.append(p)                     # corpo base só CC-BY-SA/GPL
+    p = copy.deepcopy(LPC_OK); p["selections"]["body"]["recolor"] = "#ff0000"; ruins.append(p)  # cor livre
+    p = copy.deepcopy(LPC_OK); p["selections"]["body"]["itemId"] = "nao_existe"; ruins.append(p)
+    p = copy.deepcopy(LPC_OK); p["selections"]["head"]["name"] = "<script>"; ruins.append(p)
+    p = copy.deepcopy(LPC_OK); p["extra"] = 1; ruins.append(p)
+    for corpo in ruins:
+        assert c.put(f"/api/perfis/{pid}/personagem", json=corpo).status_code == 422, corpo

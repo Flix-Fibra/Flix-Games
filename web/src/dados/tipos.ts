@@ -1,6 +1,7 @@
 // Formatos devolvidos pela API (api/app). Mudou lá, muda aqui.
+import type { PersonagemLpc } from '../lpc/motor';
 
-export type Aba = 'inicio' | 'ranking' | 'perfil';
+export type Aba = 'inicio' | 'ranking' | 'perfil' | 'creditos';
 
 export interface Jogo {
   id: string;            // g01..g15
@@ -36,6 +37,7 @@ export interface Perfil {
   cor: string;
   oculto: boolean;
   avatar: AvatarConfig | null; // null = personagem padrão
+  personagem: PersonagemLpc | null; // editor Universal LPC (configuração para reconstruir)
   desde: string;         // MM/AAAA
   partidas: number;
   nivel: number;
