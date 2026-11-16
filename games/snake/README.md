@@ -16,7 +16,9 @@ O jogo é desenhado em 540x960 (mesma proporção do cenário do gestor) e escal
 
 | O que mudar | Onde |
 |---|---|
-| Cenário (fundo em tela cheia com moldura e cidade) | `public/img/cenario.jpg`; painel escuro e grade do campo (de borda a borda) em `PANEL`, `src/theme.ts` |
+| Fundo (painel escuro com grade na tela inteira) e tamanho do campo | `PANEL`, `CELL`, `FIELD_Y`, `FIELD_ROWS`, `src/theme.ts`; `buildScenery` em `src/scenes/PlayScene.ts` |
+| Topo: céu e cidade (o menu fica por cima) | `public/img/ceu.jpg` e `public/img/cidade.png`; montagem em `buildScenery` |
+| Rodapé (calçada, arbustos, carretel, van da Flix e cones) | `public/img/rodape.png` |
 | Menu superior (avatar, SCORE, TEMPO com relógio, NÍVEL com barras verdes) | `buildHud` em `src/scenes/PlayScene.ts`; posições e tamanhos em `HUD`, `src/theme.ts` |
 | Cobra: cabeça, segmentos do corpo e cauda (azul normal; `cobra_metal_*` é a vermelha do ponto extra) | `public/img/cobra_azul_*` e `cobra_metal_*`; tamanho em `BODY_H`, `HEAD_FRONT`, `TAIL_BACK` (`theme.ts`); montagem em `updateSnake` (`PlayScene.ts`) |
 | Itens de pontuação (casa, antena, CPE, caixa de fibra, roteador, switch) | `public/img/` e a lista `FOOD_ITEMS` (`theme.ts`), que também define o tamanho de cada um |
@@ -27,7 +29,7 @@ O jogo é desenhado em 540x960 (mesma proporção do cenário do gestor) e escal
 | Onda vermelha, LEVEL UP, HUD | `src/scenes/PlayScene.ts` |
 | Menu e tela de fim; botão e fundo | `src/scenes/MenuScene.ts`, `GameOverScene.ts`, `src/ui.ts` |
 | Sons | `src/audio.ts` (notas geradas por WebAudio) |
-| Regras, pontos, velocidade, duração, tamanho do campo | `src/logic.ts` |
+| Regras, pontos, velocidade, duração, tempo extra por item (`ITEM_BONUS_MS`), tamanho do campo | `src/logic.ts` |
 
 ## Trocar ou atualizar as imagens
 As originais do gestor ficam fora do Git. Para refazer os arquivos otimizados a partir da pasta “Network Snake”:

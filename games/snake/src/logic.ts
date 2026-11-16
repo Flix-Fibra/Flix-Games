@@ -16,9 +16,11 @@ export type Cause = 'self' | 'obstacle' | 'timeout';
 export type StepEvent = 'none' | 'item' | 'signal' | 'crash';
 
 export const COLS = 15;
-export const ROWS = 18;
+export const ROWS = 20;
 export const ROUND_MS = 120_000;
 export const BASE_POINTS = 10;
+/** Tempo extra ganho a cada item conectado. */
+export const ITEM_BONUS_MS = 5000;
 export const MAX_LEVEL = 10;
 /** Tipos de item de pontuação (casa, antena, CPE, caixa de fibra, roteador, switch). O globo não é comida: é o bônus. */
 export const FOOD_KINDS = 6;
@@ -78,11 +80,11 @@ const cellsOf = (b: Bar): Pt[] => Array.from({ length: b.len }, (_, i) => (b.ver
 const h = (x: number, y: number, len = 3): Bar => ({ x, y, len, vertical: false });
 const v = (x: number, y: number, len = 3): Bar => ({ x, y, len, vertical: true });
 
-/** Layouts de muro (um é sorteado por partida). Todos deixam livre a faixa do meio, onde o cabo começa (linhas 7 a 11). */
+/** Layouts de muro (um é sorteado por partida). Todos deixam livre a faixa do meio, onde o cabo começa (linhas 8 a 12). */
 export const MAP_BARS: readonly (readonly Bar[])[] = [
-  [h(2, 3), h(10, 3), h(2, 14), h(10, 14)],
-  [v(2, 2), v(12, 2), v(2, 13), v(12, 13)],
-  [h(1, 2), h(11, 2), h(1, 15), h(11, 15), v(7, 3), v(7, 12)],
+  [h(2, 3), h(10, 3), h(2, 16), h(10, 16)],
+  [v(2, 2), v(12, 2), v(2, 15), v(12, 15)],
+  [h(1, 2), h(11, 2), h(1, 17), h(11, 17), v(7, 3), v(7, 14)],
 ];
 export const MAPS: readonly Pt[][] = MAP_BARS.map((bars) => bars.flatMap(cellsOf));
 
@@ -137,9 +139,9 @@ export function nextFoodKind(previous: number, rng: Rng): number {
 export function createState(rng: Rng): GameState {
   const idx = Math.floor(rng() * MAPS.length);
   const map = MAPS[idx] ?? MAPS[0] ?? [];
-  const snake: Pt[] = Array.from({ length: START_LENGTH }, (_, i) => ({ x: 9 - i, y: 9 }));
+  const snake: Pt[] = Array.from({ length: START_LENGTH }, (_, i) => ({ x: 9 - i, y: 10 }));
   const partial = { snake, obstacles: map.map((p) => ({ ...p })), food: { x: -1, y: -1 }, signal: null };
-  const food = freeCell(partial, rng, snake[0], 4) ?? { x: 14, y: 9 };
+  const food = freeCell(partial, rng, snake[0], 4) ?? { x: 14, y: 10 };
   return {
     snake,
     dir: 'right',

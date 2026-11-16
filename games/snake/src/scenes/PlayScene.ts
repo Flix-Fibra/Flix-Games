@@ -3,14 +3,14 @@ import type { Expression } from '@flix/avatar';
 import type { HubBridge } from '@flix/game-sdk';
 import { sfx } from '../audio';
 import {
-  COLS, ROUND_MS, ROWS, createState, enqueueDir, levelFor, mulberry32, step, tickMs, type Cause, type Dir, type GameState, type Pt,
+  COLS, ITEM_BONUS_MS, ROUND_MS, ROWS, createState, enqueueDir, levelFor, mulberry32, step, tickMs, type Cause, type Dir, type GameState, type Pt,
 } from '../logic';
 import { buildTrack, endDirection, lerp, roundedPath, sampleTrack, type V } from '../cablePath';
 import { loadBest } from '../storage';
 import {
   BODY_H, CELL, COLORS, FIELD_X, FIELD_Y, FONT, FONT_TEXT, FOOD_ITEMS, GAME_H, GAME_W, HEAD_FRONT, HUD, PANEL, SIGNAL_ITEM, SPRITE_K, TAIL_BACK, TUBE,
 } from '../theme';
-import { drawBackground, ensureGlowTexture, titleText } from '../ui';
+import { ensureGlowTexture, titleText } from '../ui';
 import { portraitKey } from './BootScene';
 
 const READY_MS = 800;
@@ -39,6 +39,8 @@ export class PlayScene extends Phaser.Scene {
   private bridge!: HubBridge;
   private runId = '';
   private elapsed = 0;
+  /** Tempo extra acumulado (5 s por item conectado). */
+  private bonusMs = 0;
   private acc = 0;
   private readyLeft = READY_MS;
   private over = false;
@@ -82,6 +84,7 @@ export class PlayScene extends Phaser.Scene {
     this.state = createState(mulberry32(Math.floor(Math.random() * 2 ** 32)));
     this.runId = this.bridge.newRunId();
     this.elapsed = 0;
+    this.bonusMs = 0;
     this.acc = 0;
     this.readyLeft = READY_MS;
     this.over = false;
@@ -92,7 +95,7 @@ export class PlayScene extends Phaser.Scene {
     this.waves = [];
     this.shownKind = -1;
 
-    this.cameras.main.setBackgroundColor(COLORS.background);
+    this.cameras.main.setBackgroundColor(COLORS.panel);
     this.buildScenery();
     this.buildObstacles();
     this.buildFood();
@@ -157,8 +160,8 @@ export class PlayScene extends Phaser.Scene {
     }
 
     this.elapsed += delta;
-    if (this.elapsed >= ROUND_MS) {
-      this.elapsed = ROUND_MS;
+    if (this.elapsed >= ROUND_MS + this.bonusMs) {
+      this.elapsed = ROUND_MS + this.bonusMs;
       this.finish('timeout');
       this.render();
       return;
@@ -193,6 +196,8 @@ export class PlayScene extends Phaser.Scene {
     sfx('house');
     this.setExpression('happy', 600);
     this.headPulse = 1;
+    this.bonusMs += ITEM_BONUS_MS;
+    this.showTimeBonus();
     const head = s.snake[0];
     if (head) {
       this.floatText(cellX(head.x) + CELL / 2, cellY(head.y), `+${s.lastGain}`);
@@ -203,6 +208,15 @@ export class PlayScene extends Phaser.Scene {
       this.lastLevel = level;
       this.showLevelUp(level);
     }
+  }
+
+  /** “+5s” sobe da caixa de tempo quando um item dá tempo extra. */
+  private showTimeBonus(): void {
+    const x = HUD.time.x;
+    const y = HUD.boxY + 34;
+    const t = titleText(this, x, y, `+${ITEM_BONUS_MS / 1000}s`, 30, '#8CFF9A', '#0a4a1a').setDepth(DEPTH_TEXT);
+    this.tweens.add({ targets: t, y: y + 34, alpha: 0, duration: 900, ease: 'Sine.easeOut', onComplete: () => t.destroy() });
+    this.tweens.add({ targets: this.timeText, scale: { from: 1.25, to: 1 }, duration: 260, ease: 'Back.easeOut' });
   }
 
   private floatText(x: number, y: number, text: string): void {
@@ -233,7 +247,7 @@ export class PlayScene extends Phaser.Scene {
       runId: this.runId,
       score: s.score,
       durationMs: this.elapsed,
-      meta: { items: s.eaten, level: levelFor(s.eaten), cause },
+      meta: { items: s.eaten, level: levelFor(s.eaten), bonusMs: this.bonusMs, cause },
     });
 
     const result = { score: s.score, items: s.eaten, cause, previousBest: loadBest(), expression: crashed || s.eaten === 0 ? 'sad' : 'happy' };
@@ -330,20 +344,27 @@ export class PlayScene extends Phaser.Scene {
 
   // ---------- construção da cena ----------
 
-  /** Cenário do gestor em tela cheia; sobre a área quadriculada vai um painel escuro com a grade do jogo. */
+  /**
+   * Fundo: no topo, o céu com a cidade na frente (o menu fica por cima dos dois); abaixo, o painel escuro com a grade
+   * do jogo e, no fim da tela, o rodapé do gestor (calçada, arbustos, van e cones).
+   */
   private buildScenery(): void {
-    drawBackground(this);
-    const bg = this.add.image(GAME_W / 2, GAME_H / 2, 'cenario').setDepth(0);
-    bg.setDisplaySize(GAME_W, GAME_H);
+    const sky = this.add.image(GAME_W / 2, 0, 'ceu').setOrigin(0.5, 0).setDepth(0);
+    sky.setDisplaySize(GAME_W, FIELD_Y);
+    const city = this.add.image(GAME_W / 2, FIELD_Y, 'cidade').setOrigin(0.5, 1).setDepth(0.5);
+    city.setScale(GAME_W / city.width);
 
     const g = this.add.graphics().setDepth(DEPTH_PANEL);
     g.fillStyle(COLORS.panel, 1);
-    g.fillRoundedRect(PANEL.x, PANEL.y, PANEL.w, PANEL.h, PANEL.radius);
+    g.fillRect(PANEL.x, PANEL.y, PANEL.w, PANEL.h);
     g.lineStyle(1.5, COLORS.panelGrid, 1);
     const w = COLS * CELL;
     const h = ROWS * CELL;
     for (let x = 0; x <= COLS; x++) g.lineBetween(cellX(x), FIELD_Y, cellX(x), FIELD_Y + h);
     for (let y = 0; y <= ROWS; y++) g.lineBetween(FIELD_X, cellY(y), FIELD_X + w, cellY(y));
+
+    const foot = this.add.image(GAME_W / 2, GAME_H, 'rodape').setOrigin(0.5, 1).setDepth(DEPTH_PANEL + 0.5);
+    foot.setScale(GAME_W / foot.width);
   }
 
   /** Muros: uma cerca de madeira com flores (asset do gestor) por trecho reto; nos trechos horizontais ela é girada. */
@@ -402,7 +423,7 @@ export class PlayScene extends Phaser.Scene {
   private buildHud(): void {
     const pl = HUD.plate;
     const g = this.add.graphics().setDepth(DEPTH_HUD);
-    g.fillStyle(0x1b1e26, 1);
+    g.fillStyle(0x10131b, 0.5); // translúcido: dá para ver o céu e a cidade atrás do menu
     g.fillRoundedRect(pl.x, pl.y, pl.w, pl.h, pl.radius);
     g.lineStyle(10, 0xd4142c, 0.3);
     g.strokeRoundedRect(pl.x, pl.y, pl.w, pl.h, pl.radius);
@@ -411,7 +432,7 @@ export class PlayScene extends Phaser.Scene {
 
     // quadro do avatar
     const a = HUD.avatar;
-    g.fillStyle(0x12141a, 1);
+    g.fillStyle(0x0b0d12, 0.62);
     g.fillRoundedRect(a.x - a.size / 2, a.y - a.size / 2, a.size, a.size, 18);
     g.lineStyle(5, 0xe8283f, 1);
     g.strokeRoundedRect(a.x - a.size / 2, a.y - a.size / 2, a.size, a.size, 18);
@@ -419,7 +440,7 @@ export class PlayScene extends Phaser.Scene {
 
     // caixas de valor
     const box = (cx: number) => {
-      g.fillStyle(0x0f1116, 1);
+      g.fillStyle(0x080a0f, 0.7);
       g.fillRoundedRect(cx - HUD.boxW / 2, HUD.boxY - HUD.boxH / 2, HUD.boxW, HUD.boxH, 16);
       g.lineStyle(2, 0x7a8294, 1);
       g.strokeRoundedRect(cx - HUD.boxW / 2, HUD.boxY - HUD.boxH / 2, HUD.boxW, HUD.boxH, 16);
@@ -433,7 +454,7 @@ export class PlayScene extends Phaser.Scene {
 
     const label = (cx: number, text: string, iconWidth: number): number => {
       const t2 = this.add
-        .text(cx + iconWidth / 2, HUD.labelY, text, { fontFamily: FONT, fontSize: '21px', color: '#FFFFFF', stroke: '#06101f', strokeThickness: 4 })
+        .text(cx + iconWidth / 2, HUD.labelY, text, { fontFamily: FONT, fontSize: '21px', color: '#FFFFFF', stroke: '#06101f', strokeThickness: 6 })
         .setOrigin(0.5)
         .setResolution(2)
         .setDepth(DEPTH_HUD + 1);
@@ -474,7 +495,7 @@ export class PlayScene extends Phaser.Scene {
     this.levelText = value(HUD.level.x).setText('1');
 
     this.boostText = this.add
-      .text(GAME_W / 2, FIELD_Y - 13, '', { fontFamily: FONT, fontSize: '22px', color: '#FF7A88', stroke: '#2a0008', strokeThickness: 5 })
+      .text(GAME_W / 2, FIELD_Y - 10, '', { fontFamily: FONT, fontSize: '22px', color: '#FF7A88', stroke: '#2a0008', strokeThickness: 5 })
       .setOrigin(0.5)
       .setResolution(2)
       .setDepth(DEPTH_HUD + 1);
@@ -489,7 +510,7 @@ export class PlayScene extends Phaser.Scene {
 
     this.scoreText.setText(String(s.score));
     this.levelText.setText(String(levelFor(s.eaten)));
-    const sec = Math.ceil(Math.max(0, ROUND_MS - this.elapsed) / 1000);
+    const sec = Math.ceil(Math.max(0, ROUND_MS + this.bonusMs - this.elapsed) / 1000);
     this.timeText.setText(`${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`);
     this.timeText.setColor(sec <= 10 ? COLORS.flixRedText : '#FFFFFF');
     this.boostText.setText(s.boostLeft > 0 ? 'PONTO EXTRA x2' : '');

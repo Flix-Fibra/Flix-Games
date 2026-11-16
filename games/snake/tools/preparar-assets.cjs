@@ -84,10 +84,13 @@ async function recortarConteudo(arquivo, saida, largura, limiar = 200) {
   await aparar(achar('Casa com Telhado'), 'casa.png', 192);
   await aparar(achar('Globo digital'), 'globo.png', 256);
   await aparar(achar('Logo FLIX Network Snake'), 'logo.png', 720);
-  // cenário (tela cheia, sem transparência): JPEG leve na proporção 9:16 do jogo
-  const cen = await sharp(achar('Painel Flix')).resize(1080, 1920, { fit: 'cover' }).jpeg({ quality: 82, mozjpeg: true }).toBuffer();
-  fs.writeFileSync(path.join(destino, 'cenario.jpg'), cen);
-  console.log('cenario.jpg'.padEnd(26), '1080x1920', Math.round(cen.length / 1024) + ' KB');
+  // rodapé: calçada, arbustos, carretel, van da Flix e cones (faixa larga e baixa; recortada pelo conteúdo sólido)
+  await recortarConteudo(achar('287A7E47'), 'rodape.png', 1000, 60);
+  // topo: o céu (fundo, cortado na proporção da faixa de cima, 540x148) e a cidade (por cima do céu)
+  const ceu = await sharp(achar('DE2D51E8')).resize(1080, 296, { fit: 'cover', position: 'north' }).jpeg({ quality: 80, mozjpeg: true }).toBuffer();
+  fs.writeFileSync(path.join(destino, 'ceu.jpg'), ceu);
+  console.log('ceu.jpg'.padEnd(26), '1080x296', Math.round(ceu.length / 1024) + ' KB');
+  await recortarConteudo(achar('2B72D523'), 'cidade.png', 1080, 60);
   await recortarConteudo(achar('Cerca de Madeira'), 'muro.png', 140); // muro: cerca vertical (girada nos trechos horizontais)
   await aparar(achar('Antena parabo'), 'item_antena.png', 160);
   await aparar(achar('CPE Wireless'), 'item_cpe.png', 120);

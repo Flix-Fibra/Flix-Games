@@ -20,7 +20,7 @@ describe('mapas', () => {
         expect(p.x).toBeLessThan(COLS);
         expect(p.y).toBeGreaterThanOrEqual(0);
         expect(p.y).toBeLessThan(ROWS);
-        expect(p.y >= 7 && p.y <= 11).toBe(false);
+        expect(p.y >= 8 && p.y <= 12).toBe(false);
       }
     }
   });

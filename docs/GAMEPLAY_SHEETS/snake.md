@@ -4,19 +4,19 @@ Observador: a definir      Revisor: a definir      Data: 16/11/2026
 Observação: rascunho feito a partir do conceito genérico do gênero (seção 10.3 do prompt). Falta o observador jogar uma referência no celular e a segunda pessoa revisar.
 
 ## 1. Loop principal
-O jogador guia um cabo de rede, com conector RJ45 nas duas pontas, por uma grade. O cabo anda sozinho; o jogador só escolhe a direção. Itens de rede (casa, antena, CPE, caixa de fibra, roteador e switch) aparecem um de cada vez, em ordem aleatória: ao conectar cada um o jogador pontua e o cabo cresce. De vez em quando aparece um globo digital: ao pegá-lo, liga o modo de ponto extra. A partida dura 2 minutos ou até o cabo bater.
+O jogador guia um cabo de rede, com conector RJ45 nas duas pontas, por uma grade. O cabo anda sozinho; o jogador só escolhe a direção. Itens de rede (casa, antena, CPE, caixa de fibra, roteador e switch) aparecem um de cada vez, em ordem aleatória: ao conectar cada um o jogador pontua e o cabo cresce. De vez em quando aparece um globo digital: ao pegá-lo, liga o modo de ponto extra. A partida começa com 2 minutos e cada item conectado dá mais 5 segundos; ela acaba quando o tempo zera ou o cabo bate.
 
 ## 2. Controles
 Deslizar o dedo em qualquer lugar da tela muda a direção. Deslizes seguidos sem soltar o dedo funcionam. Teclado (setas ou WASD) como bônus. Uma curva por vez, no máximo duas guardadas, e não é possível virar para trás.
 
 ## 3. Regras e condições de fim
-Perde ao bater em uma cerca de madeira (o muro) ou no próprio cabo. A parede do campo é uma passagem: o cabo sai por um lado da tela e surge do lado oposto. Ao acabar os 2 minutos, a partida termina e vale a pontuação feita. Pontos por item = 10 x nível; todos os itens valem o mesmo. O globo de ponto extra (22% de chance depois de cada item, some em 9 s) dobra os pontos por 6 s e troca a cobra para a versão vermelha; não faz o cabo crescer.
+Perde ao bater em uma cerca de madeira (o muro) ou no próprio cabo. A parede do campo é uma passagem: o cabo sai por um lado da tela e surge do lado oposto. Cada item conectado soma 5 segundos ao tempo. Quando o tempo zera, a partida termina e vale a pontuação feita. Pontos por item = 10 x nível; todos os itens valem o mesmo. O globo de ponto extra (22% de chance depois de cada item, some em 9 s) dobra os pontos por 6 s e troca a cobra para a versão vermelha; não faz o cabo crescer.
 
 ## 4. Progressão e dificuldade
 O nível sobe a cada 3 itens conectados (até 10). A velocidade aumenta com o nível (de 200 ms para 92 ms por passo). O mapa de cercas é sorteado entre 3 layouts a cada partida.
 
 ## 5. Ritmo e duração
-Partida de até 2 minutos. Recomeçar leva menos de 1 segundo depois do `restart` do hub, com uma contagem curta “PRONTO? / VAI!” de 0,8 s.
+Partida de 2 minutos mais os 5 segundos de cada item conectado. Recomeçar leva menos de 1 segundo depois do `restart` do hub, com uma contagem curta “PRONTO? / VAI!” de 0,8 s.
 
 ## 6. Feedback ao jogador
 Sons curtos ao conectar item, bater e ao fim do tempo. Pontos que sobem ao conectar e uma onda vermelha que se espalha pela tela. “LEVEL UP!” com o novo nível a cada subida. O retrato do personagem no HUD reage (feliz ao pontuar, triste ao perder). A tela treme ao bater. O tempo fica vermelho nos últimos 10 s.
