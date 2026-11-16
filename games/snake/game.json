@@ -1,0 +1,9 @@
+{
+  "id": "snake",
+  "name": "Fibra Conecta",
+  "_nome_de_trabalho": "Validar o nome com o marketing antes de publicar.",
+  "avatarTier": "B",
+  "avatarViews": ["portrait"],
+  "rankingMetric": "score_timed_120s",
+  "sdkVersion": "0.1.0"
+}

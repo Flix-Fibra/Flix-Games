@@ -41,7 +41,7 @@ cat docs/visao-projeto.md
 cat docs/como-manter-andamento.md
 ```
 
-**Execução e testes:** não há aplicação, dependências, migrações ou comandos de inicialização/teste no estado inspecionado [F]. Não inventar `npm run dev`, `uvicorn` ou serviços. Nesta fase, validar respostas com sua fonte, links dos documentos e consistência entre resumo e tabelas. Se usar um checkout existente, verificar alterações locais antes de trocar de branch ou atualizar; não descartar trabalho de terceiros.
+**Execução e testes:** [F] desde 16/11 existe o jogo G03 em `games/snake` (comandos em `games/snake/README.md`: `npm install`, `npm test`, `npm run dev:snake`, `npm run build:snake`). Portal, API, migrações e serviços continuam sem código [F]; não inventar `uvicorn` ou comandos deles. Nesta fase, validar respostas com sua fonte, links dos documentos e consistência entre resumo e tabelas. Se usar um checkout existente, verificar alterações locais antes de trocar de branch ou atualizar; não descartar trabalho de terceiros.
 
 **Armadilhas:** branch principal chama-se `Principal` [F]; repositório é público [F]; fornecedor e jogos não foram informados [D]; print do site não comprova integração com o app [F/D]; alternativas A/B e recursos extras são propostas [H]. Não publicar dados de clientes, credenciais ou documentação confidencial. Nenhum dado deve ser recarregado e nenhuma migração deve ser aplicada: não existem no repositório inspecionado [F].
 
@@ -56,9 +56,13 @@ cat docs/como-manter-andamento.md
 | 2 | Acesso do cliente e portal | 0/3 partes | ⬜ Depende de integração, elegibilidade e UX aprovadas [D] |
 | 3 | Jogos e ranking | 0/3 partes | ⬜ Depende da lista de jogos e regras verificáveis [D] |
 | 4 | Piloto e lançamento | 0/3 partes | ⬜ Depende dos fluxos anteriores e aceite operacional [D] |
-| **Total** | **Plano preliminar** | **0/15 partes** | **[F] Nenhum fluxo de aplicação implementado no repositório inspecionado** |
+| **Total** | **Plano preliminar** | **0/15 partes** | **[F] Jogo G03 jogável em teste local; nenhuma parte validada nem entregável (16/11)** |
 
 ## 4. Onde parou
+
+**16/11/2026 — [F]** Evolução do G03 após o primeiro teste do solicitante (detalhes em [DECISIONS](DECISIONS.md)): movimento fluido do cabo, onda vermelha a cada casa e "LEVEL UP" ao subir de nível, cabo de rede azul com conector RJ45 nas duas pontas e espessura uniforme, ícone do sinal em forma de globo, parede que atravessa para o lado oposto, personagem inicial careca com brilho, e emblema de planeta com o cabo dando a volta (conector numa ponta, fios internos na outra) na tela de game over, sem fundo. Verificado: 61 testes, typecheck e build (333 KB gzip). [D] O visual novo do cabo com conector nas duas pontas e a parede que atravessa ainda não foram vistos rodando; falta teste em celular real e as frases de game over que o solicitante vai sugerir.
+
+**16/11/2026 — [F]** Primeiro jogo codificado: **G03 Fibra Conecta** em `games/snake` (Phaser 3 + TypeScript + Vite, retrato 270x480, partida de 2 min, sem arte nem som de terceiros). Também criados `packages/flix-game-sdk` (ponte `postMessage` com o hub, origem validada), `packages/flix-avatar` (personagem placeholder só do retrato), simulador `games/snake/dev-host.html` e os documentos [DECISIONS](DECISIONS.md), [HUB_CONTRACT](HUB_CONTRACT.md), [AVATAR_SPEC](AVATAR_SPEC.md), [ficha do G03](GAMEPLAY_SHEETS/snake.md), `ASSETS.md`, `LICENSES/` e o [relatório de teste](TEST_REPORTS/snake-01.md). Verificado no computador: 26 testes, typecheck, build de 327 KB gzip e fluxo ready/init/started/gameover/restart no Chrome. **Falta:** testar em celular real, revisar a ficha de gameplay com um observador, validar o nome com o marketing, trocar o personagem placeholder pelo kit do designer e integrar com o hub real. Para continuar: `npm install`, `npm test`, `npm run dev:snake` e abrir `/dev-host.html`. Nada disso foi enviado ao GitHub ainda.
 
 **16/11/2026 — [C]** Decisões do solicitante após a leitura dos documentos: sem anúncios por enquanto (Q34); catálogo começa com 15 jogos e a meta é 20 (Q11); conta Flix com perfis ligados ao cliente (Q23); público igual à Q30; Doom-like com menos violência (inimigo e projétil diferentes); sem donos fixos por área, com o hub originalmente com o Rafael; trechos pontuais de código de referência permitidos; Tetris-like pode ser feito e vai ao jurídico depois de pronto (Q47–Q49). O prompt `prompt-inicio-minigames-flix.md` (v2.2) foi atualizado com essas decisões. Documentação movida para `docs/` e enviada ao GitHub no commit `ad9bc1e`. `visao-projeto.md` corrigido na seção 7 (catálogo de 15 jogos, meta 20). Gerar código só quando solicitado; commit e push só quando pedido.
 
@@ -88,7 +92,7 @@ cat docs/como-manter-andamento.md
 
 | Parte | Funciona | Validado | Testado | Entregável | Data | Obs. |
 |---|---|---|---|---|---|---|
-| F1.1 Projeto local e comandos documentados | ⬜ | ⬜ | ⬜ | ⬜ | 13/11 | [F] Sem manifests/lockfiles; [D] stack aguarda F0.3. |
+| F1.1 Projeto local e comandos documentados | 🟡 | ⬜ | 🟡 | ⬜ | 16/11 | [F] Monorepo npm (`games/`, `packages/`) com Vite, Phaser 3, TypeScript e Vitest; comandos em `games/snake/README.md`. [F] 26 testes e typecheck passam. [D] Só cobre os jogos; portal e API ainda sem projeto. Decisões em [DECISIONS.md](DECISIONS.md). |
 | F1.2 Persistência e evolução de dados | ⬜ | ⬜ | ⬜ | ⬜ | 13/11 | [D] Modelo, banco e migrações não definidos. |
 | F1.3 Verificações e homologação | ⬜ | ⬜ | ⬜ | ⬜ | 13/11 | [F] Sem automação; [D] ambiente depende de Q39–Q42. |
 
@@ -114,7 +118,7 @@ cat docs/como-manter-andamento.md
 
 | Parte | Funciona | Validado | Testado | Entregável | Data | Obs. |
 |---|---|---|---|---|---|---|
-| F3.1 Catálogo aprovado e jogo integrado | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [C] Catálogo de trabalho com 15 jogos (G01–G15) no prompt dos minigames; meta de 20. [D] Licença e aprovação por título pendentes; nenhum jogo integrado. |
+| F3.1 Catálogo aprovado e jogo integrado | 🟡 | ⬜ | 🟡 | ⬜ | 16/11 | [C] Catálogo de trabalho com 15 jogos (G01–G15) no prompt dos minigames; meta de 20. [F] G03 (Fibra Conecta) jogável, com o contrato do hub testado no simulador `dev-host.html` ([relatório](TEST_REPORTS/snake-01.md)). [D] Falta teste em celular, aprovação do catálogo, licença/aprovação por título e integração com o portal real. |
 | F3.2 Partida, progresso e resultado verificável | ⬜ | ⬜ | ⬜ | ⬜ | 13/11 | [D] Depende de suporte de cada título e Q15/Q29; progresso é opcional até decisão. |
 | F3.3 Ranking de clientes | ⬜ | ⬜ | ⬜ | ⬜ | 13/11 | [C] Ranking solicitado; [D] regras, desempate e revisão ainda não definidos. |
 

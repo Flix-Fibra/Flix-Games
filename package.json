@@ -1,0 +1,18 @@
+{
+  "name": "flix-games",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Mini games da plataforma Flix Games",
+  "workspaces": ["packages/*", "games/*"],
+  "scripts": {
+    "dev:snake": "npm run dev -w games/snake",
+    "build:snake": "npm run build -w games/snake",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "vite": "8.3.8",
+    "vitest": "5.1.0"
+  }
+}

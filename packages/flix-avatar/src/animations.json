@@ -1,0 +1,9 @@
+{
+  "_nota": "Contrato de animações do rig v1 (AVATAR_SPEC.md). Só `portrait` é usado hoje; as demais visões entram quando o designer entregar o kit.",
+  "frame": { "w": 32, "h": 32, "anchor": [16, 31] },
+  "portrait": { "expressions": ["neutral", "happy", "sad"] },
+  "side": {
+    "idle": 4, "run": 6, "jump_up": 1, "jump_apex": 1, "fall": 1,
+    "hurt": 2, "win": 4, "shoot": 2, "swing": 4, "fly": 4
+  }
+}
