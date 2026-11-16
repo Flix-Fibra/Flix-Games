@@ -1,4 +1,4 @@
-import { mixColor } from './cablePath';
+import { mixColor } from './color';
 
 /**
  * Conector RJ45 visto de cima, em pixel art (desenho de referência do solicitante): contatos dourados em moldura

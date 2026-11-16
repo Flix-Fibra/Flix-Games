@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PLUG_BIG, PLUG_COLORS, PLUG_MINI, buildPlug, rotateGrid } from './plugArt';
-import { CABLE_BLUE_PALETTE } from './theme';
+const CABLE_BLUE_PALETTE = { main: 0x1f7ae0, shade: 0x1457b0, light: 0x6fb2ff };
 
 const filled = (cells: number[]) => cells.filter((c) => c >= 0).length;
 

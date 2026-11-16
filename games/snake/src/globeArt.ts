@@ -1,4 +1,4 @@
-import type { Sprite } from './plugArt';
+import type { Sprite } from '@flix/game-kit';
 
 /**
  * Ícone do "sinal" (bônus que dobra os pontos): um globo azul em pixel art, com contorno, equador e meridianos escuros

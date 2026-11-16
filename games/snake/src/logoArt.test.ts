@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LOGO_SIZE, buildRj45Logo, terrain } from './logoArt';
-import { PLUG_COLORS } from './plugArt';
+import { PLUG_COLORS } from '@flix/game-kit';
 import { CABLE_BLUE_PALETTE } from './theme';
 
 const at = (g: number[], x: number, y: number) => g[y * LOGO_SIZE + x]!;

@@ -6,9 +6,8 @@ import {
   COLS, ROUND_MS, ROWS, createState, enqueueDir, levelFor, mulberry32, step, tickMs, type Cause, type Dir, type GameState, type Pt,
 } from '../logic';
 import { endDirection, lerp, mixColor, roundedPath, type V } from '../cablePath';
-import { renderPixelText } from '../pixelFont';
 import { buildGlobe } from '../globeArt';
-import { PLUG_MINI, buildPlug, spriteToCanvas } from '../plugArt';
+import { PLUG_MINI, buildPlug, renderPixelText, spriteToCanvas } from '@flix/game-kit';
 import { loadBest } from '../storage';
 import { CABLE_BLUE, CABLE_BLUE_PALETTE, CELL, COLORS, FIELD_X, FIELD_Y, FONT, GAME_H, GAME_W, HUD_H } from '../theme';
 import { portraitKey } from './BootScene';

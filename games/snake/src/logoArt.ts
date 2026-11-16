@@ -1,5 +1,5 @@
 import { lerp, mixColor, type V } from './cablePath';
-import { PLUG_BIG, buildPlug, rotateGrid } from './plugArt';
+import { PLUG_BIG, buildPlug, rotateGrid } from '@flix/game-kit';
 
 /**
  * Emblema do fim de partida, em pixel art e sem texto: um cabo de rede azul com conector RJ45 em close,
