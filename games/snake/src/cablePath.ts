@@ -116,3 +116,44 @@ export function endDirection(pts: readonly V[], atEnd: boolean): V | null {
   }
   return null;
 }
+
+/** Linha com comprimentos acumulados, para posicionar peças em uma distância ao longo dela. */
+export interface Track {
+  pts: V[];
+  /** cum[i] = comprimento do começo até o ponto i. */
+  cum: number[];
+  total: number;
+}
+
+export function buildTrack(pts: readonly V[]): Track {
+  const cum: number[] = [0];
+  for (let i = 1; i < pts.length; i++) {
+    cum.push(cum[i - 1]! + Math.hypot(pts[i]!.x - pts[i - 1]!.x, pts[i]!.y - pts[i - 1]!.y));
+  }
+  return { pts: pts.map((p) => ({ x: p.x, y: p.y })), cum, total: cum[cum.length - 1] ?? 0 };
+}
+
+/** Ponto e ângulo (radianos) da linha a `s` de distância do começo. `s` fora do intervalo é limitado às pontas. */
+export function sampleTrack(t: Track, s: number): { x: number; y: number; angle: number } {
+  const n = t.pts.length;
+  if (n === 0) return { x: 0, y: 0, angle: 0 };
+  if (n === 1) return { x: t.pts[0]!.x, y: t.pts[0]!.y, angle: 0 };
+  const d = Math.min(Math.max(s, 0), t.total);
+  let lo = 0;
+  let hi = n - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (t.cum[mid]! <= d) lo = mid;
+    else hi = mid;
+  }
+  // procura um trecho com comprimento para dar a direção (ignora pontos repetidos)
+  let a = lo;
+  let b = lo + 1;
+  while (b < n - 1 && t.cum[b]! - t.cum[a]! < 1e-6) b++;
+  while (a > 0 && t.cum[b]! - t.cum[a]! < 1e-6) a--;
+  const pa = t.pts[a]!;
+  const pb = t.pts[b]!;
+  const seg = t.cum[b]! - t.cum[a]!;
+  const f = seg < 1e-6 ? 0 : Math.min(1, Math.max(0, (d - t.cum[a]!) / seg));
+  return { x: lerp(pa.x, pb.x, f), y: lerp(pa.y, pb.y, f), angle: Math.atan2(pb.y - pa.y, pb.x - pa.x) };
+}

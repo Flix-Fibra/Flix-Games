@@ -5,21 +5,25 @@ import { sfx } from '../audio';
 import {
   COLS, ROUND_MS, ROWS, createState, enqueueDir, levelFor, mulberry32, step, tickMs, type Cause, type Dir, type GameState, type Pt,
 } from '../logic';
-import { endDirection, lerp, mixColor, roundedPath, type V } from '../cablePath';
-import { buildGlobe } from '../globeArt';
-import { PLUG_MINI, buildPlug, renderPixelText, spriteToCanvas } from '@flix/game-kit';
+import { buildTrack, endDirection, lerp, roundedPath, sampleTrack, type V } from '../cablePath';
 import { loadBest } from '../storage';
-import { CABLE_BLUE, CABLE_BLUE_PALETTE, CELL, COLORS, FIELD_X, FIELD_Y, FONT, GAME_H, GAME_W, HUD_H } from '../theme';
+import {
+  BODY_H, CELL, COLORS, FIELD_X, FIELD_Y, FONT, FONT_TEXT, FOOD_ITEMS, GAME_H, GAME_W, HEAD_FRONT, HUD, PANEL, SIGNAL_ITEM, SPRITE_K, TAIL_BACK, TUBE,
+} from '../theme';
+import { drawBackground, ensureGlowTexture, titleText } from '../ui';
 import { portraitKey } from './BootScene';
 
 const READY_MS = 800;
-const SWIPE_PX = 14;
-const CABLE_W = 9;
-const WAVE_MS = 700;
-const WAVE_BLOCK = 6;
-const WAVE_MAX_R = 340;
+const SWIPE_PX = 28;
+const WAVE_MS = 800;
+const WAVE_MAX_R = 760;
 const LEVEL_TEXT_DELAY_MS = 380;
-const PLUG_TIP_PX = 10; // quanto a ponta do conector passa do centro da casa da cabeça
+const DEPTH_PANEL = 1;
+const DEPTH_ITEMS = 2;
+const DEPTH_SNAKE = 3;
+const DEPTH_HUD = 5;
+const DEPTH_FX = 10;
+const DEPTH_TEXT = 11;
 
 interface Wave {
   x: number;
@@ -38,24 +42,29 @@ export class PlayScene extends Phaser.Scene {
   private acc = 0;
   private readyLeft = READY_MS;
   private over = false;
-  private startedSent = false;
   private steps = 0;
+  private lastLevel = 1;
+  private headPulse = 0;
+
   private fx!: Phaser.GameObjects.Graphics;
   private waves: Wave[] = [];
-  private lastLevel = 1;
-  private plugsHead: Phaser.GameObjects.Image[] = [];
-  private plugsTail: Phaser.GameObjects.Image[] = [];
+  private snakeLayer!: Phaser.GameObjects.Container;
+  private bodyG!: Phaser.GameObjects.Graphics;
+  private pills: Phaser.GameObjects.Image[] = [];
+  private heads: Phaser.GameObjects.Image[] = [];
+  private tails: Phaser.GameObjects.Image[] = [];
+  private foodImg!: Phaser.GameObjects.Image;
+  private foodGlow!: Phaser.GameObjects.Image;
+  private shownKind = -1;
   private signalImg!: Phaser.GameObjects.Image;
+  private signalGlow!: Phaser.GameObjects.Image;
+  private boostText!: Phaser.GameObjects.Text;
 
-  private g!: Phaser.GameObjects.Graphics;
   private portrait!: Phaser.GameObjects.Image;
   private scoreText!: Phaser.GameObjects.Text;
-  private timeText!: Phaser.GameObjects.Text;
   private levelText!: Phaser.GameObjects.Text;
-  private boostText!: Phaser.GameObjects.Text;
+  private timeText!: Phaser.GameObjects.Text;
   private readyText!: Phaser.GameObjects.Text;
-  private cableColor: number = CABLE_BLUE.base;
-  private cableShade: number = CABLE_BLUE.shade;
   private expressionTimer?: Phaser.Time.TimerEvent;
 
   private swipeX = 0;
@@ -68,6 +77,7 @@ export class PlayScene extends Phaser.Scene {
 
   create(): void {
     this.bridge = this.registry.get('bridge') as HubBridge;
+    ensureGlowTexture(this);
 
     this.state = createState(mulberry32(Math.floor(Math.random() * 2 ** 32)));
     this.runId = this.bridge.newRunId();
@@ -75,44 +85,24 @@ export class PlayScene extends Phaser.Scene {
     this.acc = 0;
     this.readyLeft = READY_MS;
     this.over = false;
-    this.startedSent = false;
     this.steps = 0;
+    this.lastLevel = 1;
+    this.headPulse = 0;
     this.tracking = false;
+    this.waves = [];
+    this.shownKind = -1;
 
     this.cameras.main.setBackgroundColor(COLORS.background);
-    this.drawStaticField();
-    this.g = this.add.graphics();
+    this.buildScenery();
+    this.buildObstacles();
+    this.buildFood();
+    this.buildSnake();
     this.buildHud();
-    this.waves = [];
-    this.lastLevel = 1;
-    this.fx = this.add.graphics().setDepth(10);
-    const plugSprite = buildPlug(PLUG_MINI, CABLE_BLUE_PALETTE);
-    if (!this.textures.exists('plug_mini')) this.textures.addCanvas('plug_mini', spriteToCanvas(plugSprite));
-    if (!this.textures.exists('globe')) this.textures.addCanvas('globe', spriteToCanvas(buildGlobe()));
-    this.signalImg = this.add.image(0, 0, 'globe').setVisible(false).setDepth(1);
-    // o cabo e o conector são recortados pelo campo: assim aparecem saindo por um lado e entrando pelo outro
-    const maskShape = this.make.graphics({ x: 0, y: 0 }, false);
-    maskShape.fillStyle(0xffffff, 1).fillRect(FIELD_X, FIELD_Y, COLS * CELL, ROWS * CELL);
-    const fieldMask = maskShape.createGeometryMask();
-    this.g.setMask(fieldMask);
-    this.plugsHead = [];
-    this.plugsTail = [];
-    for (const pool of [this.plugsHead, this.plugsTail]) {
-      for (let i = 0; i < 4; i++) {
-        const img = this.add.image(0, 0, 'plug_mini').setOrigin(0.5, (PLUG_TIP_PX + 0.5) / plugSprite.h).setDepth(2).setVisible(false);
-        img.setMask(fieldMask);
-        pool.push(img);
-      }
-    }
-    this.readyText = this.add
-      .text(GAME_W / 2, FIELD_Y + (ROWS * CELL) / 2 - 30, 'PRONTO?', {
-        fontFamily: FONT, fontSize: '28px', fontStyle: 'bold', color: COLORS.text,
-      })
-      .setOrigin(0.5)
-      .setResolution(2);
+    this.fx = this.add.graphics().setDepth(DEPTH_FX).setBlendMode(Phaser.BlendModes.ADD);
+
+    this.readyText = titleText(this, GAME_W / 2, FIELD_Y + (ROWS * CELL) / 2 - 40, 'PRONTO?', 68, '#FFFFFF', '#0a1c3a').setDepth(DEPTH_TEXT);
 
     this.bridge.sendStarted(this.runId);
-    this.startedSent = true;
 
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       this.swipeX = p.x;
@@ -155,6 +145,7 @@ export class PlayScene extends Phaser.Scene {
   update(_time: number, rawDelta: number): void {
     const delta = Math.min(rawDelta, 100);
     this.advanceWaves(delta);
+    this.headPulse = Math.max(0, this.headPulse - delta / 260);
     if (this.over) return;
 
     if (this.readyLeft > 0) {
@@ -175,8 +166,8 @@ export class PlayScene extends Phaser.Scene {
 
     this.acc += delta;
     let guard = 0;
-    while (!this.over && this.acc >= tickMs(levelFor(this.state.houses)) && guard++ < 4) {
-      this.acc -= tickMs(levelFor(this.state.houses));
+    while (!this.over && this.acc >= tickMs(levelFor(this.state.eaten)) && guard++ < 4) {
+      this.acc -= tickMs(levelFor(this.state.eaten));
       step(this.state, Math.random);
       this.steps++;
       this.handleEvent();
@@ -190,31 +181,33 @@ export class PlayScene extends Phaser.Scene {
 
   private handleEvent(): void {
     const s = this.state;
-    if (s.lastEvent === 'house') {
-      sfx('house');
-      this.setExpression('happy', 600);
-      const head = s.snake[0];
-      if (head) {
-        this.floatText(cellX(head.x) + CELL / 2, cellY(head.y), `+${s.lastGain}`);
-        this.spawnWave(cellX(head.x) + CELL / 2, cellY(head.y) + CELL / 2);
-      }
-      const level = levelFor(s.houses);
-      if (level > this.lastLevel) {
-        this.lastLevel = level;
-        this.showLevelUp(level);
-      }
-    } else if (s.lastEvent === 'signal') {
+    if (s.lastEvent === 'signal') {
       sfx('signal');
       this.setExpression('happy', 600);
+      this.headPulse = 1;
+      const hd = s.snake[0];
+      if (hd) this.spawnWave(cellX(hd.x) + CELL / 2, cellY(hd.y) + CELL / 2);
+      return;
+    }
+    if (s.lastEvent !== 'item') return;
+    sfx('house');
+    this.setExpression('happy', 600);
+    this.headPulse = 1;
+    const head = s.snake[0];
+    if (head) {
+      this.floatText(cellX(head.x) + CELL / 2, cellY(head.y), `+${s.lastGain}`);
+      this.spawnWave(cellX(head.x) + CELL / 2, cellY(head.y) + CELL / 2);
+    }
+    const level = levelFor(s.eaten);
+    if (level > this.lastLevel) {
+      this.lastLevel = level;
+      this.showLevelUp(level);
     }
   }
 
   private floatText(x: number, y: number, text: string): void {
-    const t = this.add
-      .text(x, y, text, { fontFamily: FONT, fontSize: '14px', fontStyle: 'bold', color: COLORS.gold })
-      .setOrigin(0.5)
-      .setResolution(2);
-    this.tweens.add({ targets: t, y: y - 22, alpha: 0, duration: 700, onComplete: () => t.destroy() });
+    const t = titleText(this, x, y, text, 40, COLORS.gold, '#5a3a00').setDepth(DEPTH_TEXT);
+    this.tweens.add({ targets: t, y: y - 64, alpha: 0, duration: 800, onComplete: () => t.destroy() });
   }
 
   private setExpression(expr: Expression, resetMs?: number): void {
@@ -233,23 +226,23 @@ export class PlayScene extends Phaser.Scene {
     s.cause = cause;
     const crashed = cause !== 'timeout';
     sfx(crashed ? 'crash' : 'end');
-    if (crashed) this.cameras.main.shake(250, 0.01);
-    this.setExpression(crashed || s.houses === 0 ? 'sad' : 'happy');
+    if (crashed) this.cameras.main.shake(250, 0.012);
+    this.setExpression(crashed || s.eaten === 0 ? 'sad' : 'happy');
 
     this.bridge.sendGameOver({
       runId: this.runId,
       score: s.score,
       durationMs: this.elapsed,
-      meta: { houses: s.houses, level: levelFor(s.houses), cause },
+      meta: { items: s.eaten, level: levelFor(s.eaten), cause },
     });
 
-    const result = { score: s.score, houses: s.houses, cause, previousBest: loadBest(), expression: crashed || s.houses === 0 ? 'sad' : 'happy' };
+    const result = { score: s.score, items: s.eaten, cause, previousBest: loadBest(), expression: crashed || s.eaten === 0 ? 'sad' : 'happy' };
     this.time.delayedCall(crashed ? 750 : 400, () => this.scene.start('GameOver', result));
   }
 
   // ---------- efeitos ----------
 
-  /** Onda vermelha em pixels que se espalha a partir da casa conectada. */
+  /** Onda vermelha (anéis de luz) que se espalha a partir do item conectado. */
   private spawnWave(x: number, y: number): void {
     this.waves.push({ x, y, t: 0 });
   }
@@ -267,178 +260,300 @@ export class PlayScene extends Phaser.Scene {
       }
       const eased = 1 - (1 - k) * (1 - k);
       const r = eased * WAVE_MAX_R;
-      const thick = 26 - k * 10;
-      const fade = 0.85 * (1 - k);
-      const x0 = Math.max(0, Math.floor((w.x - r) / WAVE_BLOCK));
-      const x1 = Math.min(Math.ceil(GAME_W / WAVE_BLOCK), Math.ceil((w.x + r) / WAVE_BLOCK));
-      const y0 = Math.max(0, Math.floor((w.y - r) / WAVE_BLOCK));
-      const y1 = Math.min(Math.ceil(GAME_H / WAVE_BLOCK), Math.ceil((w.y + r) / WAVE_BLOCK));
-      for (let by = y0; by < y1; by++) {
-        for (let bx = x0; bx < x1; bx++) {
-          const d = Math.hypot(bx * WAVE_BLOCK + WAVE_BLOCK / 2 - w.x, by * WAVE_BLOCK + WAVE_BLOCK / 2 - w.y);
-          if (d > r || d <= r - thick) continue;
-          const band = (r - d) / thick; // 0 na frente da onda, 1 na parte de trás
-          const color = band < 0.25 ? 0xff6b78 : band < 0.6 ? 0xd4142c : 0x7a0412;
-          g.fillStyle(color, fade * (1 - band * 0.6));
-          g.fillRect(bx * WAVE_BLOCK, by * WAVE_BLOCK, WAVE_BLOCK, WAVE_BLOCK);
-        }
+      const fade = 1 - k;
+      g.lineStyle(46 * fade + 6, 0xd4142c, 0.55 * fade);
+      g.strokeCircle(w.x, w.y, r);
+      g.lineStyle(18 * fade + 3, 0xff6b78, 0.8 * fade);
+      g.strokeCircle(w.x, w.y, r);
+      if (r > 60) {
+        g.lineStyle(10 * fade + 2, 0xffd6da, 0.5 * fade);
+        g.strokeCircle(w.x, w.y, r * 0.82);
       }
     }
   }
 
-  /** "LEVEL UP" em pixel art e o novo nível logo abaixo. */
+  /** “LEVEL UP!” pequeno, com o novo nível e uma seta verde, na parte de cima do campo (para não tampar o jogo). */
   private showLevelUp(level: number): void {
-    const upKey = 'pixel_levelup';
-    const lvKey = `pixel_level_${level}`;
-    if (!this.textures.exists(upKey)) this.textures.addCanvas(upKey, renderPixelText('LEVEL UP', { arrow: true }));
-    if (!this.textures.exists(lvKey)) this.textures.addCanvas(lvKey, renderPixelText(`NÍVEL ${level}`));
-
     const cx = GAME_W / 2;
-    const cy = FIELD_Y + ROWS * CELL * 0.3;
-    const up = this.add.image(cx, cy, upKey).setScale(0).setDepth(11);
-    const lv = this.add.image(cx, cy + 36, lvKey).setScale(0).setDepth(11);
+    const cy = FIELD_Y + 46;
+    const arrowScale = 0.34;
+    const up = titleText(this, cx - 16, cy, 'LEVEL UP!', 38).setDepth(DEPTH_TEXT).setScale(0);
+    const lv = titleText(this, cx - 16, cy + 28, `NÍVEL ${level}`, 20, '#FFFFFF', '#0a3a8a').setDepth(DEPTH_TEXT).setScale(0);
+    const arrow = this.add.graphics().setDepth(DEPTH_TEXT);
+    arrow.fillStyle(0x3ccb4a, 1);
+    arrow.lineStyle(6, 0x145a1f, 1);
+    const ax = (up.width / 2 + 16) / arrowScale;
+    arrow.beginPath();
+    arrow.moveTo(ax, -34);
+    arrow.lineTo(ax + 34, 4);
+    arrow.lineTo(ax + 14, 4);
+    arrow.lineTo(ax + 14, 38);
+    arrow.lineTo(ax - 14, 38);
+    arrow.lineTo(ax - 14, 4);
+    arrow.lineTo(ax - 34, 4);
+    arrow.closePath();
+    arrow.fillPath();
+    arrow.strokePath();
+    arrow.setPosition(cx - 16, cy).setScale(0);
     sfx('level');
 
     this.tweens.add({
       targets: up,
-      scale: 3,
+      scale: 1,
+      delay: LEVEL_TEXT_DELAY_MS,
+      duration: 260,
+      ease: 'Back.easeOut',
+    });
+    this.tweens.add({
+      targets: arrow,
+      scale: arrowScale,
       delay: LEVEL_TEXT_DELAY_MS,
       duration: 260,
       ease: 'Back.easeOut',
       onComplete: () => {
         this.tweens.add({
-          targets: [up, lv],
+          targets: [up, lv, arrow],
           alpha: 0,
-          y: '-=14',
-          delay: 950,
-          duration: 350,
+          y: '-=16',
+          delay: 650,
+          duration: 300,
           onComplete: () => {
             up.destroy();
             lv.destroy();
+            arrow.destroy();
           },
         });
       },
     });
-    this.tweens.add({ targets: lv, scale: 2, delay: LEVEL_TEXT_DELAY_MS + 150, duration: 240, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: lv, scale: 1, delay: LEVEL_TEXT_DELAY_MS + 120, duration: 240, ease: 'Back.easeOut' });
   }
 
-  // ---------- desenho ----------
+  // ---------- construção da cena ----------
 
-  private drawStaticField(): void {
-    const g = this.add.graphics();
-    g.fillStyle(COLORS.field, 1);
-    g.fillRect(FIELD_X, FIELD_Y, COLS * CELL, ROWS * CELL);
-    g.fillStyle(COLORS.fieldDot, 1);
-    for (let y = 0; y < ROWS; y++) {
-      for (let x = 0; x < COLS; x++) g.fillRect(cellX(x) + 7, cellY(y) + 7, 1, 1);
+  /** Cenário do gestor em tela cheia; sobre a área quadriculada vai um painel escuro com a grade do jogo. */
+  private buildScenery(): void {
+    drawBackground(this);
+    const bg = this.add.image(GAME_W / 2, GAME_H / 2, 'cenario').setDepth(0);
+    bg.setDisplaySize(GAME_W, GAME_H);
+
+    const g = this.add.graphics().setDepth(DEPTH_PANEL);
+    g.fillStyle(COLORS.panel, 1);
+    g.fillRoundedRect(PANEL.x, PANEL.y, PANEL.w, PANEL.h, PANEL.radius);
+    g.lineStyle(1.5, COLORS.panelGrid, 1);
+    const w = COLS * CELL;
+    const h = ROWS * CELL;
+    for (let x = 0; x <= COLS; x++) g.lineBetween(cellX(x), FIELD_Y, cellX(x), FIELD_Y + h);
+    for (let y = 0; y <= ROWS; y++) g.lineBetween(FIELD_X, cellY(y), FIELD_X + w, cellY(y));
+  }
+
+  /** Muros: uma cerca de madeira com flores (asset do gestor) por trecho reto; nos trechos horizontais ela é girada. */
+  private buildObstacles(): void {
+    for (const w of this.state.walls) {
+      const along = w.len * CELL - 4; // comprimento do trecho (com uma folga nas pontas)
+      const across = CELL * 0.86; // espessura da cerca
+      const cx = cellX(w.x) + (w.vertical ? CELL / 2 : (w.len * CELL) / 2);
+      const cy = cellY(w.y) + (w.vertical ? (w.len * CELL) / 2 : CELL / 2);
+      const shadow = this.add.graphics().setDepth(DEPTH_ITEMS);
+      shadow.fillStyle(0x000000, 0.3);
+      if (w.vertical) shadow.fillRoundedRect(cx - across / 2 + 4, cy - along / 2 + 5, across, along, 8);
+      else shadow.fillRoundedRect(cx - along / 2 + 5, cy - across / 2 + 4, along, across, 8);
+      const img = this.add.image(cx, cy, 'muro').setDepth(DEPTH_ITEMS + 0.1);
+      img.setDisplaySize(across, along);
+      if (!w.vertical) img.setAngle(90);
     }
   }
 
-  private buildHud(): void {
-    this.add.rectangle(GAME_W / 2, HUD_H / 2, GAME_W, HUD_H, COLORS.hud);
-    this.add.rectangle(GAME_W / 2, HUD_H - 0.5, GAME_W, 1, COLORS.flixRed);
-    this.portrait = this.add.image(34, HUD_H / 2, portraitKey('neutral')).setScale(2);
-    const label = { fontFamily: FONT, fontSize: '9px', color: COLORS.textMuted };
-    this.add.text(74, 8, 'PONTOS', label).setResolution(2);
-    this.scoreText = this.add
-      .text(74, 20, '0', { fontFamily: FONT, fontSize: '24px', fontStyle: 'bold', color: COLORS.text })
-      .setResolution(2);
-    this.boostText = this.add
-      .text(74, 49, '', { fontFamily: FONT, fontSize: '10px', fontStyle: 'bold', color: '#35C8FF' })
-      .setResolution(2);
-    this.add.text(GAME_W - 8, 8, 'TEMPO', label).setOrigin(1, 0).setResolution(2);
-    this.timeText = this.add
-      .text(GAME_W - 8, 20, '2:00', { fontFamily: FONT, fontSize: '24px', fontStyle: 'bold', color: COLORS.text })
-      .setOrigin(1, 0)
-      .setResolution(2);
-    this.levelText = this.add
-      .text(GAME_W - 8, 49, 'NÍVEL 1', { fontFamily: FONT, fontSize: '10px', color: COLORS.textMuted })
-      .setOrigin(1, 0)
-      .setResolution(2);
+  private buildFood(): void {
+    this.foodGlow = this.add.image(0, 0, 'brilho').setTint(0xfff0a0).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH_ITEMS).setAlpha(0.7);
+    this.foodGlow.setDisplaySize(CELL * 2.6, CELL * 2.6);
+    this.foodImg = this.add.image(0, 0, FOOD_ITEMS[0]!.key).setDepth(DEPTH_ITEMS + 0.2);
+    // globo de ponto extra (aparece de vez em quando; não é comida)
+    this.signalGlow = this.add.image(0, 0, 'brilho').setTint(0x35c8ff).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH_ITEMS).setVisible(false);
+    this.signalGlow.setDisplaySize(CELL * 3.4, CELL * 3.4);
+    this.signalImg = this.add.image(0, 0, SIGNAL_ITEM.key).setDepth(DEPTH_ITEMS + 0.2).setVisible(false);
+    this.signalImg.setScale(SIGNAL_ITEM.size / Math.max(this.signalImg.width, this.signalImg.height));
   }
 
-  private render(): void {
-    const s = this.state;
-    const g = this.g;
-    g.clear();
-
-    // obras
-    for (const o of s.obstacles) this.drawCone(o);
-    // sinal
-    this.updateSignal();
-    // casa
-    this.drawHouse(s.house);
-    // cabo
-    this.drawCable();
-
-    // HUD
-    this.scoreText.setText(String(s.score));
-    const remaining = Math.max(0, ROUND_MS - this.elapsed);
-    const sec = Math.ceil(remaining / 1000);
-    this.timeText.setText(`${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`);
-    this.timeText.setColor(sec <= 10 ? COLORS.flixRedText : COLORS.text);
-    this.levelText.setText(`NÍVEL ${levelFor(s.houses)}`);
-    this.boostText.setText(s.boostLeft > 0 ? 'SINAL x2' : '');
-  }
-
-  private drawCone(p: Pt): void {
-    const g = this.g;
-    const x = cellX(p.x);
-    const y = cellY(p.y);
-    g.fillStyle(COLORS.coneOrange, 1);
-    g.fillRect(x + 2, y + 2, CELL - 4, CELL - 4);
-    g.fillStyle(COLORS.coneStripe, 1);
-    g.fillRect(x + 2, y + 6, CELL - 4, 3);
-    g.fillStyle(COLORS.cableOutline, 1);
-    g.fillRect(x + 1, y + CELL - 3, CELL - 2, 2);
-  }
-
-  private drawHouse(p: Pt): void {
-    const g = this.g;
-    const x = cellX(p.x);
-    const y = cellY(p.y);
-    const pulse = 1 + Math.sin(this.time.now / 180) * 0.6;
-    g.fillStyle(COLORS.houseWall, 1);
-    g.fillRect(x + 2, y + 7, CELL - 4, CELL - 8);
-    g.fillStyle(COLORS.houseRoof, 1);
-    g.fillTriangle(x + 1, y + 8, x + CELL - 1, y + 8, x + CELL / 2, y + 1 - pulse * 0.2);
-    g.fillStyle(COLORS.houseDoor, 1);
-    g.fillRect(x + 6, y + 10, 3, 4);
-  }
-
-  /** Mostra o globo (bônus de sinal) na casa do sinal, com leve flutuação; pisca quando está para sumir. */
-  private updateSignal(): void {
-    const s = this.state;
-    const sig = s.signal;
-    const blink = sig !== null && s.signalLeft < 12 && Math.floor(this.time.now / 150) % 2 === 0;
-    if (!sig || blink) {
-      this.signalImg.setVisible(false);
-      return;
+  private buildSnake(): void {
+    this.snakeLayer = this.add.container(0, 0).setDepth(DEPTH_SNAKE);
+    // o cabo é recortado pelo campo: ao atravessar a borda ele aparece saindo por um lado e entrando pelo outro
+    const maskShape = this.make.graphics({ x: 0, y: 0 }, false);
+    maskShape.fillStyle(0xffffff, 1).fillRect(FIELD_X, FIELD_Y, COLS * CELL, ROWS * CELL);
+    this.snakeLayer.setMask(maskShape.createGeometryMask());
+    // ordem na camada: tubo contínuo do corpo, segmentos (criados sob demanda), depois cabeças e caudas por cima
+    this.bodyG = this.add.graphics();
+    this.snakeLayer.add(this.bodyG);
+    this.pills = [];
+    this.heads = [];
+    this.tails = [];
+    for (let i = 0; i < 4; i++) {
+      const hd = this.add.image(0, 0, 'cobra_azul_cabeca').setVisible(false);
+      const tl = this.add.image(0, 0, 'cobra_azul_cauda').setVisible(false);
+      this.snakeLayer.add([hd, tl]);
+      this.heads.push(hd);
+      this.tails.push(tl);
     }
-    const bob = Math.round(Math.sin(this.time.now / 200));
-    this.signalImg.setPosition(cellX(sig.x) + CELL / 2, cellY(sig.y) + CELL / 2 + bob).setVisible(true);
   }
 
   /**
-   * Desenha o cabo de rede: tubo brilhante (contorno, sombra, cor, brilho e reflexo), com a mesma espessura dos dois lados,
-   * com um conector RJ45 em cada ponta. A lógica anda de casa em casa, mas aqui a cabeça desliza e a ponta recua
-   * entre um passo e o seguinte (progresso `p` de 0 a 1), e o cabo é uma linha contínua com curvas.
-   * Quando o cabo atravessa a borda da tela, ele é desenhado "desenrolado" e repetido do lado oposto
-   * (recortado pela máscara do campo), então aparece saindo por um lado e entrando pelo outro ao mesmo tempo.
+   * Menu superior: cobre o topo do cenário com uma placa escura de borda vermelha e desenha o quadro do avatar e as
+   * caixas SCORE, TEMPO (com ícone de relógio) e NÍVEL (com as barras verdes ascendentes).
    */
-  private drawCable(): void {
-    const g = this.g;
+  private buildHud(): void {
+    const pl = HUD.plate;
+    const g = this.add.graphics().setDepth(DEPTH_HUD);
+    g.fillStyle(0x1b1e26, 1);
+    g.fillRoundedRect(pl.x, pl.y, pl.w, pl.h, pl.radius);
+    g.lineStyle(10, 0xd4142c, 0.3);
+    g.strokeRoundedRect(pl.x, pl.y, pl.w, pl.h, pl.radius);
+    g.lineStyle(4, 0xe8283f, 1);
+    g.strokeRoundedRect(pl.x, pl.y, pl.w, pl.h, pl.radius);
+
+    // quadro do avatar
+    const a = HUD.avatar;
+    g.fillStyle(0x12141a, 1);
+    g.fillRoundedRect(a.x - a.size / 2, a.y - a.size / 2, a.size, a.size, 18);
+    g.lineStyle(5, 0xe8283f, 1);
+    g.strokeRoundedRect(a.x - a.size / 2, a.y - a.size / 2, a.size, a.size, 18);
+    this.portrait = this.add.image(a.x, a.y + 1, portraitKey('neutral')).setDisplaySize(a.size - 18, a.size - 18).setDepth(DEPTH_HUD + 1);
+
+    // caixas de valor
+    const box = (cx: number) => {
+      g.fillStyle(0x0f1116, 1);
+      g.fillRoundedRect(cx - HUD.boxW / 2, HUD.boxY - HUD.boxH / 2, HUD.boxW, HUD.boxH, 16);
+      g.lineStyle(2, 0x7a8294, 1);
+      g.strokeRoundedRect(cx - HUD.boxW / 2, HUD.boxY - HUD.boxH / 2, HUD.boxW, HUD.boxH, 16);
+    };
+    box(HUD.score.x);
+    box(HUD.time.x);
+    box(HUD.level.x);
+    // divisórias entre o avatar e as caixas
+    g.lineStyle(2, 0x3a3f4b, 1);
+    g.lineBetween(116, 34, 116, 110);
+
+    const label = (cx: number, text: string, iconWidth: number): number => {
+      const t2 = this.add
+        .text(cx + iconWidth / 2, HUD.labelY, text, { fontFamily: FONT, fontSize: '21px', color: '#FFFFFF', stroke: '#06101f', strokeThickness: 4 })
+        .setOrigin(0.5)
+        .setResolution(2)
+        .setDepth(DEPTH_HUD + 1);
+      return t2.x - t2.width / 2 - iconWidth / 2 - 4; // centro do ícone fica logo à esquerda do texto
+    };
+    label(HUD.score.x, 'SCORE', 0);
+
+    // TEMPO + relógio
+    const clockX = label(HUD.time.x, 'TEMPO', 26) + 4;
+    const cy = HUD.labelY;
+    g.lineStyle(3, 0xffffff, 1);
+    g.strokeCircle(clockX, cy, 11);
+    g.fillStyle(0xffffff, 1);
+    g.fillRect(clockX - 4, cy - 15, 8, 3); // botão do relógio
+    g.lineStyle(3, 0xffffff, 1);
+    g.lineBetween(clockX, cy, clockX, cy - 7);
+    g.lineBetween(clockX, cy, clockX + 5, cy + 3);
+
+    // NÍVEL + barras verdes ascendentes
+    const barsX = label(HUD.level.x, 'NÍVEL', 26) + 4;
+    const heights = [8, 14, 20];
+    heights.forEach((h, i) => {
+      const bx = barsX - 11 + i * 8.5;
+      g.fillStyle(0x145a1f, 1);
+      g.fillRoundedRect(bx - 1, cy + 11 - h - 1, 8, h + 2, 2);
+      g.fillStyle(i === 2 ? 0x3ce05a : 0x2fc24a, 1);
+      g.fillRoundedRect(bx, cy + 11 - h, 6, h, 2);
+    });
+
+    const value = (cx: number) =>
+      this.add
+        .text(cx, HUD.boxY + 1, '0', { fontFamily: FONT, fontSize: '32px', color: '#FFFFFF', stroke: '#06101f', strokeThickness: 5 })
+        .setOrigin(0.5)
+        .setResolution(2)
+        .setDepth(DEPTH_HUD + 1);
+    this.scoreText = value(HUD.score.x);
+    this.timeText = value(HUD.time.x).setText('2:00');
+    this.levelText = value(HUD.level.x).setText('1');
+
+    this.boostText = this.add
+      .text(GAME_W / 2, FIELD_Y - 13, '', { fontFamily: FONT, fontSize: '22px', color: '#FF7A88', stroke: '#2a0008', strokeThickness: 5 })
+      .setOrigin(0.5)
+      .setResolution(2)
+      .setDepth(DEPTH_HUD + 1);
+  }
+
+  // ---------- atualização por quadro ----------
+
+  private render(): void {
+    const s = this.state;
+    this.updateFood();
+    this.updateSnake();
+
+    this.scoreText.setText(String(s.score));
+    this.levelText.setText(String(levelFor(s.eaten)));
+    const sec = Math.ceil(Math.max(0, ROUND_MS - this.elapsed) / 1000);
+    this.timeText.setText(`${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`);
+    this.timeText.setColor(sec <= 10 ? COLORS.flixRedText : '#FFFFFF');
+    this.boostText.setText(s.boostLeft > 0 ? 'PONTO EXTRA x2' : '');
+  }
+
+  /** Item de pontuação atual (um dos modelos do gestor, sorteado), com brilho e leve flutuação. */
+  private updateFood(): void {
+    const s = this.state;
+    if (s.foodKind !== this.shownKind) {
+      this.shownKind = s.foodKind;
+      const item = FOOD_ITEMS[s.foodKind] ?? FOOD_ITEMS[0]!;
+      this.foodImg.setTexture(item.key);
+      this.foodImg.setScale(item.size / Math.max(this.foodImg.width, this.foodImg.height));
+      // um pulinho ao aparecer
+      this.tweens.add({ targets: this.foodImg, scale: { from: 0, to: item.size / Math.max(this.foodImg.width, this.foodImg.height) }, duration: 260, ease: 'Back.easeOut' });
+    }
+    const t = this.time.now;
+    const x = cellX(s.food.x) + CELL / 2;
+    const y = cellY(s.food.y) + CELL / 2;
+    this.foodImg.setPosition(x, y - 2 + Math.sin(t / 220) * 3);
+    this.foodGlow.setPosition(x, y).setAlpha(0.5 + Math.sin(t / 260) * 0.2);
+
+    // globo: pisca quando está para sumir
+    const sig = s.signal;
+    const blink = sig !== null && s.signalLeft < 10 && Math.floor(t / 150) % 2 === 0;
+    if (!sig || blink) {
+      this.signalImg.setVisible(false);
+      this.signalGlow.setVisible(false);
+      return;
+    }
+    const sx = cellX(sig.x) + CELL / 2;
+    const sy = cellY(sig.y) + CELL / 2;
+    this.signalImg.setPosition(sx, sy + Math.sin(t / 200) * 3).setVisible(true);
+    this.signalGlow.setPosition(sx, sy).setVisible(true).setAlpha(0.6 + Math.sin(t / 240) * 0.25);
+  }
+
+  private pillAt(i: number): Phaser.GameObjects.Image {
+    let img = this.pills[i];
+    if (!img) {
+      img = this.add.image(0, 0, 'cobra_azul_corpo');
+      this.snakeLayer.addAt(img, 1 + i); // logo depois do tubo, abaixo das cabeças e caudas
+      this.pills[i] = img;
+    }
+    return img;
+  }
+
+  /**
+   * Monta a cobra com as imagens do gestor: cabeça RJ45 com o olho, corpo contínuo e conector RJ45 na cauda. O corpo
+   * é um tubo azul contínuo (sem vãos) com os segmentos do modelo por cima, que acompanham a curva do caminho. A lógica
+   * anda de casa em casa; aqui a cabeça desliza e a ponta recua entre um passo e o seguinte. Perto da borda, as peças
+   * também aparecem do lado oposto (recortadas pela máscara do campo).
+   */
+  private updateSnake(): void {
     const s = this.state;
     const snake = s.snake;
     const head = snake[0];
     if (!head) return;
 
-    const tick = tickMs(levelFor(s.houses));
+    const tick = tickMs(levelFor(s.eaten));
     const p = this.steps === 0 || !s.alive || this.readyLeft > 0 ? 1 : Phaser.Math.Clamp(this.acc / tick, 0, 1);
     const center = (c: Pt): V => ({ x: FIELD_X + c.x * CELL + CELL / 2, y: FIELD_Y + c.y * CELL + CELL / 2 });
     const unwrap = (d: number, size: number): number => (d > size / 2 ? d - size : d < -size / 2 ? d + size : d);
 
-    // casas "desenroladas": contínuas mesmo quando o cabo cruza a borda
+    // casas “desenroladas”: contínuas mesmo quando o cabo cruza a borda
     const cells: Pt[] = [{ x: head.x, y: head.y }];
     for (let i = 1; i < snake.length; i++) {
       const prev = cells[i - 1]!;
@@ -446,8 +561,6 @@ export class PlayScene extends Phaser.Scene {
       const b = snake[i]!;
       cells.push({ x: prev.x + unwrap(b.x - a.x, COLS), y: prev.y + unwrap(b.y - a.y, ROWS) });
     }
-
-    // vértices do cabo, da cabeça até a ponta
     const points: V[] = [];
     const h = center(cells[0]!);
     if (cells[1] && p < 1) {
@@ -464,21 +577,33 @@ export class PlayScene extends Phaser.Scene {
       const old = center({ x: lc.x + unwrap(s.prevTail.x - last.x, COLS), y: lc.y + unwrap(s.prevTail.y - last.y, ROWS) });
       points.push({ x: lerp(old.x, end.x, p), y: lerp(old.y, end.y, p) });
     }
+    const path = roundedPath(points, CELL * 0.6);
+    const track = buildTrack(path);
+    const headDir = endDirection(path, false) ?? {
+      x: s.dir === 'right' ? 1 : s.dir === 'left' ? -1 : 0,
+      y: s.dir === 'down' ? 1 : s.dir === 'up' ? -1 : 0,
+    };
+    const tailDir = endDirection(path, true) ?? { x: -headDir.x, y: -headDir.y };
 
-    const path = roundedPath(points, CELL * 0.55);
-    const boosted = s.boostLeft > 0;
+    const skin = s.boostLeft > 0 ? 'metal' : 'azul'; // no ponto extra a cobra troca para a versão vermelha
+    const tubeColors = TUBE[skin];
+    const headTex = this.textures.get(`cobra_${skin}_cabeca`).getSourceImage();
+    const tailTex = this.textures.get(`cobra_${skin}_cauda`).getSourceImage();
+    const pillTex = this.textures.get(`cobra_${skin}_corpo`).getSourceImage();
+    const headW = headTex.width * SPRITE_K;
+    const tailW = tailTex.width * SPRITE_K;
+    const pillW = pillTex.width * SPRITE_K;
+    const bodyStart = headW - HEAD_FRONT; // a cabeça termina aqui (distância a partir da casa da cabeça)
+    const bodyEnd = track.total - (tailW - TAIL_BACK);
+    const bodyLen = Math.max(0, bodyEnd - bodyStart);
+    // segmentos bem juntos (com sobreposição), para o meio nunca ficar vago nem quebrado nas curvas
+    const n = bodyLen > 2 ? Math.max(1, Math.ceil(bodyLen / (pillW * 0.8))) : 0;
+    const spacing = n > 0 ? bodyLen / n : pillW;
 
-    const body = path; // espessura igual dos dois lados, como um cabo de verdade
-
-    const main = boosted ? mixColor(this.cableColor, COLORS.signal, 0.45) : this.cableColor;
-    const shade = boosted ? mixColor(this.cableShade, COLORS.signal, 0.25) : this.cableShade;
-    const light = mixColor(main, 0xffffff, 0.4);
-    const spec = boosted ? mixColor(COLORS.signal, 0xffffff, 0.6) : mixColor(main, 0xffffff, 0.8);
-
-    // cópias do cabo que aparecem dentro do campo (a normal e, perto da borda, a do lado oposto)
+    // cópias que aparecem dentro do campo (a normal e, perto da borda, as do lado oposto)
     const fieldW = COLS * CELL;
     const fieldH = ROWS * CELL;
-    const pad = CABLE_W + 6;
+    const pad = headW;
     let minX = Infinity;
     let maxX = -Infinity;
     let minY = Infinity;
@@ -497,53 +622,66 @@ export class PlayScene extends Phaser.Scene {
         }
       }
     }
-    const at = (pts: V[], ox: number, oy: number): V[] => pts.map((v) => ({ x: v.x + ox, y: v.y + oy }));
 
-    for (const [ox, oy] of copies) {
-      // 1. contorno
-      g.lineStyle(CABLE_W + 4, COLORS.cableOutline, 1);
-      g.strokePoints(at(body, ox, oy), false, false);
-      // 2. sombra (parte de baixo do tubo)
-      g.lineStyle(CABLE_W, shade, 1);
-      g.strokePoints(at(body, ox, oy), false, false);
-      // 3. cor principal, deslocada para a luz (cima e esquerda)
-      g.lineStyle(CABLE_W - 3, main, 1);
-      g.strokePoints(at(body, ox - 0.7, oy - 0.7), false, false);
-      // 4. brilho largo
-      g.lineStyle(2, light, 1);
-      g.strokePoints(at(body, ox - 1.8, oy - 1.8), false, false);
-      // 5. reflexo fino
-      g.lineStyle(1, spec, 1);
-      g.strokePoints(at(body, ox - 2.4, oy - 2.4), false, false);
+    // tubo contínuo sob os segmentos: preenche qualquer vão entre eles, mesmo nas curvas
+    const g = this.bodyG;
+    g.clear();
+    const tube: V[] = [];
+    if (bodyLen > 0) {
+      const from = Math.max(0, bodyStart - 10);
+      const to = Math.min(track.total, bodyEnd + 10);
+      for (let d = from; d < to; d += 4) {
+        const q = sampleTrack(track, d);
+        tube.push({ x: q.x, y: q.y });
+      }
+      const last = sampleTrack(track, to);
+      tube.push({ x: last.x, y: last.y });
     }
 
-    // conector RJ45 em cada ponta, virado para fora do cabo
-    const headDir = endDirection(path, false) ?? {
-      x: s.dir === 'right' ? 1 : s.dir === 'left' ? -1 : 0,
-      y: s.dir === 'down' ? 1 : s.dir === 'up' ? -1 : 0,
+    // orienta uma imagem que “olha” para a esquerda (cabeça) ou para a direita (cauda) na direção d, sem ficar de cabeça para baixo
+    const orient = (img: Phaser.GameObjects.Image, d: V, facesLeft: boolean) => {
+      const a = Math.atan2(d.y, d.x);
+      const rightward = d.x >= 0;
+      img.setFlipX(facesLeft ? rightward : !rightward);
+      img.setRotation(rightward ? a : a > 0 ? a - Math.PI : a + Math.PI);
     };
-    const tailDir = endDirection(path, true) ?? { x: -headDir.x, y: -headDir.y };
-    this.placePlug(this.plugsHead, path[0] ?? h, headDir.x, headDir.y);
-    this.placePlug(this.plugsTail, path[path.length - 1] ?? h, tailDir.x, tailDir.y);
-  }
 
-  /** Posiciona e gira o conector (sprite de pixel art) na ponta do cabo, virado para onde ele anda. */
-  private placePlug(pool: Phaser.GameObjects.Image[], hp: V, dx: number, dy: number): void {
-    const horizontal = Math.abs(dx) > Math.abs(dy);
-    const angle = horizontal ? (dx > 0 ? 90 : -90) : dy > 0 ? 180 : 0;
-    const fieldW = COLS * CELL;
-    const fieldH = ROWS * CELL;
-    const reach = PLUG_TIP_PX + 8;
-    let used = 0;
-    for (const ox of [-fieldW, 0, fieldW]) {
-      for (const oy of [-fieldH, 0, fieldH]) {
-        const x = hp.x + ox;
-        const y = hp.y + oy;
-        if (x < FIELD_X - reach || x > FIELD_X + fieldW + reach || y < FIELD_Y - reach || y > FIELD_Y + fieldH + reach) continue;
-        const img = pool[used++];
-        if (img) img.setPosition(Math.round(x), Math.round(y)).setAngle(angle).setVisible(true);
+    const pulse = 1 + 0.2 * this.headPulse;
+    let pi = 0;
+    let ci = 0;
+    for (const [ox, oy] of copies) {
+      if (tube.length > 1) {
+        const shifted = tube.map((v) => ({ x: v.x + ox, y: v.y + oy }));
+        g.lineStyle(BODY_H + 3, tubeColors.outline, 1);
+        g.strokePoints(shifted, false, false);
+        g.lineStyle(BODY_H - 3, tubeColors.mid, 1);
+        g.strokePoints(shifted, false, false);
+        g.lineStyle(4, tubeColors.light, 0.8);
+        g.strokePoints(shifted.map((v) => ({ x: v.x - 2, y: v.y - 5 })), false, false);
+      }
+
+      const headImg = this.heads[ci]!;
+      const tailImg = this.tails[ci]!;
+      ci++;
+      headImg.setTexture(`cobra_${skin}_cabeca`).setVisible(true).setScale(SPRITE_K * pulse);
+      headImg.setPosition(path[0]!.x - headDir.x * (headW / 2 - HEAD_FRONT) + ox, path[0]!.y - headDir.y * (headW / 2 - HEAD_FRONT) + oy);
+      orient(headImg, headDir, true);
+      const end = path[path.length - 1]!;
+      tailImg.setTexture(`cobra_${skin}_cauda`).setVisible(true).setScale(SPRITE_K);
+      tailImg.setPosition(end.x - tailDir.x * (tailW / 2 - TAIL_BACK) + ox, end.y - tailDir.y * (tailW / 2 - TAIL_BACK) + oy);
+      orient(tailImg, tailDir, false);
+
+      for (let i = 0; i < n; i++) {
+        const sp = sampleTrack(track, bodyStart + (i + 0.5) * spacing);
+        const pill = this.pillAt(pi++);
+        pill.setTexture(`cobra_${skin}_corpo`).setVisible(true);
+        pill.setPosition(sp.x + ox, sp.y + oy).setRotation(sp.angle).setScale(((spacing * 1.25) / pillTex.width), SPRITE_K);
       }
     }
-    for (let i = used; i < pool.length; i++) pool[i]?.setVisible(false);
+    for (let i = ci; i < this.heads.length; i++) {
+      this.heads[i]?.setVisible(false);
+      this.tails[i]?.setVisible(false);
+    }
+    for (let i = pi; i < this.pills.length; i++) this.pills[i]?.setVisible(false);
   }
 }

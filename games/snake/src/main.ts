@@ -15,18 +15,20 @@ const bridge = createHubBridge({
   avatarViews: game_json.avatarViews as Array<'portrait'>,
 });
 
+// Arte em alta resolução (não é pixel art): suavização ligada. O jogo é desenhado em 540x960 e escala para a tela.
 const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
   width: GAME_W,
   height: GAME_H,
   backgroundColor: COLORS.background,
-  pixelArt: true,
-  roundPixels: true,
+  pixelArt: false,
+  antialias: true,
+  roundPixels: false,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   input: { activePointers: 1 },
   scene: [BootScene, MenuScene, PlayScene, GameOverScene],
-});
+} as Phaser.Types.Core.GameConfig);
 
 game.registry.set('bridge', bridge);
 

@@ -78,3 +78,33 @@ describe('endDirection', () => {
     expect(endDirection([{ x: 1, y: 1 }, { x: 1, y: 1 }], true)).toBeNull();
   });
 });
+
+import { buildTrack, sampleTrack } from './cablePath';
+
+describe('trilha (posições ao longo da linha)', () => {
+  const t = buildTrack([{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }]);
+
+  it('mede o comprimento total', () => {
+    expect(t.total).toBe(20);
+  });
+
+  it('acha o ponto e o ângulo a uma distância', () => {
+    const a = sampleTrack(t, 5);
+    expect(a.x).toBeCloseTo(5);
+    expect(a.y).toBeCloseTo(0);
+    expect(a.angle).toBeCloseTo(0);
+    const b = sampleTrack(t, 15);
+    expect(b.x).toBeCloseTo(10);
+    expect(b.y).toBeCloseTo(5);
+    expect(b.angle).toBeCloseTo(Math.PI / 2);
+  });
+
+  it('limita às pontas e aguenta pontos repetidos', () => {
+    expect(sampleTrack(t, -5)).toMatchObject({ x: 0, y: 0 });
+    expect(sampleTrack(t, 99)).toMatchObject({ x: 10, y: 10 });
+    const dup = buildTrack([{ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 4, y: 0 }]);
+    const s = sampleTrack(dup, 2);
+    expect(s.x).toBeCloseTo(2);
+    expect(Number.isFinite(s.angle)).toBe(true);
+  });
+});
