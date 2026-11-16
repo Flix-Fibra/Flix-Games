@@ -1,4 +1,4 @@
-import type { Aparelho, Jogo, LinhaRanking, Perfil, Sessao } from './tipos';
+import type { Aparelho, Jogo, LinhaRanking, Perfil, ResultadoPartida, Sessao } from './tipos';
 
 /** Erro da API com a mensagem já pronta para mostrar ao cliente. */
 export class ErroApi extends Error {
@@ -58,6 +58,11 @@ export const servico = {
   excluirPerfil: (id: string) => api<void>('DELETE', `/perfis/${encodeURIComponent(id)}`),
   favoritar: (perfilId: string, jogoId: string, sim: boolean) =>
     api<void>(sim ? 'PUT' : 'DELETE', `/perfis/${encodeURIComponent(perfilId)}/favoritos/${encodeURIComponent(jogoId)}`),
+
+  // Partidas: o JOGO avisa o hub por postMessage; o HUB chama estas rotas (contrato, seção 6)
+  iniciarPartida: (jogoId: string, runId: string) => api<{ runId: string }>('POST', '/partidas/inicio', { jogoId, runId }),
+  finalizarPartida: (runId: string, pontos: number, duracaoMs: number) =>
+    api<ResultadoPartida>('POST', '/partidas/fim', { runId, pontos, duracaoMs }),
 
   aparelhos: () => api<Aparelho[]>('GET', '/aparelhos'),
   desconectarAparelho: (id: string) => api<void>('DELETE', `/aparelhos/${encodeURIComponent(id)}`),

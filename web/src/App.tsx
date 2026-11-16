@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ProvedorAviso, useAviso } from './componentes/Aviso';
 import { Inicio } from './componentes/Inicio';
+import { Jogando } from './componentes/Jogando';
 import { Perfil } from './componentes/Perfil';
 import { QuemVaiJogar } from './componentes/QuemVaiJogar';
 import { Ranking } from './componentes/Ranking';
@@ -22,6 +23,7 @@ function Portal() {
   const [aba, setAba] = useState<Aba>('inicio');
   const [quemAberto, setQuemAberto] = useState(false);
   const [rankingJogo, setRankingJogo] = useState<string | null>(null);
+  const [jogando, setJogando] = useState<Jogo | null>(null);
 
   // Abertura: sessão deste aparelho + catálogo. Links diretos: #perfis abre a escolha;
   // #inicio, #ranking e #perfil abrem a aba (se já houver perfil escolhido neste aparelho).
@@ -109,6 +111,16 @@ function Portal() {
     trocarPerfil(await servico.alterarPerfil(perfil.id, dados));
   }
 
+  // Fechou o jogo: se houve partida, busca o perfil de novo (recorde, posição, conquistas)
+  async function fecharJogo(houvePartida: boolean) {
+    setJogando(null);
+    if (!houvePartida) return;
+    try {
+      const s = await servico.sessao();
+      setCarga({ ...pronto, perfis: s.perfis });
+    } catch { /* mantém o que estava na tela */ }
+  }
+
   async function sair() {
     await servico.sairDesteAparelho();
     window.location.reload(); // sem sessão: mostra "Entre pelo App Flix"
@@ -125,7 +137,7 @@ function Portal() {
               <>
                 {aba === 'inicio' && (
                   <Inicio jogos={jogos} perfil={perfil} onFavoritar={favoritar}
-                    onVerRanking={(j) => { setRankingJogo(j.id); irPara('ranking'); }} />
+                    onVerRanking={(j) => { setRankingJogo(j.id); irPara('ranking'); }} onJogar={setJogando} />
                 )}
                 {aba === 'ranking' && <Ranking jogos={jogos} perfil={perfil} jogoId={rankingJogo} onJogo={setRankingJogo} />}
                 {aba === 'perfil' && (
@@ -138,6 +150,7 @@ function Portal() {
           {import.meta.env.DEV && <p className="gx-aviso-prototipo">Desenvolvimento · conta de teste e dados fictícios</p>}
         </>
       )}
+      {jogando && perfil && <Jogando jogo={jogando} onFechar={fecharJogo} />}
       {(quemAberto || !perfil) && (
         <QuemVaiJogar perfis={perfis} maxPerfis={maxPerfis} atualId={perfilId} onEntrar={entrar} onCriar={criar} onExcluir={excluir} />
       )}

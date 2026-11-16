@@ -10,9 +10,10 @@ interface Props {
   perfil: Perfil;
   onFavoritar: (jogo: Jogo) => Promise<void>;
   onVerRanking: (jogo: Jogo) => void;
+  onJogar: (jogo: Jogo) => void;
 }
 
-export function Inicio({ jogos, perfil, onFavoritar, onVerRanking }: Props) {
+export function Inicio({ jogos, perfil, onFavoritar, onVerRanking, onJogar }: Props) {
   const avisar = useAviso();
   const [sel, setSel] = useState(0);
   const tiles = useRef<(HTMLButtonElement | null)[]>([]);
@@ -20,7 +21,10 @@ export function Inicio({ jogos, perfil, onFavoritar, onVerRanking }: Props) {
   const st = perfil.jogos[jogo.id] ?? {};
   const fav = perfil.favoritos.includes(jogo.id);
 
-  const jogar = useCallback(() => avisar(`Em breve: "${jogo.nome}" abre aqui`), [avisar, jogo.nome]);
+  const jogar = useCallback(() => {
+    if (jogo.pasta) onJogar(jogo);
+    else avisar(`"${jogo.nome}" chega em breve`);
+  }, [avisar, jogo, onJogar]);
 
   const selecionar = useCallback((i: number, focar = false) => {
     const n = (i + jogos.length) % jogos.length;
@@ -67,7 +71,7 @@ export function Inicio({ jogos, perfil, onFavoritar, onVerRanking }: Props) {
     return () => { window.removeEventListener('gamepadconnected', conectou); cancelAnimationFrame(quadro); };
   }, [sel, selecionar, jogar, avisar]);
 
-  const { linhas: top, erro } = useRanking(jogo, perfil.id + perfil.apelido + perfil.oculto);
+  const { linhas: top, erro } = useRanking(jogo, `${perfil.id}|${perfil.apelido}|${perfil.oculto}|${perfil.partidas}`);
   const continuar = jogos.filter((j) => perfil.jogos[j.id]?.progresso);
 
   return (
@@ -106,7 +110,7 @@ export function Inicio({ jogos, perfil, onFavoritar, onVerRanking }: Props) {
         </div>
         <p className="gx-hero-desc">{jogo.descricao}</p>
         <div className="gx-acoes">
-          <button className="gx-btn gx-btn-jogar" onClick={jogar}><Play /><span>{st.progresso ? 'Continuar' : 'Jogar'}</span></button>
+          <button className="gx-btn gx-btn-jogar" onClick={jogar}><Play /><span>{!jogo.pasta ? 'Em breve' : st.progresso ? 'Continuar' : 'Jogar'}</span></button>
           <button className="gx-btn gx-btn-sec" aria-pressed={fav}
             onClick={() => onFavoritar(jogo).then(() => avisar(fav ? 'Removido dos favoritos' : 'Adicionado aos favoritos')).catch((e: Error) => avisar(e.message))}>
             <Coracao /><span>{fav ? 'Favorito' : 'Favoritar'}</span>

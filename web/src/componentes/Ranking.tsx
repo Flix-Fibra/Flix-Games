@@ -13,7 +13,7 @@ interface Props {
 export function Ranking({ jogos, perfil, jogoId, onJogo }: Props) {
   const comRanking = jogos.filter((j) => j.ranking);
   const jogo = comRanking.find((j) => j.id === jogoId) ?? comRanking[0];
-  const { linhas, erro } = useRanking(jogo ?? { id: '', ranking: false } as Jogo, perfil.id + perfil.apelido + perfil.oculto);
+  const { linhas, erro } = useRanking(jogo ?? { id: '', ranking: false } as Jogo, `${perfil.id}|${perfil.apelido}|${perfil.oculto}|${perfil.partidas}`);
 
   return (
     <section className="gx-view ativa" aria-label="Ranking">

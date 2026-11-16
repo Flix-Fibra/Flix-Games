@@ -19,6 +19,7 @@ Qualquer pessoa ou IA pode continuar a próxima fase. Não há responsáveis fix
 | `web/` | Interface: React + TypeScript + Vite | Ligada à API (`web/src/dados/servico.ts`); catálogo G01–G15 vem do banco |
 | `api/` | Backend: Python + FastAPI + Uvicorn + PostgreSQL | Funciona localmente com login simulado e 19 testes (ver `api/LEIAME.md`) |
 | `tarefas/` | Processo separado: revalidar clientes no CRM | Ainda não criado (ver `tarefas/LEIAME.md`) |
+| `games/` | Jogos (builds em `games/<pasta>/dist`), servidos em `/games/<pasta>/` no iframe do hub | Só o jogo de teste `_teste-hub` (ver `docs/hub-iframe.md`) |
 | `prototipo/` | Protótipo estático original (HTML/CSS/JS) | Referência; será removido quando a versão React for aprovada |
 
 ## Rodar a interface localmente

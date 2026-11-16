@@ -19,8 +19,11 @@ def semear() -> None:
         raise SystemExit("Recusado: semear só roda com MODO=desenvolvimento.")
     rnd = random.Random(42)  # sempre os mesmos números
     with psycopg.connect(config.database_url) as c:
+        # Jogo de teste do hub (games/_teste-hub) no lugar dos três primeiros, até chegarem os jogos reais
+        c.execute("UPDATE jogos SET pasta = '_teste-hub' WHERE id IN ('g01', 'g02', 'g15') AND pasta IS NULL")
         if c.execute("SELECT 1 FROM contas WHERE cliente_ref = 'DEV-0001'").fetchone():
-            print("Já semeado.")
+            c.commit()
+            print("Já semeado (pastas de teste conferidas).")
             return
         c.execute("UPDATE jogos SET publicado = (id <> 'g10')")
         jogos = c.execute("SELECT id, ordem, pontos_min, pontos_max, duracao_min_ms FROM jogos WHERE publicado AND tem_ranking").fetchall()

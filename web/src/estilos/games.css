@@ -299,3 +299,19 @@ main{padding-bottom:16px}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{transition:none!important;animation:none!important}
 }
+
+/* ---------- Jogo aberto (iframe do hub) ---------- */
+.gx-jogo{position:fixed;inset:0;z-index:80;display:flex;flex-direction:column;background:#000}
+.gx-jogo-barra{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:8px;
+  padding:calc(4px + env(safe-area-inset-top)) 8px 4px;background:rgba(11,11,13,.92);color:#F5F5F7;text-align:center;font-size:14px}
+.gx-jogo-btn{width:44px;height:44px;border:0;border-radius:50%;background:rgba(255,255,255,.08);color:#F5F5F7;font-size:18px}
+.gx-jogo-quadro{flex:1;width:100%;border:0;background:#0b0b0d;padding-bottom:env(safe-area-inset-bottom)}
+.gx-jogo-aviso{position:absolute;inset:0;display:grid;place-items:center;color:#A1A1A6;pointer-events:none}
+.gx-jogo-fim{position:absolute;inset:0;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.6);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.gx-jogo-cartao{width:min(360px,100%);padding:22px;border-radius:22px;background:#1c1c1f;color:#F5F5F7;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.gx-jogo-cartao h2{margin:0 0 8px;font-size:22px}
+.gx-jogo-cartao p{margin:0 0 12px;color:#C7C7CC}
+.gx-jogo-pontos{font-size:40px;font-weight:800;color:#F5F5F7!important;letter-spacing:-.02em}
+.gx-jogo-cartao .gx-chip{justify-content:center;--gold:#F5C04A}
+.gx-jogo-acoes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+.gx-jogo-acoes .btn.light{background:rgba(255,255,255,.08);color:#F5F5F7;border-color:rgba(255,255,255,.12)}

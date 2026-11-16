@@ -13,6 +13,7 @@ export interface Jogo {
   unidade: string;       // 'pontos', 'tacadas', 'ms'...
   ordem: 'maior' | 'menor'; // 'menor' = menos tacadas/tempo vence
   ranking: boolean;
+  pasta: string | null;  // build em /games/<pasta>/; null = ainda não entregue
 }
 
 /** Desempenho de um perfil em um jogo. Sem posição = ainda não pontuou. */
@@ -55,6 +56,11 @@ export interface LinhaRanking {
   pontos: number;
   eu: boolean;
 }
+
+/** Resposta da API ao fim da partida. Recusada = não entra no ranking (motivo fica gravado para a TI). */
+export type ResultadoPartida =
+  | { aceita: true; melhor: number | null; posicao: number | null }
+  | { aceita: false; motivo: string };
 
 /** Aparelhos são da conta, não do perfil (Q09). */
 export interface Aparelho {
