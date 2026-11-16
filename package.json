@@ -7,6 +7,8 @@
   "scripts": {
     "dev:snake": "npm run dev -w games/snake",
     "build:snake": "npm run build -w games/snake",
+    "dev:estoque": "npm run dev -w games/estoque",
+    "build:estoque": "npm run build -w games/estoque",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

@@ -173,7 +173,7 @@ Colunas: **Ficha** = ficha de gameplay revisada; **Código** = jogo executa o ci
 | G07 | Plataforma com mapas | 3 | baixo a médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Mapas no Tiled; precisa de `docs/ADDING_LEVELS.md`. |
 | G08 | Plataforma com tiro (run and gun curto) | 3 | médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Inimigos temáticos, sem violência gráfica. |
 | G09 | Travessia infinita em grade | 3 | médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Diferenciar bem do G05. |
-| G10 | Tetris-like (blocos que encaixam) | 3 | alto | ⬜ | ⬜ | ⬜ | ⬜ | ⛔ | ⛔ | 16/11 | [C] Pode ser desenvolvido; publicar só após o parecer do jurídico (a API o mantém bloqueado). |
+| G10 | Estoque Flix (peças que caem + combinar 3 iguais, `games/estoque`) | 3 | alto | 🟡 | 🟡 | 🟡 | ⬜ | ⛔ | ⛔ | 16/11 | [C] Nova direção do solicitante em 16/11: mistura de peças que caem com combinação de itens iguais, tema de estoque, gráfico liso; um item por vez, 2 minutos, grupos maiores valem muito mais. [F] Jogável com setas/toque, 5 itens vetoriais (roteador, cabo, monitor, furadeira, antena), cadeia de combinações, caixa de estoque; 20 testes de regras; simulado em navegador desktop. [H] Ficha é rascunho; falta celular, arte final da Flix, jurídico (Q47) e hub real. Publicar só após o parecer. |
 | G11 | Arena em primeira pessoa (Doom-like com menos violência) | 4 | médio a alto | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [C] Inimigo e projétil diferentes, sem arma de fogo; sem assets nem nome do original. |
 | G12 | Corrida top-down em pixel art | 3 | baixo a médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Referência com GPL/CC BY-SA: só gameplay. |
 | G13 | Futebol de cabeça 1 contra 1 | 2 | médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Adversário por IA; sem multiplayer na v1 (Q28). |
