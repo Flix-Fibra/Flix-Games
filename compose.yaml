@@ -1,0 +1,46 @@
+# Ambiente LOCAL de desenvolvimento do Flix Games.
+# Produção terá um arquivo próprio (MODO=producao, sem dependências de teste).
+#
+# Segurança (Docker publica portas por fora do ufw):
+# - Postgres NÃO publica porta: só a API o alcança, pela rede interna do compose.
+# - API publicada apenas em 127.0.0.1.
+#
+# Senha do banco: vem do arquivo .env (não versionado). Copie .env.exemplo para .env.
+
+services:
+  db:
+    image: postgres:16.16-alpine
+    environment:
+      POSTGRES_DB: flixgames
+      POSTGRES_USER: flixgames
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+    volumes:
+      - db-dados:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flixgames -d flixgames"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    cpus: 1.0
+    mem_limit: 512m
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./api
+      args:
+        INSTALAR_DEV: "1"
+    environment:
+      DATABASE_URL: postgresql://flixgames:${POSTGRES_PASSWORD}@db:5432/flixgames
+      MODO: desenvolvimento
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    cpus: 1.0
+    mem_limit: 256m
+    restart: unless-stopped
+
+volumes:
+  db-dados:
