@@ -94,7 +94,7 @@ Referências: [OpenID Connect Core](https://openid.net/specs/openid-connect-core
 
 [H] Cada título deverá ter ficha com origem, direito de distribuição, execução, dispositivos, controles, peso dos arquivos, persistência, pontuação e possibilidade de validação. Jogos de navegador, links externos, multiplayer e streaming de PC/console têm integrações e custos diferentes.
 
-[H] A hipótese inicial é um catálogo pequeno, com 3 a 5 jogos de navegador. Quantidade e títulos não aprovados. Os jogos do print não são parte confirmada do catálogo.
+[C] Decisão do solicitante em 16/11/2026: o catálogo começa com 15 jogos de navegador (G01–G15, lista de trabalho em [prompt-inicio-minigames-flix.md](prompt-inicio-minigames-flix.md), seção 10) e a meta futura é 20. Substitui a hipótese anterior de 3 a 5 jogos. [D] Títulos finais, licenças e aprovação por jogo seguem pendentes. Os jogos do print não são parte confirmada do catálogo. O Doom-like (G11) será uma versão com menos violência, com outro inimigo e outro tipo de projétil.
 
 [H] Para ranking confiável: partida identificada pelo servidor; autorização limitada; resultado validado; prevenção de reenvio; regras por versão/modo; desempate publicado; histórico e revisão auditável. Um token válido não torna verdadeira uma pontuação enviada pelo navegador. Competição de maior risco pode exigir reconstituição da partida ou regras executadas no servidor.
 

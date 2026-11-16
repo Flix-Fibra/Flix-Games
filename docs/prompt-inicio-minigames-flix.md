@@ -1,4 +1,4 @@
-# Prompt de início - Mini games da plataforma Flix (versão 2.1)
+# Prompt de início - Mini games da plataforma Flix (versão 2.2)
 
 > Como usar: coloque este arquivo na raiz do repositório dos jogos e passe-o ao agente de IA (por exemplo o Claude Code) como instrução inicial. Ele é escrito para o agente, mas também serve de guia para o time.
 >
@@ -8,16 +8,31 @@
 
 ---
 
+## Decisões do solicitante em 16/11/2026 (prevalecem sobre qualquer trecho em contrário abaixo)
+
+1. **Sem anúncios por enquanto**, inclusive na tela de game over. O hub envia `restart` direto, sem anúncio (Q34 do painel `andamento.md`).
+2. **Catálogo:** começa com 15 jogos (G01 a G15) e a meta futura é chegar a 20.
+3. **Identidade:** conta Flix com perfis ligados ao cliente (até 2 por conta, Q23). Não há ranking por apelido anônimo. Público igual à Q30: sem jogos infantis; segue valendo a regra de evitar violência gráfica.
+4. **Doom-like (G11):** tentar uma versão com menos violência: inimigo diferente e, no lugar da arma de fogo, outro tipo de projétil. Continuam valendo as regras de licença e de nome.
+5. **Equipe:** não há donos fixos por área. O Rafael foi originalmente encarregado do hub, mas qualquer pessoa pode atuar em qualquer área.
+6. **Código de referência:** é permitido usar e colar trechos pontuais de código dos jogos de referência quando facilitarem o desenvolvimento, desde que não reproduzam grande parte nem a totalidade da obra. Registrar origem e licença do trecho no `ASSETS.md`. Trechos de repositórios GPL, CC BY-SA ou sem licença são risco assumido pelo time; o jurídico avalia na revisão do jogo pronto. Sprites, sons, imagens e vídeos de terceiros continuam proibidos.
+7. **Assets:** o agente deve explicar ao time onde ficam os assets de cada jogo (manifesto `assets.manifest.json`, pastas de arte e de áudio) e como trocá-los para deixar tudo com a identidade da Flix.
+8. **Tetris-like (G10):** pode ser desenvolvido agora. Depois de pronto, o time apresenta e aguarda a avaliação do jurídico antes de publicar. Não publicar sem esse parecer.
+9. **Código e git:** o agente gera código quando solicitado. Commit e push só quando o solicitante pedir.
+10. Itens não citados nesta lista seguem como estão. Se algo causar problema, perguntar de novo.
+
+---
+
 ## 0. Resumo
 
 - A Flix Fibra (ISP) vai ter, dentro do site principal, uma página de mini games para atrair clientes e aumentar o tempo no site.
 - Os jogos são simples, viciantes, de sessão curta (ônibus, fila), jogáveis no celular pelo navegador.
-- Ao perder, o jogador vê um anúncio e um botão de restart. Há ranking para o cliente ver sua posição.
+- Ao perder, o jogador vê a tela de fim e um botão de restart (sem anúncio por enquanto). Há ranking para o cliente ver sua posição.
 - **No hub, cada jogador cria um personagem personalizado** (cor da pele, cor e tipo de roupa, cabelo, skins) que aparece em todos os jogos (seção 9).
-- O Rafael cuida do hub (página dos jogos, editor de personagem, ranking, anúncios). Este repositório cuida dos jogos e do código compartilhado de personagem.
-- O catálogo tem **15 jogos** (seção 10): runner, Flappy-like, Snake, Arkanoid-like, Frogger-like, minigolfe, plataforma com mapas, run and gun, travessia infinita, Tetris-like, arena em primeira pessoa, corrida top-down, futebol de cabeça, descida em espiral e cesta de basquete de um toque.
-- Vamos nos inspirar em jogos open source e em jogos existentes, mas sem copiar código, arte, som, nome, personagem ou fase. A referência serve só para entender a mecânica e o ritmo.
-- Todo jogo é recriado do zero, com identidade visual da Flix, a partir de uma ficha de gameplay escrita com palavras do time (seção 11).
+- O Rafael foi encarregado originalmente do hub (página dos jogos, editor de personagem, ranking), mas qualquer pessoa pode atuar em qualquer área. Este repositório cuida dos jogos e do código compartilhado de personagem.
+- O catálogo começa com **15 jogos** (meta futura: 20) (seção 10): runner, Flappy-like, Snake, Arkanoid-like, Frogger-like, minigolfe, plataforma com mapas, run and gun, travessia infinita, Tetris-like, arena em primeira pessoa, corrida top-down, futebol de cabeça, descida em espiral e cesta de basquete de um toque.
+- Vamos nos inspirar em jogos open source e em jogos existentes, sem copiar a obra: arte, som, nome, personagem e fase não são copiados, e trechos pontuais de código podem ser usados conforme as decisões de 16/11/2026 (item 6). A referência serve para entender a mecânica e o ritmo.
+- Todo jogo é recriado com identidade visual da Flix, a partir de uma ficha de gameplay escrita com palavras do time (seção 11).
 - Stack padrão: Phaser 3 + TypeScript + Vite, com saída estática (seção 4).
 - O primeiro jogo é um runner infinito de um botão (seção 10.1). O plano de hoje está na seção 12.
 
@@ -28,7 +43,7 @@
 **Empresa e objetivo de negócio**
 - Flix Fibra, provedor de internet. O site principal é onde os clientes contratam e procuram suporte.
 - A página de jogos é ideia do CEO. A intenção é atrair clientes e deixá-los mais tempo no site.
-- Monetização e engajamento previstos: anúncio na tela de game over junto com o botão de restart, ranking entre os clientes e personalização do personagem.
+- Engajamento previsto: ranking entre os clientes e personalização do personagem. Anúncio na tela de game over fica fora por enquanto (decisão de 16/11/2026).
 
 **Público e dispositivo**
 - Clientes em celulares variados, inclusive aparelhos simples e conexão móvel. Assuma o pior caso: Android de entrada, 4G instável.
@@ -37,13 +52,13 @@
 **Equipe**
 - A equipe de TI da Flix não trabalha com jogos normalmente. Prefira soluções simples, bem documentadas e fáceis de manter.
 - Tobias: responsável pelos jogos e pela pesquisa de referências.
-- Rafael: responsável pelo hub. Ainda não começou nenhum jogo. Por isso o contrato entre jogo e hub (seção 6) e o formato do personagem (seção 9) são importantes: os dois lados precisam trabalhar em paralelo.
+- Rafael: encarregado originalmente do hub (sem donos fixos por área; qualquer pessoa pode atuar em qualquer área). Ainda não começou nenhum jogo. Por isso o contrato entre jogo e hub (seção 6) e o formato do personagem (seção 9) são importantes: os dois lados precisam trabalhar em paralelo.
 
 **Tipos de jogo desejados**
 - Plataforma e metroidvania em pixel art (estilo Mario ou similar, sem copiar nenhum).
 - Arcade de sessão curta.
 - Clássicos recriados com identidade própria: Arkanoid, Frogger, Tetris, Snake, Flappy Bird.
-- Ideia do CEO: algo parecido com Doom. Fica para a última onda (seção 10.11), por causa de peso, controle por toque e conteúdo violento.
+- Ideia do CEO: algo parecido com Doom, em versão com menos violência (inimigo diferente e outro tipo de projétil no lugar da arma de fogo). Fica para a última onda (seção 10.11), por causa de peso e controle por toque.
 
 ---
 
@@ -51,7 +66,7 @@
 
 ### 2.1 Propriedade intelectual
 
-1. **Nada de código, arte, som, música, fonte, nome, personagem, fase ou texto de terceiros** sem licença que permita uso comercial e sem registro na seção de assets (seção 8).
+1. **Nada de arte, som, música, fonte, nome, personagem, fase ou texto de terceiros** sem licença que permita uso comercial e sem registro na seção de assets (seção 8). Código: trechos pontuais de referência são permitidos (decisões de 16/11/2026, item 6); copiar grande parte ou toda a obra continua proibido.
 2. **Mecânica não é cópia, expressão é.** Pode-se se inspirar em ideias gerais (por exemplo "o personagem corre sozinho e o toque faz pular"). Não se pode reproduzir o jeito específico como um jogo as expressa: personagens, desenho dos cenários, layout das fases, interface, sons, textos, nome.
 3. **Nunca use nomes ou estilos de jogos protegidos** em nomes de arquivos, commits, textos do jogo ou prompts de geração de imagem (por exemplo "estilo Metal Slug", "tipo Crossy Road", "Mario", "Tetris", "Arkanoid", "Frogger", "Flappy"). Nos documentos internos use nomes de trabalho como "Flappy-like" apenas para identificar o gênero, e troque por nomes próprios antes de qualquer commit de código ou texto visível ao jogador.
 4. **Cada jogo precisa de pelo menos cinco diferenciais próprios e visíveis** (tema, personagem, cenário, regra extra, interface, sons). Liste na ficha do jogo.
@@ -61,7 +76,7 @@
 
 Estes jogos pedem cuidado extra, porque os titulares têm histórico de defender suas marcas e sua aparência. O que a pesquisa encontrou:
 
-- **Tetris (risco alto).** Num caso dos Estados Unidos (Tetris Holding v. Xio Interactive, tribunal de New Jersey, 2012), o clone "Mino" foi considerado infração de copyright e de trade dress. O tribunal entendeu que regras e mecânica não são protegidas, mas a forma de expressá-las, a aparência e a sensação do jogo, são. Os desenvolvedores tinham tentado licenciar o jogo e a empresa recusou. Não basta trocar o nome e as cores. Antes de começar, o jurídico precisa aprovar o conceito.
+- **Tetris (risco alto).** Num caso dos Estados Unidos (Tetris Holding v. Xio Interactive, tribunal de New Jersey, 2012), o clone "Mino" foi considerado infração de copyright e de trade dress. O tribunal entendeu que regras e mecânica não são protegidas, mas a forma de expressá-las, a aparência e a sensação do jogo, são. Os desenvolvedores tinham tentado licenciar o jogo e a empresa recusou. Não basta trocar o nome e as cores. O jogo pode ser feito agora, mas só é publicado depois que o time o apresentar pronto e o jurídico avaliar (decisão de 16/11/2026).
 - **Flappy Bird (risco médio).** A discussão de desenvolvedores indica que copiar a mecânica é discutível, mas elementos artísticos que identificam o original (desenho do pássaro, esquema de cores, fonte, canos verdes) podem ser protegidos. Regra prática: se uma pessoa comum confundiria o seu jogo com o original, você está em risco.
 - **Arkanoid (risco médio).** Já houve disputa histórica entre a dona do Breakout e o Arkanoid. O nome Arkanoid é marca. Evite o nome, o desenho da raquete, as cápsulas de poder, as fases e as músicas.
 - **Frogger (risco médio).** Os titulares dos direitos (possivelmente Konami e Sega, a confirmar) devem ser tratados como donos do nome e do personagem. Não usar sapo nem o nome. O personagem do nosso jogo será o personagem personalizado do jogador.
@@ -72,7 +87,7 @@ Medidas para todos eles:
 1. Mudanças reais de regra, de tema e de apresentação, não só de cor ou de nome.
 2. Nada de elementos distintivos conhecidos (formas, cores, sons, efeitos, telas, tipografia do original).
 3. Nome, personagem, cenário e interface próprios da Flix.
-4. Revisão do jurídico antes de publicar. Para o Tetris-like, aprovação antes de escrever o primeiro código.
+4. Revisão do jurídico antes de publicar. Para o Tetris-like, o desenvolvimento pode começar; a publicação espera o parecer do jurídico sobre o jogo pronto.
 
 ### 2.3 Licenças
 
@@ -86,20 +101,22 @@ Medidas para todos eles:
 
 O objetivo é que o jogo final não seja uma obra derivada de nenhum jogo de referência.
 
+> Atualização de 16/11/2026: o implementador (agente) pode receber e usar trechos pontuais de código das referências quando isso facilitar o desenvolvimento (decisões, item 6). Prints, sprites, sons e vídeos continuam fora. A ficha de gameplay segue sendo a base do jogo.
+
 1. **Observador** (Tobias ou Rafael, uma pessoa): joga a referência no celular e no computador, anota e preenche a **Ficha de gameplay** (seção 11), em palavras próprias e sem copiar textos, nomes ou números exatos que sejam expressão do jogo.
 2. **Implementador** (o agente de IA e quem revisa): trabalha **somente a partir da ficha**. Não recebe o código-fonte da referência, os sprites, os sons, os prints nem os vídeos.
 3. A ficha é revisada por uma segunda pessoa antes de ser entregue ao agente, para tirar qualquer detalhe que seja expressão específica.
 
 ### 2.5 Como usar IA sem criar obra derivada
 
-- **Não cole o código de um jogo de referência no agente** pedindo para "reescrever" ou "refazer parecido". Isso gera uma obra derivada, mesmo com variáveis renomeadas.
+- **Pode colar trechos pontuais de código de referência no agente** quando facilitarem o desenvolvimento. **Não cole o jogo inteiro nem grande parte dele** pedindo para "reescrever" ou "refazer parecido": isso gera uma obra derivada, mesmo com variáveis renomeadas. Registre a origem do trecho no `ASSETS.md`.
 - Não envie prints, sprites ou vídeos da referência para ferramentas de geração de imagem ou de código.
 - Pixel art gerada por IA serve no máximo como conceito ou placeholder interno. A arte final deve ser feita pelo designer da Flix ou vir de pacotes CC0 com origem conhecida. Confirme com o jurídico antes de usar arte gerada por IA em produção.
 - Código escrito pelo agente deve ser revisado por uma pessoa do time antes de entrar no branch principal.
 
 ### 2.6 Privacidade (LGPD)
 
-- O ranking usa **apelido livre**, sem vínculo com o cadastro do cliente, sem CPF, e-mail, telefone ou endereço. Se o hub ligar o perfil à conta do cliente, o Rafael e o jurídico decidem o tratamento dos dados.
+- O ranking usa o **perfil do jogador, ligado à conta Flix do cliente** (decisão de 16/11/2026; até 2 perfis por conta). O ranking mostra apenas apelido, avatar e posição, nunca CPF, e-mail, telefone ou endereço. O tratamento dos dados é do hub, com o jurídico (LGPD).
 - A configuração do personagem (seção 9) é guardada pelo hub e entregue ao jogo. O jogo não guarda nem envia essa configuração para lugar nenhum.
 - O jogo não coleta dado pessoal. Quem envia pontuação e quem exibe anúncio é o hub.
 - Sem bibliotecas de analytics, anúncios ou rastreamento dentro dos jogos. Isso é responsabilidade do hub.
@@ -124,7 +141,7 @@ Estas são as referências levantadas até agora. Os status vêm da pesquisa de 
 
 Se um destes for usado diretamente como base, o fluxo é: copiar o projeto para uma pasta própria, registrar a licença em `LICENSES/`, trocar todos os assets pelos da Flix e adaptar ao contrato do hub. Mesmo assim, a stack padrão deste repositório é Phaser (seção 4). Usar GDevelop é exceção e precisa ser combinada com o Rafael.
 
-### 3.2 Somente referência de gameplay (não usar código nem assets)
+### 3.2 Somente referência de gameplay (assets nunca; trechos pontuais de código só conforme as decisões de 16/11/2026, item 6)
 
 | Referência | Motivo | O que observar |
 |---|---|---|
@@ -240,7 +257,7 @@ type HubToGame =
       muted: boolean;
       locale?: string;              // por exemplo 'pt-BR'
     }
-  | { source: 'flix-hub'; v: 2; type: 'restart' }   // depois do anúncio
+  | { source: 'flix-hub'; v: 2; type: 'restart' }   // sem anúncio por enquanto; se houver anúncio no futuro, vem depois dele
   | { source: 'flix-hub'; v: 2; type: 'pause' }
   | { source: 'flix-hub'; v: 2; type: 'resume' }
   | { source: 'flix-hub'; v: 2; type: 'mute'; muted: boolean };
@@ -252,7 +269,7 @@ type HubToGame =
 2. O hub responde com `init` (personagem, som, idioma). Se o `init` não chegar em até 1,5 segundo, o jogo segue com o personagem padrão. O jogo nunca fica travado esperando o personagem.
 3. O jogador toca e começa. O jogo envia `started` com um `runId` único (UUID).
 4. Ao perder, o jogo congela, mostra a tela de fim sem anúncio, envia `gameover` e **espera**.
-5. O hub mostra o anúncio, depois envia `restart`. O jogo reinicia com novo `runId`.
+5. O hub envia `restart` quando o jogador pedir (sem anúncio por enquanto). O jogo reinicia com novo `runId`.
 6. Se o hub não responder em modo de desenvolvimento (sem iframe), o jogo mostra um botão de restart próprio. Em produção o botão de restart pertence ao hub.
 
 ### 6.4 Segurança
@@ -283,7 +300,7 @@ type HubToGame =
 - **Navegador do celular:** impedir rolagem, zoom por duplo toque e menu de contexto durante o jogo. Respeitar áreas seguras (notch).
 - **Acessibilidade mínima:** contraste alto no HUD, textos legíveis, opção de silenciar, e controle de um dedo sempre que o jogo permitir.
 - **Sem dependência de rede** depois do carregamento.
-- **Sem conteúdo gráfico violento ou ofensivo:** o público inclui famílias e menores. Evite sangue e armas realistas.
+- **Sem conteúdo gráfico violento ou ofensivo.** Não há jogos infantis (Q30), mas evite sangue e armas realistas.
 
 ---
 
@@ -406,7 +423,7 @@ Entregar, nesta ordem:
 ### 9.8 Segurança, privacidade e moderação
 
 - Lista permitida de itens, sem texto livre, sem upload.
-- O personagem é dado de perfil do jogador. Se estiver ligado a uma conta de cliente, o Rafael e o jurídico decidem o tratamento (LGPD).
+- O personagem é dado de perfil do jogador, ligado à conta do cliente (decisão de 16/11/2026). O tratamento (LGPD) é definido pelo hub com o jurídico.
 - O jogo não grava nem transmite o personagem. Só desenha.
 
 ### 9.9 O que o agente entrega para o personagem
@@ -435,7 +452,7 @@ Os níveis de risco abaixo são uma estimativa interna do time, e não parecer j
 | G07 | Plataforma com mapas (metroidvania-lite depois) | Plataforma | Not-A-Vania Redux e plataformas laterais em geral | Baixo a médio | A (side) | Menor tempo para completar a fase, desempate por coletáveis | 3 |
 | G08 | Plataforma com tiro (run and gun curto) | Ação | metal-slug-js e Wishforge (só gameplay) | Médio | A (side, `shoot`) | Pontos por inimigo com multiplicador de sequência | 3 |
 | G09 | Travessia infinita em grade | Arcade | expo-crossy-road (só gameplay) | Médio | A (top) | Faixas atravessadas | 3 |
-| G10 | Tetris-like (blocos que encaixam) | Puzzle | Tetris (só como gênero) | **Alto** | B (portrait) | Pontos em modo cronometrado de 2 minutos | 3, depois do jurídico |
+| G10 | Tetris-like (blocos que encaixam) | Puzzle | Tetris (só como gênero) | **Alto** | B (portrait) | Pontos em modo cronometrado de 2 minutos | 3 (publicação só após parecer do jurídico) |
 | G11 | Arena em primeira pessoa (ideia do CEO) | Tiro | ufocoder/fps e ideia tipo Doom | Médio a alto | B (fp_hands) | Inimigos eliminados por tempo de sobrevivência | 4 |
 | G12 | Corrida top-down em pixel art | Corrida | Pixel Wheels (só gameplay, licenças GPL e CC BY-SA) | Baixo a médio | B (portrait, piloto) | Melhor tempo de volta por pista | 3 |
 | G13 | Futebol de cabeça 1 contra 1 | Esporte | Head-Ball-Game e Head Ball (só gênero) | Médio | A (side, cabeça grande do personagem) | Gols em 2 minutos contra a IA, ou vitórias seguidas | 2 |
@@ -445,7 +462,7 @@ Os níveis de risco abaixo são uma estimativa interna do time, e não parecer j
 **Por que esta ordem:**
 - **Onda 1** valida o pipeline inteiro (SDK, contrato com o hub, personagem, relatório de teste) com jogos pequenos. G01 é o piloto de hoje. G02 reaproveita o toque e a física do runner. G03 é o mais simples de todos. G15 também é de um toque só e tem física simples.
 - **Onda 2** traz clássicos que dependem de mais arte e de mais regras, e já usa a visão `top` do personagem (G05). G13 aproveita bem o personagem, com a cabeça grande. G14 é um jogo curto e simples de fazer.
-- **Onda 3** traz os jogos com mapas e combate, o Tetris-like, que só começa com aprovação do jurídico, e a corrida top-down (G12), que dá mais trabalho de pistas e de arte.
+- **Onda 3** traz os jogos com mapas e combate, o Tetris-like, que pode ser feito agora mas só é publicado após o parecer do jurídico sobre o jogo pronto, e a corrida top-down (G12), que dá mais trabalho de pistas e de arte.
 - **Onda 4** é a ideia do CEO. É a mais pesada e a mais delicada.
 
 **Modos cronometrados:** sempre que possível, ofereça um modo de 2 a 3 minutos. Ranking de partidas com duração parecida é mais justo e combina com sessões curtas.
@@ -583,7 +600,7 @@ Os níveis de risco abaixo são uma estimativa interna do time, e não parecer j
 
 ### 10.10 G10 - Tetris-like (blocos que encaixam) - risco alto
 
-**Só começa com aprovação do jurídico (seção 2.2).**
+**Pode ser desenvolvido agora; só é publicado depois que o time apresentar o jogo pronto e o jurídico avaliar (seção 2.2, decisão de 16/11/2026).**
 
 **Inspiração geral (gênero):** encaixar peças feitas de blocos para completar linhas.
 
@@ -600,6 +617,7 @@ Os níveis de risco abaixo são uma estimativa interna do time, e não parecer j
 - Se for feito: jogo **original**, com mapa pequeno, resolução interna baixa (por exemplo 320x180) ampliada, controle por toque com joystick à esquerda, arrastar para olhar à direita e tiro automático, sessão de 2 minutos em ondas, **sem sangue**, com inimigos temáticos. As mãos do jogador usam a cor da pele e da manga do personagem (visão `fp_hands`).
 - **Não usar assets do Doom nem o nome.** O projeto Freedoom (licença BSD) permite uso comercial com cópia da licença junto da distribuição e crédito ao projeto. Mesmo assim, para a marca da Flix, assets próprios são preferíveis.
 - Motores do Doom em WebAssembly são GPL: ao distribuí-los é preciso disponibilizar o código-fonte do motor. Só com aprovação do jurídico.
+- **Decisão de 16/11/2026:** fazer uma versão com menos violência: trocar o inimigo e a arma de fogo por outro tipo de projétil (por exemplo pulso de sinal), mantendo a regra de não usar assets nem o nome do Doom.
 
 ### 10.12 G12 - Corrida top-down em pixel art
 
@@ -757,6 +775,8 @@ Siga na ordem. Em cada passo, termine com algo que roda e pode ser testado. Em c
 ---
 
 ## 15. Perguntas em aberto (para Tobias e Rafael decidirem)
+
+Respondidas em 16/11/2026 (ver decisões no início do documento): 6 (sem anúncio por enquanto), 9 (perfil ligado à conta do cliente) e 12 (Tetris-like pode ser feito e vai ao jurídico depois de pronto). As demais continuam em aberto; o ranking da pergunta 5 é permanente por jogo, conforme o painel (Q18).
 
 1. Confirmam Phaser 3 + TypeScript + Vite como padrão, ou preferem GDevelop?
 2. Onde ficará o repositório (conta e organização) e quem revisa o código?
