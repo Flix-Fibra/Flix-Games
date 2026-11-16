@@ -26,11 +26,11 @@ export function Inicio({ jogos, perfil, onFavoritar, onVerRanking, onJogar }: Pr
     else avisar(`"${jogo.nome}" chega em breve`);
   }, [avisar, jogo, onJogar]);
 
-  const selecionar = useCallback((i: number, focar = false) => {
+  const selecionar = useCallback((i: number, focar = false, rolar = true) => {
     const n = (i + jogos.length) % jogos.length;
     setSel(n);
     const el = tiles.current[n];
-    el?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    if (rolar) el?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     if (focar) el?.focus({ preventScroll: true });
   }, [jogos.length]);
 
@@ -88,6 +88,8 @@ export function Inicio({ jogos, perfil, onFavoritar, onVerRanking, onJogar }: Pr
             tabIndex={j.id === jogo.id ? 0 : -1}
             style={{ '--t1': j.cor1, '--t2': j.cor2 } as CSSProperties}
             onClick={() => (j.id === jogo.id ? jogar() : selecionar(i))}
+            // Como no PS5: com mouse, passar por cima já leva o foco para o jogo (sem rolar a fileira)
+            onMouseEnter={() => { if (j.id !== jogo.id && window.matchMedia('(hover: hover)').matches) selecionar(i, false, false); }}
           >
             <IconeJogo id={j.id} />
             {perfil.favoritos.includes(j.id) && <span className="gx-tile-fav"><Coracao /></span>}
@@ -96,7 +98,7 @@ export function Inicio({ jogos, perfil, onFavoritar, onVerRanking, onJogar }: Pr
         ))}
       </div>
 
-      <div className="gx-hero" aria-live="polite">
+      <div className="gx-hero" aria-live="polite" key={jogo.id}>
         <p className="gx-sobre">{jogo.genero} · 1 jogador</p>
         <h1 className="gx-hero-titulo">{jogo.nome}</h1>
         <div className="gx-chips">

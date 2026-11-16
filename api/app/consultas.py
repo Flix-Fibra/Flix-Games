@@ -5,6 +5,7 @@ from uuid import UUID
 from psycopg import Connection
 
 from .avatar import avatar_valido
+from .personagem import personagem_valido
 
 # Melhor resultado de cada perfil em cada jogo e a posição no ranking daquele jogo.
 # - 'maior' vence maior pontuação; 'menor' vence menor (tacadas, tempo).
@@ -58,7 +59,7 @@ def ranking_do_jogo(c: Connection, jogo_id: str, eu: UUID, limite: int = 10) -> 
 
 
 def montar_perfil(c: Connection, perfil_id: UUID) -> dict[str, Any]:
-    p = c.execute("SELECT id, apelido, cor, oculto, criado_em, avatar FROM perfis WHERE id = %s", (perfil_id,)).fetchone()
+    p = c.execute("SELECT id, apelido, cor, oculto, criado_em, avatar, personagem FROM perfis WHERE id = %s", (perfil_id,)).fetchone()
     assert p is not None
     posicoes = c.execute(f"SELECT jogo_id, melhor, posicao FROM ({SQL_POSICOES}) r WHERE perfil_id = %(eu)s", {"eu": perfil_id}).fetchall()
     tot = c.execute(
@@ -88,7 +89,8 @@ def montar_perfil(c: Connection, perfil_id: UUID) -> dict[str, Any]:
         "apelido": p["apelido"],
         "cor": p["cor"],
         "oculto": p["oculto"],
-        "avatar": avatar_valido(p["avatar"]),  # AvatarConfig v1 ou None (padrão); peça fora do catálogo atual vira None
+        "avatar": avatar_valido(p["avatar"]),
+        "personagem": personagem_valido(p["personagem"]),  # editor Universal LPC (configuração, não imagem)  # AvatarConfig v1 ou None (padrão); peça fora do catálogo atual vira None
         "desde": p["criado_em"].strftime("%m/%Y"),
         "partidas": tot["partidas"],
         "nivel": 1 + tot["partidas"] // 25,  # [H] regra provisória (Q20)

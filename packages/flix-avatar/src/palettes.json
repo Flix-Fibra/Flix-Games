@@ -1,24 +1,73 @@
 {
   "_nota": "PLACEHOLDER. Cada cor tem base e sombra. A paleta final vem do designer e da marca Flix.",
   "skin": {
-    "sk01": { "base": "#F3D2B3", "shade": "#D9AE88" },
-    "sk02": { "base": "#D9A577", "shade": "#B98457" },
-    "sk03": { "base": "#A8704A", "shade": "#85543A" },
-    "sk04": { "base": "#6B4630", "shade": "#4F3223" },
-    "sk_f01": { "base": "#6FB7E8", "shade": "#4A93C6" }
+    "sk01": {
+      "base": "#F3D2B3",
+      "shade": "#D9AE88"
+    },
+    "sk02": {
+      "base": "#D9A577",
+      "shade": "#B98457"
+    },
+    "sk03": {
+      "base": "#A8704A",
+      "shade": "#85543A"
+    },
+    "sk04": {
+      "base": "#6B4630",
+      "shade": "#4F3223"
+    },
+    "sk_f01": {
+      "base": "#6FB7E8",
+      "shade": "#4A93C6"
+    }
   },
   "hair": {
-    "hc01": { "base": "#3B2A20", "shade": "#2A1D16" },
-    "hc02": { "base": "#C99A4A", "shade": "#A57B33" },
-    "hc03": { "base": "#1D1D1F", "shade": "#101012" },
-    "hc04": { "base": "#B33A2B", "shade": "#8D2B1F" }
+    "hc01": {
+      "base": "#3B2A20",
+      "shade": "#2A1D16"
+    },
+    "hc02": {
+      "base": "#C99A4A",
+      "shade": "#A57B33"
+    },
+    "hc03": {
+      "base": "#1D1D1F",
+      "shade": "#101012"
+    },
+    "hc04": {
+      "base": "#B33A2B",
+      "shade": "#8D2B1F"
+    }
   },
   "cloth": {
-    "c01": { "base": "#D4142C", "shade": "#A10F21" },
-    "c02": { "base": "#2F6FDE", "shade": "#2352A8" },
-    "c03": { "base": "#2E9E5B", "shade": "#217244" },
-    "c04": { "base": "#F2B33D", "shade": "#C58E22" },
-    "c05": { "base": "#7B4FD6", "shade": "#5C3AA3" },
-    "c06": { "base": "#F5F5F7", "shade": "#C9C9CE" }
+    "c01": {
+      "base": "#D4142C",
+      "shade": "#A10F21"
+    },
+    "c02": {
+      "base": "#2F6FDE",
+      "shade": "#2352A8"
+    },
+    "c03": {
+      "base": "#2E9E5B",
+      "shade": "#217244"
+    },
+    "c04": {
+      "base": "#F2B33D",
+      "shade": "#C58E22"
+    },
+    "c05": {
+      "base": "#7B4FD6",
+      "shade": "#5C3AA3"
+    },
+    "c06": {
+      "base": "#F5F5F7",
+      "shade": "#C9C9CE"
+    },
+    "c07": {
+      "base": "#2B2B33",
+      "shade": "#18181D"
+    }
   }
 }

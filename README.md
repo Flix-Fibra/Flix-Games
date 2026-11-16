@@ -16,7 +16,7 @@ Qualquer pessoa ou IA pode continuar a próxima fase. Não há responsáveis fix
 | Pasta | O que é | Situação |
 |---|---|---|
 | `docs/` | Andamento, visão, manutenção do painel e prompt dos minigames | Fonte do estado do projeto |
-| `web/` | Interface: React + TypeScript + Vite | Ligada à API (`web/src/dados/servico.ts`); catálogo G01–G15 vem do banco |
+| `web/` | Interface: React + TypeScript + Vite. **Licença GPL-3.0** (`web/LICENSE`), por usar o Universal LPC (`web/lpc`, submódulo) | Ligada à API (`web/src/dados/servico.ts`); catálogo G01–G15 vem do banco |
 | `api/` | Backend: Python + FastAPI + Uvicorn + PostgreSQL | Funciona localmente com login simulado e 19 testes (ver `api/LEIAME.md`) |
 | `tarefas/` | Processo separado: revalidar clientes no CRM | Ainda não criado (ver `tarefas/LEIAME.md`) |
 | `games/` | Jogos (builds em `games/<pasta>/dist`), servidos em `/games/<pasta>/` no iframe do hub | Só o jogo de teste `_teste-hub` (ver `docs/hub-iframe.md`) |
@@ -24,7 +24,9 @@ Qualquer pessoa ou IA pode continuar a próxima fase. Não há responsáveis fix
 
 ## Rodar a interface localmente
 
-Requer Node 20 ou mais novo e a API rodando (`docker compose up -d`, ver `api/LEIAME.md`): o Vite repassa `/api` para `127.0.0.1:8000`. Em desenvolvimento, sem sessão, a interface entra sozinha na conta de teste `DEV-0001`.
+Na primeira vez: `git submodule update --init --depth 1 web/lpc` (editor de personagem, ver `docs/personagem-lpc.md`).
+
+Requer Node 22.19 ou mais novo e a API rodando (`docker compose up -d`, ver `api/LEIAME.md`): o Vite repassa `/api` para `127.0.0.1:8000`. Em desenvolvimento, sem sessão, a interface entra sozinha na conta de teste `DEV-0001`.
 
 ```bash
 cd web

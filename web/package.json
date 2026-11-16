@@ -7,13 +7,19 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "verificar": "tsc -b --noEmit"
+    "verificar": "tsc -b --noEmit",
+    "lpc:gerar": "node scripts/lpc-gerar.mjs",
+    "predev": "node scripts/lpc-gerar.mjs",
+    "prebuild": "node scripts/lpc-gerar.mjs"
   },
   "dependencies": {
+    "mithril": "2.3.8",
+    "neverthrow": "8.2.0",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
   "devDependencies": {
+    "@tsconfig/strictest": "2.0.8",
     "@types/node": "24.19.2",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",

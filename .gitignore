@@ -7,6 +7,7 @@ dist/
 .env.*
 !.env.exemplo
 *.tsbuildinfo
+lpc-gerado/
 
 # Originais do estilo Network Snake enviados pelo gestor (arquivos grandes; o jogo usa as versões otimizadas em games/snake/public/img)
 Network Snake/
