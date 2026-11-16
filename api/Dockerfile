@@ -4,14 +4,16 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PIP_DISABLE_
 WORKDIR /app
 
 # Dependências com versões travadas (requirements.txt é gerado a partir do requirements.in)
-COPY requirements.txt requirements-dev.txt ./
+COPY api/requirements.txt api/requirements-dev.txt ./
 ARG INSTALAR_DEV=0
 RUN pip install -r requirements.txt \
  && if [ "$INSTALAR_DEV" = "1" ]; then pip install -r requirements-dev.txt; fi
 
-COPY app ./app
-COPY migracoes ./migracoes
-COPY tests ./tests
+COPY api/app ./app
+COPY api/migracoes ./migracoes
+COPY api/tests ./tests
+# Catálogo do personagem: fonte única, a mesma que os jogos usam (packages/flix-avatar)
+COPY packages/flix-avatar/src/catalog.json packages/flix-avatar/src/palettes.json ./avatar/
 
 # Não roda como root dentro do container
 RUN useradd --system --uid 10001 --no-create-home flix

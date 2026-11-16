@@ -89,7 +89,7 @@ export interface AvatarConfig {
 export interface CorCatalogo { id: string; hex: string; tipo?: 'realista' | 'fantasia' }
 export interface ItemCatalogo { id: string; nome: string }
 
-/** Catálogo PROVISÓRIO servido pela API (api/app/avatar_catalogo.json). */
+/** Catálogo servido pela API, lido de packages/flix-avatar (fonte única, a mesma dos jogos). */
 export interface CatalogoAvatar {
   versao: number;
   provisorio: boolean;
@@ -104,4 +104,5 @@ export interface CatalogoAvatar {
   chapeus: ItemCatalogo[];
   acessorios: ItemCatalogo[];
   skins: ItemCatalogo[];
+  padrao: AvatarConfig; // personagem padrão, o mesmo do packages/flix-avatar
 }

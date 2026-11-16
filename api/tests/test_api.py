@@ -168,35 +168,34 @@ def test_limite_de_partidas_por_minuto(app_ativo):
 
 
 # ---------- Personagem (AvatarConfig v1, seção 9.3) ----------
-AVATAR_OK = {
+AVATAR_OK = {  # IDs do catálogo único: packages/flix-avatar/src/catalog.json e palettes.json
     "v": 1,
-    "body": {"type": "corpo-a", "skinTone": "pele-06"},
-    "face": {"eyes": "olhos-redondos", "mouth": "boca-sorriso"},
-    "hair": {"style": "cabelo-cacheado", "color": "cab-castanho"},
-    "top": {"item": "camiseta-basica", "primary": "cor-vermelho-flix"},
-    "bottom": {"item": "calca-jeans", "primary": "cor-azul"},
-    "shoes": {"item": "calcado-tenis", "primary": "cor-branco"},
-    "hat": None,
-    "accessories": ["oculos"],
+    "body": {"type": "b01", "skinTone": "sk03"},
+    "face": {"eyes": "e01", "mouth": "m01"},
+    "hair": {"style": "h02_long", "color": "hc04"},
+    "top": {"item": "t02_hoodie", "primary": "c02"},
+    "bottom": {"item": "p01_pants", "primary": "c06"},
+    "shoes": {"item": "s01_sneaker", "primary": "c01"},
+    "hat": {"item": "hat01_cap", "primary": "c05"},
+    "accessories": [],
     "skinPreset": None,
 }
-
 
 def test_salva_e_devolve_o_personagem(app_ativo):
     c, pid = com_perfil(app_ativo, "Estiloso")
     r = c.put(f"/api/perfis/{pid}/avatar", json=AVATAR_OK)
     assert r.status_code == 200, r.text
-    assert r.json()["avatar"]["body"]["skinTone"] == "pele-06"
-    assert c.get("/api/sessao").json()["perfis"][0]["avatar"]["hair"]["style"] == "cabelo-cacheado"
+    assert r.json()["avatar"]["body"]["skinTone"] == "sk03"
+    assert c.get("/api/sessao").json()["perfis"][0]["avatar"]["hair"]["style"] == "h02_long"
 
 
 def test_personagem_so_aceita_ids_do_catalogo(app_ativo):
     c, pid = com_perfil(app_ativo, "Criativo")
     ruins = [
-        {**AVATAR_OK, "body": {"type": "corpo-a", "skinTone": "#FF0000"}},        # cor livre
+        {**AVATAR_OK, "body": {"type": "b01", "skinTone": "#FF0000"}},            # cor livre
         {**AVATAR_OK, "hat": {"item": "<script>", "primary": None}},              # fora do catálogo
-        {**AVATAR_OK, "accessories": ["oculos", "fone", "oculos-sol", "oculos"]},  # mais de 3
-        {**AVATAR_OK, "accessories": ["oculos", "oculos"]},                         # repetido
+        {**AVATAR_OK, "accessories": ["a", "b", "c", "d"]},                         # mais de 3
+        {**AVATAR_OK, "accessories": ["oculos"]},                                   # fora do catálogo
         {**AVATAR_OK, "foto": "data:image/png;base64,AAAA"},                        # campo extra (imagem)
         {**AVATAR_OK, "v": 2},
     ]
@@ -208,3 +207,17 @@ def test_nao_altera_personagem_de_outra_conta(app_ativo):
     _, pid_alheio = com_perfil(app_ativo, "Alvo")
     invasor = novo_cliente(app_ativo)
     assert invasor.put(f"/api/perfis/{pid_alheio}/avatar", json=AVATAR_OK).status_code == 404
+
+
+def test_catalogo_do_editor_vem_do_pacote_do_personagem(app_ativo):
+    cat = TestClient(app).get("/api/avatar/catalogo").json()
+    assert {c["id"] for c in cat["paletas"]["pele"]} >= {"sk01", "sk_f01"}
+    assert {"id": "h02_long", "nome": "Longo"} in cat["cabelos"]
+    assert cat["padrao"]["body"]["type"] == "b01"
+
+
+def test_personagem_com_peca_retirada_volta_como_padrao(app_ativo):
+    """Peça que saiu do catálogo não quebra o perfil: o personagem volta como None (padrão)."""
+    c, pid = com_perfil(app_ativo, "Antigo")
+    sql("UPDATE perfis SET avatar = %s::jsonb WHERE id = %s", '{"v": 1, "body": {"type": "corpo-a"}}', pid)
+    assert c.get("/api/sessao").json()["perfis"][0]["avatar"] is None

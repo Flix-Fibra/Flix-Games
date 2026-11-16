@@ -1,6 +1,6 @@
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { extname, join, normalize, resolve, sep } from 'node:path';
-import { defineConfig, type Connect, type Plugin } from 'vite';
+import { defineConfig, searchForWorkspaceRoot, type Connect, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 
 const PASTA_JOGOS = resolve(__dirname, '../games');
@@ -47,9 +47,15 @@ function servirJogos(): Plugin {
 
 export default defineConfig({
   plugins: [react(), servirJogos()],
+  // Pacote do personagem (o mesmo dos jogos): compositor e catálogo vêm de packages/flix-avatar
+  resolve: { alias: { '@flix/avatar': resolve(__dirname, '../packages/flix-avatar/src/index.ts') } },
   // Só na máquina local: o servidor de desenvolvimento não fica visível na rede.
   // /api vai para a API local (docker compose). Mesma origem: o cookie de sessão funciona sem CORS.
-  server: { host: '127.0.0.1', port: 5173, strictPort: true, proxy: { '/api': 'http://127.0.0.1:8000' } },
+  server: {
+    host: '127.0.0.1', port: 5173, strictPort: true, proxy: { '/api': 'http://127.0.0.1:8000' },
+    // libera só a pasta do pacote do personagem, além do próprio web/
+    fs: { allow: [searchForWorkspaceRoot(process.cwd()), resolve(__dirname, '../packages/flix-avatar')] },
+  },
   preview: { host: '127.0.0.1', port: 4173, strictPort: true, proxy: { '/api': 'http://127.0.0.1:8000' } },
   build: {
     // Celulares simples (Q14): JS compatível com navegadores mais antigos.

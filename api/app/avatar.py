@@ -1,32 +1,38 @@
 """Personagem do perfil (AvatarConfig v1, seção 9.3 do prompt dos minigames).
 
-Regras: só IDs do catálogo, nada de cor livre, texto ou imagem; campo desconhecido é recusado.
-O catálogo é PROVISÓRIO (app/avatar_catalogo.json) até chegar o catalog.json do packages/flix-avatar.
+Fonte ÚNICA do catálogo: packages/flix-avatar/src/catalog.json e palettes.json, os mesmos
+arquivos que os jogos usam. Regras: só IDs do catálogo, nada de cor livre, texto ou imagem;
+campo desconhecido é recusado.
 """
 import json
+import os
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 from psycopg.types.json import Jsonb
 
-from .consultas import montar_perfil
 from .sessao import Db, Sessao
 
-CATALOGO: dict = json.loads((Path(__file__).parent / "avatar_catalogo.json").read_text(encoding="utf-8"))
+
+def _pasta_catalogo() -> Path:
+    """Na imagem Docker fica em /app/avatar; rodando direto do repositório, em packages/flix-avatar/src."""
+    for p in (os.environ.get("AVATAR_DIR"), Path(__file__).resolve().parent.parent / "avatar",
+              Path(__file__).resolve().parents[2] / "packages" / "flix-avatar" / "src"):
+        if p and (Path(p) / "catalog.json").exists():
+            return Path(p)
+    raise RuntimeError("Catálogo do personagem não encontrado (packages/flix-avatar/src/catalog.json)")
 
 
-def _ids(chave: str) -> set[str]:
-    return {i["id"] for i in CATALOGO[chave]}
+_PASTA = _pasta_catalogo()
+CATALOGO: dict[str, Any] = json.loads((_PASTA / "catalog.json").read_text(encoding="utf-8"))
+PALETAS: dict[str, Any] = json.loads((_PASTA / "palettes.json").read_text(encoding="utf-8"))
 
-
-IDS = {
-    "pele": {p["id"] for p in CATALOGO["paletas"]["pele"]},
-    "cor_cabelo": {p["id"] for p in CATALOGO["paletas"]["cabelo"]},
-    "cor_roupa": {p["id"] for p in CATALOGO["paletas"]["roupa"]},
-    **{k: _ids(k) for k in ("corpos", "olhos", "bocas", "cabelos", "camisetas", "calcas", "calcados", "chapeus", "acessorios", "skins")},
+IDS: dict[str, set[str]] = {
+    "pele": set(PALETAS["skin"]), "cor_cabelo": set(PALETAS["hair"]), "cor_roupa": set(PALETAS["cloth"]),
+    **{k: set(CATALOGO.get(k, [])) for k in ("bodies", "eyes", "mouths", "hairStyles", "tops", "bottoms", "shoes", "hats", "accessories", "skinPresets")},
 }
 
 ESTRITO = ConfigDict(extra="forbid", strict=True)
@@ -91,56 +97,83 @@ class AvatarConfig(BaseModel):
             if valor is not None and valor not in IDS[grupo]:
                 erros.append(campo)
 
-        conferir(self.body.type, "corpos", "body.type")
+        conferir(self.body.type, "bodies", "body.type")
         conferir(self.body.skinTone, "pele", "body.skinTone")
-        conferir(self.face.eyes, "olhos", "face.eyes")
-        conferir(self.face.mouth, "bocas", "face.mouth")
+        conferir(self.face.eyes, "eyes", "face.eyes")
+        conferir(self.face.mouth, "mouths", "face.mouth")
         if self.hair:
-            conferir(self.hair.style, "cabelos", "hair.style")
+            conferir(self.hair.style, "hairStyles", "hair.style")
             conferir(self.hair.color, "cor_cabelo", "hair.color")
-        for nome, peca, grupo in (("top", self.top, "camisetas"), ("bottom", self.bottom, "calcas")):
+        for nome, peca, grupo in (("top", self.top, "tops"), ("bottom", self.bottom, "bottoms")):
             if peca:
                 conferir(peca.item, grupo, f"{nome}.item")
                 conferir(peca.primary, "cor_roupa", f"{nome}.primary")
                 conferir(peca.secondary, "cor_roupa", f"{nome}.secondary")
         if self.shoes:
-            conferir(self.shoes.item, "calcados", "shoes.item")
+            conferir(self.shoes.item, "shoes", "shoes.item")
             conferir(self.shoes.primary, "cor_roupa", "shoes.primary")
         if self.hat:
-            conferir(self.hat.item, "chapeus", "hat.item")
+            conferir(self.hat.item, "hats", "hat.item")
             conferir(self.hat.primary, "cor_roupa", "hat.primary")
         for a in self.accessories:
-            conferir(a, "acessorios", "accessories")
+            conferir(a, "accessories", "accessories")
         if len(set(self.accessories)) != len(self.accessories):
             erros.append("accessories (repetido)")
-        conferir(self.skinPreset, "skins", "skinPreset")
+        conferir(self.skinPreset, "skinPresets", "skinPreset")
         if erros:
             raise ValueError("Item fora do catálogo: " + ", ".join(erros))
         return self
 
 
+def avatar_valido(bruto: Any) -> dict[str, Any] | None:
+    """Personagem salvo que não vale mais no catálogo atual (peça retirada) volta como None = padrão."""
+    if bruto is None:
+        return None
+    try:
+        return AvatarConfig.model_validate(bruto).model_dump(mode="json")
+    except ValidationError:
+        return None
+
+
+def _catalogo_para_o_editor() -> dict[str, Any]:
+    """Catálogo no formato do editor do portal, com nomes em português (campo `labels` do catalog.json)."""
+    nomes: dict[str, str] = CATALOGO.get("labels", {})
+    itens = lambda chave: [{"id": i, "nome": nomes.get(i, i)} for i in CATALOGO.get(chave, [])]  # noqa: E731
+    cores = lambda grupo: [{"id": i, "hex": c["base"], "tipo": "fantasia" if "_f" in i else "realista"} for i, c in PALETAS[grupo].items()]  # noqa: E731
+    d = CATALOGO["defaults"]
+    return {
+        "versao": CATALOGO.get("version", 1),
+        "provisorio": True,  # placeholder até a arte do designer (docs/briefing-personagem.md)
+        "paletas": {"pele": cores("skin"), "cabelo": cores("hair"), "roupa": cores("cloth")},
+        "corpos": itens("bodies"), "olhos": itens("eyes"), "bocas": itens("mouths"), "cabelos": itens("hairStyles"),
+        "camisetas": itens("tops"), "calcas": itens("bottoms"), "calcados": itens("shoes"), "chapeus": itens("hats"),
+        "acessorios": itens("accessories"), "skins": itens("skinPresets"),
+        # Mesmo personagem padrão do packages/flix-avatar (DEFAULT_AVATAR)
+        "padrao": {
+            "v": 1, "body": {"type": d["body"], "skinTone": d["skinTone"]}, "face": {"eyes": d["eyes"], "mouth": d["mouth"]},
+            "hair": None, "top": {"item": d["top"], "primary": d["clothColor"]}, "bottom": {"item": d["bottom"], "primary": "c02"},
+            "shoes": {"item": d["shoes"], "primary": "c06"}, "hat": None, "accessories": [], "skinPreset": None,
+        },
+    }
+
+
+EDITOR = _catalogo_para_o_editor()
 router = APIRouter(prefix="/api")
 
 
 @router.get("/avatar/catalogo")
 def catalogo() -> dict:
-    return CATALOGO
+    return EDITOR
 
 
 @router.put("/perfis/{perfil_id}/avatar")
 def salvar_avatar(perfil_id: UUID, avatar: AvatarConfig, s: Sessao, c: Db) -> dict:
+    from .consultas import montar_perfil  # evita import circular (consultas usa avatar_valido)
+
     r = c.execute(
         "UPDATE perfis SET avatar = %s WHERE id = %s AND conta_id = %s RETURNING id",
         (Jsonb(avatar.model_dump(mode="json")), perfil_id, s["conta_id"]),
     ).fetchone()
-    if not r:
-        raise HTTPException(404, "Perfil não encontrado.")
-    return montar_perfil(c, perfil_id)
-
-
-@router.delete("/perfis/{perfil_id}/avatar")
-def apagar_avatar(perfil_id: UUID, s: Sessao, c: Db) -> dict:
-    r = c.execute("UPDATE perfis SET avatar = NULL WHERE id = %s AND conta_id = %s RETURNING id", (perfil_id, s["conta_id"])).fetchone()
     if not r:
         raise HTTPException(404, "Perfil não encontrado.")
     return montar_perfil(c, perfil_id)

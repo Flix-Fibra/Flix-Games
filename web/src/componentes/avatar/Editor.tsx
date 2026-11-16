@@ -157,7 +157,7 @@ export function Editor({ perfil, onSalvo, onFechar }: Props) {
                 {av.hat && av.hat.item !== 'capacete-tecnico' && (
                   <Cores cores={cat.paletas.roupa} valor={av.hat.primary} rotulo="Cor do chapéu" onEscolher={(id) => mudar((a) => ({ ...a, hat: { ...a.hat!, primary: id } }))} />
                 )}
-                <h4>Acessórios (até 3)</h4>
+                {cat.acessorios.length > 0 && <h4>Acessórios (até 3)</h4>}
                 <div className="gx-av-itens">
                   {cat.acessorios.map((i) => {
                     const on = av.accessories.includes(i.id);
@@ -172,7 +172,7 @@ export function Editor({ perfil, onSalvo, onFechar }: Props) {
                 </div>
               </>
             )}
-            {cat.provisorio && <p className="perfil-dica">Prévia simplificada: a arte final do personagem (pixel art) está sendo desenhada. Suas escolhas já ficam salvas.</p>}
+            {cat.provisorio && <p className="perfil-dica">Este é o personagem como aparece nos jogos. A arte final está sendo desenhada; suas escolhas já ficam salvas.</p>}
           </div>
       </div>
 

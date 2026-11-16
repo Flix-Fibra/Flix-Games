@@ -1,0 +1,7 @@
+# Só api/ e o catálogo do personagem vão para a imagem da API (nada de .env, .git, node_modules)
+**
+!api
+!api/**
+!packages/flix-avatar/src/catalog.json
+!packages/flix-avatar/src/palettes.json
+**/__pycache__

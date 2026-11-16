@@ -60,6 +60,8 @@ cat docs/como-manter-andamento.md
 
 ## 4. Onde parou
 
+**16/11/2026 — [F]** Catálogo do personagem unificado: API e editor do portal passam a usar `packages/flix-avatar/src/catalog.json` e `palettes.json` (fonte única, a mesma dos jogos); catálogo provisório do hub removido. Nomes em português no novo campo `labels` do catalog.json. Prévia do editor desenhada pelo `composePortrait` do pacote (o que o cliente vê é o que aparece no jogo). Personagem salvo com peça fora do catálogo volta como padrão, sem apagar dados. Imagem da API construída a partir da raiz com `.dockerignore` (só `api/` e o catálogo). Conferido: 24 testes da API; tipos e build do portal; salvar e recarregar personagem no navegador.
+
 **16/11/2026 — [C]** Retrato gerado por código não atingiu a qualidade pedida pelo solicitante (referência: pixel art de RPG desenhada à mão). Decisão: arte do personagem feita por pixel artist, usando como referência de estilo o **personagem da Flix feito com IA** (Q51) (pixel art chibi de corpo inteiro), com briefing em [briefing-personagem.md](briefing-personagem.md) e peças com os IDs do catálogo atual. [D] Tamanho do rig (32×32 da seção 9.2 × detalhe do personagem da Flix) a definir com quem faz os jogos. Até a arte chegar, o portal mostra uma silhueta neutra com as cores escolhidas; editor, gravação e envio aos jogos seguem funcionando. [D] Contratação/definição do artista pendente.
 
 **16/11/2026 — [C]** Por decisão do solicitante, a câmera foi retirada do editor de personagem (sem MediaPipe, sem modelo de IA, sem leitura de rosto); fica só a personalização com as opções do catálogo. Retrato do personagem refeito em pixel art 64×64 (estilo 2D pedido pelo solicitante), provisório até a arte do designer. Tipos e build sem erros.

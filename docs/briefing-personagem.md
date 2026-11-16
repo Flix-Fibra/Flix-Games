@@ -30,21 +30,9 @@ O cliente monta o próprio personagem no portal escolhendo peças de uma lista. 
 
 ## Lista de peças (fase 1)
 
-Os IDs abaixo já existem no sistema (`api/app/avatar_catalogo.json`). A arte deve usar os mesmos IDs, ou o catálogo é atualizado junto.
+**Fonte única: `packages/flix-avatar/src/catalog.json` e `palettes.json`** (os mesmos arquivos que os jogos e a API usam). Hoje o catálogo é um placeholder pequeno; o artista entrega as peças com IDs novos e o catálogo é ampliado junto, com o nome de cada peça no campo `labels`.
 
-| Grupo | Quantidade | IDs |
-|---|---|---|
-| Corpo | 2 | `corpo-a`, `corpo-b` |
-| Olhos | 3 expressões | `olhos-redondos`, `olhos-sorridentes`, `olhos-serios` |
-| Boca | 3 | `boca-sorriso`, `boca-neutra`, `boca-aberta` |
-| Cabelo | 8 estilos + "sem cabelo" | `cabelo-curto`, `cabelo-raspado`, `cabelo-cacheado`, `cabelo-crespo`, `cabelo-medio`, `cabelo-longo`, `cabelo-coque`, `cabelo-tranca` |
-| Camiseta | 6 | `camiseta-basica`, `camiseta-listrada`, `camiseta-gola-v`, `camiseta-regata`, `camiseta-moletom`, `camiseta-polo` |
-| Calça | 4 | `calca-jeans`, `calca-bermuda`, `calca-jogger`, `calca-saia` |
-| Calçado | 4 | `calcado-tenis`, `calcado-bota`, `calcado-sandalia`, `calcado-chuteira` |
-| Chapéu | 3 | `bone`, `gorro`, `capacete-tecnico` |
-| Acessório | 3 | `oculos`, `oculos-sol`, `fone` |
-| Visual completo | 3 | `skin-tecnico-flix`, `skin-astronauta`, `skin-ninja` |
-| Paletas | 16 + 10 + 16 | pele (12 realistas + 4 fantasia), cabelo (10), roupa (16): cores em `avatar_catalogo.json`; o artista pode ajustar os tons e devolver as rampas de 4 tons |
+Metas da fase 1 (seção 9.4 do prompt dos minigames): 2 corpos, 3 olhos/expressões, 3 bocas, 8 cabelos (+ sem cabelo), 6 camisetas, 4 calças ou bermudas, 4 calçados, até 6 chapéus e acessórios, 3 visuais completos (incluindo o Técnico Flix, `flix_tech`); paletas de pele (12 realistas + 4 fantasia), cabelo (10) e roupa (16), cada cor com rampa de tons.
 
 Sugestões vindas dos testes com o cliente (opcionais, a aprovar): sardas, cor dos olhos (castanho, verde, azul), brincos.
 

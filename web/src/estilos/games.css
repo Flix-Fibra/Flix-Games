@@ -334,7 +334,7 @@ main{padding-bottom:16px}
 .gx-av-item.ativo{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .gx-av-item:disabled{opacity:.4}
 .gx-av-rodape{display:grid;grid-template-columns:1fr 1.4fr;gap:10px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--bg)}
-.perfil-avatar #p-avatar svg{width:100%!important;height:100%!important}
+.perfil-avatar #p-avatar canvas{width:100%!important;height:100%!important}
 @media (min-width:900px){
   .gx-av-corpo{grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:28px;padding:0 32px 24px;max-width:1100px;margin:0 auto;width:100%}
   .gx-av-palco{position:sticky;top:0}
