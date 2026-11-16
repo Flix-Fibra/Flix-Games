@@ -60,6 +60,8 @@ cat docs/como-manter-andamento.md
 
 ## 4. Onde parou
 
+**16/11/2026 — [F]** Interface migrada para `web/` (React + TS + Vite), mesmas telas do protótipo: Início, Ranking, Perfil e "Quem vai jogar?" (2 perfis). Conferido localmente: tipos e build sem erros; build de produção com JS de 79 KB comprimido; fluxos de perfil (entrar, trocar, criar, excluir, apelido repetido recusado), favoritar, ranking pelo botão e links `#ranking`/`#perfil`. Próximo: `api/` FastAPI + Postgres com Compose local, trocando `servicoSimulado` por chamadas HTTP.
+
 **16/11/2026 — [C]** Decisões do solicitante após a leitura dos documentos: sem anúncios por enquanto (Q34); catálogo começa com 15 jogos e a meta é 20 (Q11); conta Flix com perfis ligados ao cliente (Q23); público igual à Q30; Doom-like com menos violência (inimigo e projétil diferentes); sem donos fixos por área, com o hub originalmente com o Rafael; trechos pontuais de código de referência permitidos; Tetris-like pode ser feito e vai ao jurídico depois de pronto (Q47–Q49). O prompt `prompt-inicio-minigames-flix.md` (v2.2) foi atualizado com essas decisões. Documentação movida para `docs/` e enviada ao GitHub no commit `ad9bc1e`. `visao-projeto.md` corrigido na seção 7 (catálogo de 15 jogos, meta 20). Gerar código só quando solicitado; commit e push só quando pedido.
 
 **16/11/2026 — [C]** Protótipo visual em `prototipo/` (HTML/CSS/JS estático, sem servidor; dados fictícios) no padrão Flix Pulse, com escolha de até 2 perfis por conta (Q23). Stack decidida (Q46). Próximo: tornar o repositório privado (Q44), aprovar escopo da v1 (Q43) e iniciar a Fase 1 com login simulado atrás de uma interface, trocando pela API real quando a documentação chegar. Primeiro fluxo ponta a ponta sugerido [H]: jogo próprio Voo Flix gravando pontuação no ranking pelo servidor.
@@ -88,7 +90,7 @@ cat docs/como-manter-andamento.md
 
 | Parte | Funciona | Validado | Testado | Entregável | Data | Obs. |
 |---|---|---|---|---|---|---|
-| F1.1 Projeto local e comandos documentados | ⬜ | ⬜ | ⬜ | ⬜ | 13/11 | [F] Sem manifests/lockfiles; [D] stack aguarda F0.3. |
+| F1.1 Projeto local e comandos documentados | 🟡 | ⬜ | ⬜ | ⬜ | 16/11 | [F] `web/` em React 19 + TypeScript 5.9 + Vite 6.4 com versões fixas e `package-lock.json`; `npm run verificar` e `npm run build` sem erros; comandos no README. Dados simulados atrás de `ServicoGames`. [D] `api/`, `tarefas/` e Compose ainda não criados. |
 | F1.2 Persistência e evolução de dados | ⬜ | ⬜ | ⬜ | ⬜ | 13/11 | [D] Modelo, banco e migrações não definidos. |
 | F1.3 Verificações e homologação | ⬜ | ⬜ | ⬜ | ⬜ | 13/11 | [F] Sem automação; [D] ambiente depende de Q39–Q42. |
 
