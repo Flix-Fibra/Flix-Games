@@ -2,7 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { ProvedorAviso, useAviso } from './componentes/Aviso';
 import { Creditos } from './componentes/Creditos';
 import { Inicio } from './componentes/Inicio';
+import { FundoPlasma } from './componentes/FundoPlasma';
 import { Jogando } from './componentes/Jogando';
+import { Lancamento } from './componentes/Lancamento';
+import { Jogos } from './componentes/Jogos';
+import { EditorLpc } from './componentes/personagem/EditorLpc';
 import { Perfil } from './componentes/Perfil';
 import { QuemVaiJogar } from './componentes/QuemVaiJogar';
 import { Ranking } from './componentes/Ranking';
@@ -10,7 +14,7 @@ import { Topo } from './componentes/Topo';
 import { ErroApi, servico } from './dados/servico';
 import type { Aba, Jogo, Perfil as TPerfil } from './dados/tipos';
 
-const ABAS: Aba[] = ['inicio', 'ranking', 'perfil', 'creditos'];
+const ABAS: Aba[] = ['inicio', 'jogos', 'ranking', 'perfil', 'creditos'];
 
 type Carga =
   | { estado: 'carregando' }
@@ -25,6 +29,8 @@ function Portal() {
   const [quemAberto, setQuemAberto] = useState(false);
   const [rankingJogo, setRankingJogo] = useState<string | null>(null);
   const [jogando, setJogando] = useState<Jogo | null>(null);
+  const [lancando, setLancando] = useState<Jogo | null>(null); // animação de abertura do jogo
+  const [editorAberto, setEditorAberto] = useState(false); // editor de personagem aberto pelo atalho do Início
 
   // Abertura: sessão deste aparelho + catálogo. Links diretos: #perfis abre a escolha;
   // #inicio, #ranking e #perfil abrem a aba (se já houver perfil escolhido neste aparelho).
@@ -71,8 +77,12 @@ function Portal() {
   }
 
   const pronto = carga; // já estreitado para 'pronto' (as funções abaixo usam esta constante)
-  const { jogos, perfis, perfilId, maxPerfis } = pronto;
+  const { perfis, perfilId, maxPerfis } = pronto;
+  // Só aparecem no hub os jogos que abrem de verdade: com pasta entregue e que não sejam o jogo de teste do hub.
+  const jogos = pronto.jogos.filter(jogoNoHub);
   const perfil = perfis.find((p) => p.id === perfilId) ?? null;
+  // Jogar: o jogo abre NA HORA (carregando por baixo) e a capa voa até ele (Lancamento). Clique repetido é ignorado.
+  const abrirJogo = (j: Jogo) => { if (!lancando && !jogando) { setJogando(j); setLancando(j); } };
   const trocarPerfil = (p: TPerfil) => setCarga({ ...pronto, perfis: perfis.map((x) => (x.id === p.id ? p : x)) });
 
   async function entrar(id: string) {
@@ -129,24 +139,23 @@ function Portal() {
 
   return (
     <>
-      <div className="gx-fundo" aria-hidden="true" />
+      <FundoPlasma pausado={!!jogando} />
       {perfil && (
         <>
           <Topo aba={aba} perfil={perfil} onAba={irPara} onTrocarPerfil={() => setQuemAberto(true)} />
           <main>
-            {jogos.length === 0 ? <p className="perfil-dica">Nenhum jogo publicado ainda.</p> : (
-              <>
-                {aba === 'inicio' && (
-                  <Inicio jogos={jogos} perfil={perfil} onFavoritar={favoritar}
-                    onVerRanking={(j) => { setRankingJogo(j.id); irPara('ranking'); }} onJogar={setJogando} />
-                )}
-                {aba === 'ranking' && <Ranking jogos={jogos} perfil={perfil} jogoId={rankingJogo} onJogo={setRankingJogo} />}
-                {aba === 'creditos' && <Creditos />}
-                {aba === 'perfil' && (
-                  <Perfil jogos={jogos} perfil={perfil} perfis={perfis} onSalvar={salvar}
-                    onTrocarPerfil={() => setQuemAberto(true)} onSair={sair} onAtualizado={trocarPerfil} />
-                )}
-              </>
+            {aba === 'inicio' && (
+              <Inicio jogos={jogos} perfil={perfil} onFavoritar={favoritar} onCriarPersonagem={() => setEditorAberto(true)}
+                onVerRanking={(j) => { setRankingJogo(j.id); irPara('ranking'); }} onJogar={abrirJogo} />
+            )}
+            {aba === 'jogos' && <Jogos jogos={jogos} perfil={perfil} onJogar={abrirJogo} onFavoritar={favoritar} />}
+            {aba === 'ranking' && (jogos.some((j) => j.ranking)
+              ? <Ranking jogos={jogos} perfil={perfil} jogoId={rankingJogo} onJogo={setRankingJogo} />
+              : <p className="perfil-dica gx-vazio">O ranking aparece quando os jogos chegarem.</p>)}
+            {aba === 'creditos' && <Creditos />}
+            {aba === 'perfil' && (
+              <Perfil jogos={jogos} perfil={perfil} perfis={perfis} onSalvar={salvar}
+                onTrocarPerfil={() => setQuemAberto(true)} onSair={sair} onAtualizado={trocarPerfil} />
             )}
           </main>
           <p className="gx-aviso-prototipo">
@@ -154,12 +163,19 @@ function Portal() {
           </p>
         </>
       )}
-      {jogando && perfil && <Jogando jogo={jogando} avatar={perfil.avatar} onFechar={fecharJogo} />}
+      {editorAberto && perfil && <EditorLpc perfil={perfil} onSalvo={trocarPerfil} onFechar={() => setEditorAberto(false)} />}
+      {jogando && perfil && <Jogando entrando={!!lancando} jogo={jogando} avatar={perfil.avatar} onFechar={fecharJogo} />}
+      {lancando && <Lancamento jogo={lancando} onFim={() => setLancando(null)} />}
       {(quemAberto || !perfil) && (
         <QuemVaiJogar perfis={perfis} maxPerfis={maxPerfis} atualId={perfilId} onEntrar={entrar} onCriar={criar} onExcluir={excluir} />
       )}
     </>
   );
+}
+
+/** O jogo aparece no hub só se abre de verdade: pasta entregue e que não seja o jogo de teste do hub. */
+function jogoNoHub(j: Jogo): boolean {
+  return !!j.pasta && j.pasta !== '_teste-hub';
 }
 
 export function App() {

@@ -1,7 +1,9 @@
 {
   "id": "snake",
+  "catalogo": "g03",
   "name": "Network Snake",
-  "_nome_de_trabalho": "Validar o nome com o marketing antes de publicar.",
+  "capa": "img/logo.png",
+  "_nome": "Network Snake confirmado pelo solicitante em 17/11/2026. Nome e capa vão para a plataforma por scripts/sincronizar-catalogo.mjs.",
   "avatarTier": "B",
   "avatarViews": ["portrait"],
   "rankingMetric": "score_timed_120s",

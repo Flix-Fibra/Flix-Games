@@ -21,6 +21,7 @@ def semear() -> None:
     with psycopg.connect(config.database_url) as c:
         # Jogo de teste do hub (games/_teste-hub) no lugar dos três primeiros, até chegarem os jogos reais
         c.execute("UPDATE jogos SET pasta = '_teste-hub' WHERE id IN ('g01', 'g02', 'g15') AND pasta IS NULL")
+        # Jogos reais (pasta, nome e capa) vêm do game.json de cada jogo: npm run catalogo (scripts/sincronizar-catalogo.mjs).
         if c.execute("SELECT 1 FROM contas WHERE cliente_ref = 'DEV-0001'").fetchone():
             c.commit()
             print("Já semeado (pastas de teste conferidas).")

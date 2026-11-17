@@ -130,6 +130,22 @@ def test_duracao_maior_que_o_tempo_real_e_rejeitada(app_ativo):
     assert r["aceita"] is False and "tempo real" in r["motivo"]
 
 
+def test_catalogo_devolve_a_capa_do_jogo(app_ativo):
+    c, _ = com_perfil(app_ativo, "Capista")
+    sql("UPDATE jogos SET pasta = 'snake', capa = 'img/logo.png' WHERE id = 'g03'")
+    jogos = {j["id"]: j for j in c.get("/api/jogos").json()}
+    assert jogos["g03"]["capa"] == "img/logo.png"
+    assert "capa" in jogos["g05"] and jogos["g05"]["capa"] is None
+
+
+def test_capa_nao_aceita_caminho_fora_da_pasta_do_jogo(app_ativo):
+    import psycopg
+    import pytest
+    for ruim in ("../segredo.png", "/etc/x.png", "img/../../x.png", "capa.svg", "https://x.com/a.png"):
+        with pytest.raises(psycopg.errors.CheckViolation):
+            sql(f"UPDATE jogos SET capa = '{ruim}' WHERE id = 'g03'")
+
+
 def test_jogo_nao_publicado_nao_aceita_partida(app_ativo):
     c, _ = com_perfil(app_ativo, "Curioso")
     r = c.post("/api/partidas/inicio", json={"jogoId": "g10", "runId": str(uuid.uuid4())})
@@ -257,3 +273,71 @@ def test_personagem_lpc_recusa_peca_fora_da_licenca_ou_corpo(app_ativo):
     p = copy.deepcopy(LPC_OK); p["selections"]["head"]["itemId"] = "heads_orc_male"; ruins.append(p)    # cabeça de fantasia
     for corpo in ruins:
         assert c.put(f"/api/perfis/{pid}/personagem", json=corpo).status_code == 422, corpo
+
+
+# ---------- Página do jogo: avaliação, comentários e denúncias ----------
+def test_avaliacao_uma_nota_por_perfil_e_media(app_ativo):
+    a, _ = com_perfil(app_ativo, "Avaliador A")
+    b, _ = com_perfil(app_ativo, "Avaliador B")
+    assert a.put("/api/jogos/g03/avaliacao", json={"nota": 5}).json()["minha"] == 5
+    a.put("/api/jogos/g03/avaliacao", json={"nota": 4})  # muda a nota, não soma outra
+    r = b.put("/api/jogos/g03/avaliacao", json={"nota": 2}).json()
+    assert r["total"] == 2 and r["media"] == 3.0 and r["minha"] == 2
+    assert a.put("/api/jogos/g03/avaliacao", json={"nota": 6}).status_code == 422
+    assert a.put("/api/jogos/g10/avaliacao", json={"nota": 5}).status_code == 404  # não publicado
+
+
+def test_comentario_publica_na_hora_e_aparece_para_todos(app_ativo):
+    a, _ = com_perfil(app_ativo, "Comentarista")
+    b, _ = com_perfil(app_ativo, "Leitora")
+    r = a.post("/api/jogos/g03/comentarios", json={"texto": "  Jogo muito bom,   viciante!  "})
+    assert r.status_code == 201 and r.json()["texto"] == "Jogo muito bom, viciante!" and r.json()["meu"]
+    vistos = b.get("/api/jogos/g03/detalhes").json()["comentarios"]
+    assert vistos[0]["apelido"] == "Comentarista" and not vistos[0]["meu"]
+
+
+def test_filtro_recusa_palavrao_link_email_e_telefone(app_ativo):
+    c, _ = com_perfil(app_ativo, "Testador Filtro")
+    for ruim in ("que p0rr4 de jogo", "PORRRRA", "p.o.r.r.a", "veja www.golpe.com", "acesse http://x.io",
+                 "me chama em ze@mail.com", "zap 11 98765-4321", "x"):
+        r = c.post("/api/jogos/g03/comentarios", json={"texto": ruim})
+        assert r.status_code == 422, ruim
+    assert c.post("/api/jogos/g03/comentarios", json={"texto": "fiz 120 pontos no nível 3"}).status_code == 201
+
+
+def test_limite_de_comentarios_por_minuto(app_ativo):
+    c, _ = com_perfil(app_ativo, "Apressado")
+    codigos = [c.post("/api/jogos/g03/comentarios", json={"texto": f"comentário {i}"}).status_code for i in range(4)]
+    assert codigos == [201, 201, 201, 429]
+
+
+def test_so_apaga_o_proprio_comentario(app_ativo):
+    a, _ = com_perfil(app_ativo, "Dono")
+    b, _ = com_perfil(app_ativo, "Intruso")
+    cid = a.post("/api/jogos/g03/comentarios", json={"texto": "meu comentário"}).json()["id"]
+    assert b.delete(f"/api/comentarios/{cid}").status_code == 404
+    assert a.delete(f"/api/comentarios/{cid}").status_code == 204
+    assert all(x["id"] != cid for x in a.get("/api/jogos/g03/detalhes").json()["comentarios"])
+
+
+def test_tres_denuncias_ocultam_e_denuncia_repetida_nao_conta(app_ativo):
+    autor, _ = com_perfil(app_ativo, "Autor")
+    cid = autor.post("/api/jogos/g03/comentarios", json={"texto": "comentário polêmico"}).json()["id"]
+    assert autor.post(f"/api/comentarios/{cid}/denuncia").status_code == 400  # não denuncia o próprio
+    d1, _ = com_perfil(app_ativo, "Denunciante 1")
+    for _ in range(3):
+        d1.post(f"/api/comentarios/{cid}/denuncia")  # a mesma pessoa conta uma vez só
+    assert any(x["id"] == cid for x in autor.get("/api/jogos/g03/detalhes").json()["comentarios"])
+    for n in (2, 3):
+        dn, _ = com_perfil(app_ativo, f"Denunciante {n}")
+        assert dn.post(f"/api/comentarios/{cid}/denuncia").status_code == 204
+    assert all(x["id"] != cid for x in autor.get("/api/jogos/g03/detalhes").json()["comentarios"])
+
+
+def test_perfil_oculto_comenta_como_jogador_flix(app_ativo):
+    a, pid = com_perfil(app_ativo, "Discreto")
+    b, _ = com_perfil(app_ativo, "Curiosa")
+    sql("UPDATE perfis SET oculto = true WHERE id = %s", pid)
+    a.post("/api/jogos/g03/comentarios", json={"texto": "anônimo aqui"})
+    assert b.get("/api/jogos/g03/detalhes").json()["comentarios"][0]["apelido"] == "Jogador Flix"
+    assert a.get("/api/jogos/g03/detalhes").json()["comentarios"][0]["apelido"] == "Discreto"

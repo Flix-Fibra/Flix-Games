@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from . import avatar, personagem, rotas_conta, rotas_jogos
+from . import avatar, personagem, rotas_comunidade, rotas_conta, rotas_jogos
 from .config import config
 from .db import conexao, pool
 
@@ -50,5 +50,6 @@ def saude() -> dict:
 
 app.include_router(rotas_conta.router)
 app.include_router(rotas_jogos.router)
+app.include_router(rotas_comunidade.router)
 app.include_router(avatar.router)
 app.include_router(personagem.router)

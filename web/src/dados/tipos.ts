@@ -1,7 +1,7 @@
 // Formatos devolvidos pela API (api/app). Mudou lá, muda aqui.
 import type { PersonagemLpc } from '../lpc/motor';
 
-export type Aba = 'inicio' | 'ranking' | 'perfil' | 'creditos';
+export type Aba = 'inicio' | 'jogos' | 'ranking' | 'perfil' | 'creditos';
 
 export interface Jogo {
   id: string;            // g01..g15
@@ -15,6 +15,7 @@ export interface Jogo {
   ordem: 'maior' | 'menor'; // 'menor' = menos tacadas/tempo vence
   ranking: boolean;
   pasta: string | null;  // build em /games/<pasta>/; null = ainda não entregue
+  capa: string | null;   // imagem dentro da pasta do jogo (vem do game.json); null = ícone desenhado
 }
 
 /** Desempenho de um perfil em um jogo. Sem posição = ainda não pontuou. */
@@ -107,4 +108,25 @@ export interface CatalogoAvatar {
   acessorios: ItemCatalogo[];
   skins: ItemCatalogo[];
   padrao: AvatarConfig; // personagem padrão, o mesmo do packages/flix-avatar
+}
+
+/** Página do jogo: média das notas (1 a 5), quantas avaliações e a nota deste perfil. */
+export interface ResumoAvaliacao {
+  media: number | null;
+  total: number;
+  minha: number | null;
+}
+
+export interface Comentario {
+  id: string;
+  apelido: string; // "Jogador Flix" quando o autor está oculto no ranking
+  cor: string;
+  texto: string;
+  criadoEm: string;
+  meu: boolean;
+}
+
+export interface DetalhesJogo {
+  avaliacao: ResumoAvaliacao;
+  comentarios: Comentario[];
 }

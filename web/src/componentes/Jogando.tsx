@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { formatarPontos } from '../dados/formatar';
 import { ErroApi, servico } from '../dados/servico';
 import type { AvatarConfig, Jogo, ResultadoPartida } from '../dados/tipos';
@@ -28,6 +28,8 @@ interface Props {
   jogo: Jogo;
   avatar: AvatarConfig | null;
   onFechar: (houvePartida: boolean) => void;
+  /** Aberto pela animação de lançamento: o jogo aparece junto com a capa se desfazendo. */
+  entrando?: boolean;
 }
 
 type MsgJogo =
@@ -47,7 +49,21 @@ function lerMensagem(d: unknown): MsgJogo | null {
   return null;
 }
 
-export function Jogando({ jogo, avatar, onFechar }: Props) {
+/**
+ * Proporção (largura/altura) dos jogos desenhados numa tela fixa. No computador, o quadro do jogo fica nessa
+ * proporção, o maior possível, com o fundo nas cores do jogo dos lados. Jogo fora da lista ocupa a tela toda.
+ */
+const PROPORCAO: Record<string, number> = { snake: 540 / 960 };
+
+/** Computador: mouse e tela larga. No celular e no tablet o jogo continua como está. */
+const ehComputador = () => window.matchMedia('(hover: hover) and (pointer: fine) and (min-width: 900px)').matches;
+
+export function Jogando({ jogo, avatar, onFechar, entrando = false }: Props) {
+  const [comEntrada] = useState(entrando); // fixo desde a abertura (não reanima ao terminar o lançamento)
+  const raiz = useRef<HTMLDivElement>(null);
+  const [computador] = useState(ehComputador);
+  const [telaCheia, setTelaCheia] = useState(false);
+  const proporcao = jogo.pasta ? PROPORCAO[jogo.pasta] : undefined;
   const quadro = useRef<HTMLIFrameElement>(null);
   const [fase, setFase] = useState<Fase>({ tipo: 'carregando' });
   const [mudo, setMudo] = useState(false);
@@ -125,18 +141,45 @@ export function Jogando({ jogo, avatar, onFechar }: Props) {
     enviar({ type: 'mute', muted: novo });
   }
 
+  // O jogo abre dentro do navegador (sem tela cheia automática); o botão ⛶ deixa o cliente escolher.
+  // Ao sair do jogo, sai da tela cheia se ela estiver ligada.
+  useEffect(() => {
+    const mudou = () => setTelaCheia(document.fullscreenElement === raiz.current);
+    document.addEventListener('fullscreenchange', mudou);
+    return () => {
+      document.removeEventListener('fullscreenchange', mudou);
+      if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+    };
+  }, []);
+
+  function alternarTelaCheia() {
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+    else raiz.current?.requestFullscreen?.().catch(() => {});
+  }
+
   const origem = window.location.origin;
   const src = `/games/${encodeURIComponent(jogo.pasta ?? '')}/?hubOrigin=${encodeURIComponent(origem)}`;
 
   return (
-    <div className="gx-jogo" role="dialog" aria-modal="true" aria-label={`Jogando ${jogo.nome}`}>
+    <div ref={raiz} role="dialog" aria-modal="true" aria-label={`Jogando ${jogo.nome}`}
+      className={'gx-jogo' + (computador ? ' pc' : '') + (telaCheia ? ' cheia' : '') + (computador && proporcao ? ' proporcional' : '') + (comEntrada ? ' entrando' : '')}
+      style={{ '--t1': jogo.cor1, '--t2': jogo.cor2, '--prop': proporcao ?? 1 } as CSSProperties}>
       <div className="gx-jogo-barra">
         <button className="gx-jogo-btn" type="button" onClick={() => onFechar(houvePartida.current)} aria-label="Sair do jogo">✕</button>
         <strong>{jogo.nome}</strong>
-        <button className="gx-jogo-btn" type="button" onClick={alternarSom} aria-pressed={mudo} aria-label={mudo ? 'Ligar som' : 'Desligar som'}>
-          {mudo ? '🔇' : '🔊'}
-        </button>
+        <span className="gx-jogo-dir">
+          {computador && (
+            <button className="gx-jogo-btn" type="button" onClick={alternarTelaCheia} aria-pressed={telaCheia}
+              aria-label={telaCheia ? 'Sair da tela cheia' : 'Tela cheia'} title={telaCheia ? 'Sair da tela cheia (Esc)' : 'Tela cheia'}>
+              {telaCheia ? '🗗' : '⛶'}
+            </button>
+          )}
+          <button className="gx-jogo-btn" type="button" onClick={alternarSom} aria-pressed={mudo} aria-label={mudo ? 'Ligar som' : 'Desligar som'}>
+            {mudo ? '🔇' : '🔊'}
+          </button>
+        </span>
       </div>
+      <div className="gx-jogo-palco">
       <iframe
         ref={quadro}
         className="gx-jogo-quadro"
@@ -146,6 +189,7 @@ export function Jogando({ jogo, avatar, onFechar }: Props) {
         allow="gamepad; fullscreen"
         referrerPolicy="no-referrer"
       />
+      </div>
       {fase.tipo === 'carregando' && <div className="gx-jogo-aviso">Carregando…</div>}
       {(fase.tipo === 'enviando' || fase.tipo === 'resultado' || fase.tipo === 'erro') && (
         <div className="gx-jogo-fim" role="status">

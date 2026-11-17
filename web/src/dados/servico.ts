@@ -1,5 +1,5 @@
 import type { PersonagemLpc } from '../lpc/motor';
-import type { Aparelho, AvatarConfig, CatalogoAvatar, Jogo, LinhaRanking, Perfil, ResultadoPartida, Sessao } from './tipos';
+import type { Aparelho, AvatarConfig, CatalogoAvatar, Comentario, DetalhesJogo, Jogo, LinhaRanking, Perfil, ResultadoPartida, ResumoAvaliacao, Sessao } from './tipos';
 
 /** Erro da API com a mensagem já pronta para mostrar ao cliente. */
 export class ErroApi extends Error {
@@ -69,6 +69,13 @@ export const servico = {
   salvarPersonagem: (perfilId: string, personagem: PersonagemLpc) =>
     api<Perfil>('PUT', `/perfis/${encodeURIComponent(perfilId)}/personagem`, personagem),
   salvarAvatar: (perfilId: string, avatar: AvatarConfig) => api<Perfil>('PUT', `/perfis/${encodeURIComponent(perfilId)}/avatar`, avatar),
+
+  // Página do jogo: o perfil vem da sessão (a API nunca aceita o perfil do cliente)
+  detalhesJogo: (jogoId: string) => api<DetalhesJogo>('GET', `/jogos/${encodeURIComponent(jogoId)}/detalhes`),
+  avaliar: (jogoId: string, nota: number) => api<ResumoAvaliacao>('PUT', `/jogos/${encodeURIComponent(jogoId)}/avaliacao`, { nota }),
+  comentar: (jogoId: string, texto: string) => api<Comentario>('POST', `/jogos/${encodeURIComponent(jogoId)}/comentarios`, { texto }),
+  apagarComentario: (id: string) => api<void>('DELETE', `/comentarios/${encodeURIComponent(id)}`),
+  denunciarComentario: (id: string) => api<void>('POST', `/comentarios/${encodeURIComponent(id)}/denuncia`),
 
   aparelhos: () => api<Aparelho[]>('GET', '/aparelhos'),
   desconectarAparelho: (id: string) => api<void>('DELETE', `/aparelhos/${encodeURIComponent(id)}`),

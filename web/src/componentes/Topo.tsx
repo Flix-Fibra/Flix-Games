@@ -1,7 +1,8 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { startTransition, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { fotoDoRosto } from './personagem/PreviaLpc';
 import { iniciais } from '../dados/apelido';
 import type { Aba, Perfil } from '../dados/tipos';
-import { Barras, Casa, Pessoa } from './Icones';
+import { Barras, Casa, Controle, Pessoa } from './Icones';
 import { LogoGames } from './LogoGames';
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
 
 const ITENS: { aba: Aba; rotulo: string; Icone: () => ReactNode }[] = [
   { aba: 'inicio', rotulo: 'Início', Icone: Casa },
+  { aba: 'jogos', rotulo: 'Jogos', Icone: Controle },
   { aba: 'ranking', rotulo: 'Ranking', Icone: Barras },
   { aba: 'perfil', rotulo: 'Perfil', Icone: Pessoa },
 ];
@@ -25,7 +27,40 @@ function alternarTema() {
   try { localStorage.setItem('flixgames-tema', escuro ? 'light' : 'dark'); } catch { /* sem storage */ }
 }
 
+/** Foto do rosto do personagem criado; sem personagem (ou enquanto a foto fica pronta), as iniciais. */
+function FotoDoPerfil({ perfil }: { perfil: Perfil }) {
+  const [foto, setFoto] = useState<string | null>(null);
+  const chave = perfil.personagem ? JSON.stringify(perfil.personagem) : '';
+  useEffect(() => {
+    setFoto(null);
+    if (!perfil.personagem) return;
+    let ativo = true;
+    fotoDoRosto(perfil.personagem).then((url) => { if (ativo) setFoto(url); }).catch(() => {});
+    return () => { ativo = false; };
+  }, [perfil.id, chave]); // eslint-disable-line react-hooks/exhaustive-deps
+  return foto ? <img className="avatar-foto" src={foto} alt="" draggable={false} /> : <>{iniciais(perfil.apelido)}</>;
+}
+
 export function Topo({ aba, perfil, onAba, onTrocarPerfil }: Props) {
+  // Pílula de seleção: mede o botão ativo e desliza até ele. Na primeira medida não anima (nasce no lugar certo).
+  const nav = useRef<HTMLElement>(null);
+  // Seleção local: muda NA HORA do clique (a pílula já sai andando); a troca de página vem em seguida, sem travar
+  // a animação (startTransition deixa o React desenhar a página nova sem bloquear os quadros da pílula).
+  const [sel, setSel] = useState(aba);
+  useEffect(() => setSel(aba), [aba]);
+  const escolher = (a: Aba) => { setSel(a); startTransition(() => onAba(a)); };
+  const [indicador, setIndicador] = useState({ x: 0, y: 0, w: 0, h: 0, pronto: false });
+  useLayoutEffect(() => {
+    const medir = () => {
+      const el = nav.current?.querySelector<HTMLElement>(`[data-aba="${sel}"]`);
+      setIndicador((atual) => ({ x: el?.offsetLeft ?? 0, y: el?.offsetTop ?? 0, w: el?.offsetWidth ?? 0, h: el?.offsetHeight ?? 0, pronto: atual.w > 0 }));
+    };
+    medir();
+    window.addEventListener('resize', medir);
+    void document.fonts?.ready.then(medir); // a largura muda quando a fonte termina de carregar
+    return () => window.removeEventListener('resize', medir);
+  }, [sel]);
+
   // Vidro escuro no topo depois de rolar (padrão Flix Pulse)
   const [rolado, setRolado] = useState(false);
   useEffect(() => {
@@ -42,9 +77,12 @@ export function Topo({ aba, perfil, onAba, onTrocarPerfil }: Props) {
           <img src="/logo-flix-chapada.png" alt="Flix" width={218} height={84} />
           <LogoGames altura={13} />
         </button>
-        <nav className="gx-nav" aria-label="Seções">
+        <nav className="gx-nav" aria-label="Seções" ref={nav}>
+          {/* Pílula de seleção única: desliza até o botão escolhido (só no computador) */}
+          <span className={'gx-nav-indicador' + (indicador.pronto ? ' pronto' : '')} aria-hidden="true"
+            style={{ transform: `translate(${indicador.x}px, ${indicador.y}px)`, width: indicador.w, height: indicador.h, opacity: indicador.w ? 1 : 0 }} />
           {ITENS.map(({ aba: a, rotulo, Icone }) => (
-            <button key={a} className={'gx-nav-item' + (a === aba ? ' ativo' : '')} aria-current={a === aba ? 'page' : undefined} onClick={() => onAba(a)}>
+            <button key={a} data-aba={a} className={'gx-nav-item' + (a === sel ? ' ativo' : '')} aria-current={a === aba ? 'page' : undefined} onClick={() => escolher(a)}>
               <Icone /><span>{rotulo}</span>
             </button>
           ))}
@@ -56,7 +94,7 @@ export function Topo({ aba, perfil, onAba, onTrocarPerfil }: Props) {
             <span className="tema-bola" />
           </button>
           <button className="avatar" type="button" aria-label="Trocar de perfil" style={{ background: perfil.cor }} onClick={onTrocarPerfil}>
-            {iniciais(perfil.apelido)}
+            <FotoDoPerfil perfil={perfil} />
           </button>
         </div>
       </div>

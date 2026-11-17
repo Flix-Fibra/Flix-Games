@@ -30,7 +30,8 @@ svg{width:20px;height:20px;fill:currentColor;flex:none}
    grudar no header em vez da tela. */
 header{position:sticky;top:0;z-index:30;isolation:isolate;padding-top:env(safe-area-inset-top)}
 header::before{content:"";position:absolute;inset:0;z-index:-1;background:transparent;border-bottom:1px solid transparent;
-  transition:background-color .5s,border-color .5s,backdrop-filter .5s,-webkit-backdrop-filter .5s}
+  transition:background-color .5s,border-color .5s,backdrop-filter .5s,-webkit-backdrop-filter .5s;
+  transition-timing-function:cubic-bezier(.4,0,.2,1)} /* mesma curva e duração do flixfibra.com.br */
 header.rolado{--ink:#F5F5F7;--muted:#A1A1A6;--hover:rgba(255,255,255,.1);--line:rgba(255,255,255,.12)}
 header.rolado::before{background:rgba(11,11,13,.8);border-bottom-color:rgba(255,255,255,.1);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px)}
 :root[data-theme=dark] header.rolado::before{background:rgba(11,11,13,.5)}
@@ -406,3 +407,386 @@ html.rolando::-webkit-scrollbar-track{background:transparent}
 .creditos-autores{font-size:13px;line-height:1.6;color:var(--ink)}
 .creditos code{font-size:12px;padding:1px 5px;border-radius:5px;background:var(--hover)}
 .gx-aviso-prototipo a{color:inherit;text-decoration:underline}
+
+/* ---------- Atalho "Criar personagem" no Início ---------- */
+.gx-tile-mais{position:absolute;right:8px;bottom:8px;width:24px;height:24px;display:grid;place-items:center;border-radius:50%;
+  background:#fff;color:#D2232A;font-size:18px;font-weight:800;line-height:1;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.gx-hero-personagem{display:flex;align-items:center;gap:24px;max-width:760px}
+.gx-hero-personagem .gx-hero-texto{flex:1;min-width:0}
+.gx-hero-retrato{flex:none;width:140px;height:140px;border-radius:24px;background:rgba(255,255,255,.08);
+  display:grid;place-items:center;overflow:hidden}
+@media (max-width:599px){.gx-hero-retrato{display:none}}
+.gx-vazio{padding:40px 0;text-align:center}
+
+/* ---------- Jogo no computador: tela cheia e quadro na proporção do jogo ---------- */
+.gx-jogo .gx-jogo-barra{grid-template-columns:1fr auto 1fr} /* título sempre no meio */
+.gx-jogo .gx-jogo-barra>:first-child{justify-self:start}
+.gx-jogo-dir{display:flex;gap:8px;justify-self:end}
+.gx-jogo-palco{flex:1;min-height:0;display:flex;justify-content:center}
+.gx-jogo-palco .gx-jogo-quadro{flex:1}
+/* Fundo dos lados: cores do jogo, escurecidas e desfocadas (no celular nada muda) */
+.gx-jogo.pc{background:
+  radial-gradient(60% 80% at 20% 30%,color-mix(in srgb,var(--t1) 55%,transparent),transparent 70%),
+  radial-gradient(60% 80% at 80% 70%,color-mix(in srgb,var(--t2) 55%,transparent),transparent 70%),#07070a}
+.gx-jogo.proporcional .gx-jogo-quadro{flex:none;height:100%;width:auto;aspect-ratio:var(--prop);max-width:100%;
+  box-shadow:0 0 0 1px rgba(255,255,255,.08),0 30px 90px rgba(0,0,0,.6)}
+/* Tela cheia: a barra flutua por cima e o jogo usa a altura toda */
+.gx-jogo.cheia .gx-jogo-barra{position:absolute;top:0;left:0;right:0;z-index:2;background:linear-gradient(rgba(0,0,0,.55),transparent)}
+
+/* =====================================================================
+   Diagramação (mesma grade do flixfibra.com.br)
+   Uma coluna de no máximo 1200 px com margem interna de 24 px (40 px a partir de 768 px).
+   --pad é a margem real de cada lado: a sobra da tela além de 1200 px mais a margem interna. Topo, conteúdo e rodapé usam o mesmo --pad, então tudo alinha
+   na mesma linha vertical. A fileira de jogos "sangra" até a borda, como as vitrines da Apple.
+   Escala de espaço: 8 · 16 · 24 · 32 · 48 · 64.
+   ===================================================================== */
+:root{--max:1200px;--gutter:24px;--pad:calc(max(0px,(100vw - var(--max)) / 2) + var(--gutter));
+  --s1:8px;--s2:16px;--s3:24px;--s4:32px;--s5:48px;--s6:64px}
+/* Igual ao flixfibra.com.br: coluna de 1200 px com 24 px de margem interna; 40 px a partir de 768 px */
+@media (min-width:768px){:root{--gutter:40px}}
+
+/* Mesma coluna no topo, no conteúdo e no rodapé */
+.barra{max-width:none;padding-inline:var(--pad)}
+main{max-width:none;padding-inline:var(--pad);padding-top:var(--s2)}
+.gx-aviso-prototipo{padding-inline:var(--pad);padding-top:var(--s5)}
+
+/* Vitrines que rolam: começam alinhadas à coluna e vão até a borda da tela */
+.gx-trilho{margin-inline:calc(-1 * var(--pad));padding-inline:var(--pad);scroll-padding-inline:var(--pad);gap:12px;padding-top:var(--s1)}
+.gx-filtro-jogos{margin-inline:calc(-1 * var(--pad));padding-inline:var(--pad)}
+
+/* Destaque: hierarquia clara e respiro entre título, selos, texto e botões */
+.gx-hero{padding:var(--s1) 0 var(--s5);max-width:680px}
+.gx-sobre{margin-bottom:var(--s1)}
+.gx-hero-titulo{margin-bottom:var(--s2)}
+.gx-chips{gap:var(--s1);margin-bottom:var(--s2)}
+.gx-hero-desc{margin-bottom:var(--s3);font-size:17px;line-height:1.47}
+.gx-acoes{gap:12px}
+.gx-hero-personagem{gap:var(--s5);max-width:none}
+
+/* Cartões e seções */
+.gx-faixas{gap:var(--s3)}
+.card{padding:20px;border-radius:22px}
+.card-titulo,.card h3{margin-bottom:var(--s2);font-size:17px}
+.titulo-pagina{margin:var(--s2) 0 var(--s4)}
+.perfil,.perfil-grade{gap:var(--s3)}
+
+@media (min-width:900px){
+  main{padding-top:var(--s4)}
+  .gx-hero{padding-bottom:var(--s6)}
+  .gx-faixas{gap:var(--s4)}
+  .card{padding:28px}
+  .titulo-pagina{margin:var(--s3) 0 var(--s5)}
+  .perfil,.perfil-grade{gap:var(--s4)}
+  .gx-aviso-prototipo{padding-top:var(--s6)}
+}
+
+/* ---------- Barra superior: mesma espessura do flixfibra.com.br (48 px no celular, 56 px a partir de 768 px, + 1 px de borda) ---------- */
+.barra{height:48px}
+@media (min-width:768px){.barra{height:56px}}
+header{padding-bottom:1px} /* a linha de 1 px (transparente no topo, visível ao rolar) fica fora dos 56 px, como no site */
+/* Logo FLIX: mesmo tamanho do flixfibra.com.br (24 px de altura no celular, 28 px a partir de 768 px) e alinhado à
+   coluna: o respiro de 4 px do botão (área de toque e foco) é compensado com margem negativa. */
+.marca{margin-left:-4px}
+.marca img{height:24px;width:auto;aspect-ratio:135/53;object-fit:fill} /* proporção do logo do site: 61,13×24 e 71,32×28, idênticos */
+@media (min-width:768px){.marca img{height:28px}}
+@media (min-width:900px){
+  .gx-nav-item{min-height:32px;padding:6px 12px;font-size:13px;font-weight:400;letter-spacing:-.025em}
+  .gx-nav-item svg{width:16px;height:16px}
+}
+
+/* ---------- Página Jogos: categorias e grade ---------- */
+.gx-categorias{display:flex;gap:var(--s1);overflow-x:auto;margin:0 calc(-1 * var(--pad)) var(--s4);padding:0 var(--pad) 4px;scrollbar-width:none}
+.gx-categorias::-webkit-scrollbar{display:none}
+.gx-categoria{flex:none;display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 16px;border-radius:999px;
+  border:1px solid var(--line);background:var(--card);color:var(--ink);font-weight:600;font-size:14px;
+  transition:background-color .35s ease-out,color .35s ease-out,border-color .35s ease-out} /* troca de seleção levemente suave */
+.gx-categoria.ativo{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.gx-categoria-n{font-size:12px;font-weight:600;opacity:.6}
+.gx-grade-jogos{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:var(--s3) var(--s2)} /* 2 colunas já no celular de 320 px */
+.gx-cartao-jogo{display:flex;flex-direction:column;gap:12px;width:100%;padding:0;border:0;background:none;color:var(--ink);text-align:left}
+.gx-cartao-capa{position:relative;aspect-ratio:1;border-radius:22px;display:grid;place-items:center;color:#fff;
+  background:linear-gradient(145deg,var(--t1),var(--t2));box-shadow:0 10px 30px rgba(0,0,0,.25);transition:transform .3s var(--ease),box-shadow .3s ease}
+.gx-cartao-capa svg{width:42%;height:42%}
+.gx-cartao-info{display:grid;gap:2px}
+.gx-cartao-info strong{font-size:16px;font-weight:600;letter-spacing:-.01em}
+.gx-cartao-info small{font-size:13px;color:var(--muted)}
+.gx-cartao-jogar{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;min-height:34px;padding:0 14px;border-radius:999px;
+  background:var(--red-fundo);color:#fff;font-size:13px;font-weight:700}
+.gx-cartao-jogar svg{width:14px;height:14px}
+@media (hover:hover){.gx-cartao-jogo:hover .gx-cartao-capa{transform:translateY(-4px);box-shadow:0 18px 40px rgba(0,0,0,.35)}}
+@media (min-width:900px){.gx-grade-jogos{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--s4)}}
+
+/* ---------- Capa do jogo (imagem que vem do game.json) ---------- */
+.gx-capa-img{display:block;width:86%;height:86%;object-fit:contain;filter:drop-shadow(0 6px 14px rgba(0,0,0,.35));user-select:none}
+.gx-cartao-capa .gx-capa-img{width:84%;height:84%}
+.gx-mini .gx-capa-img{width:100%;height:100%;filter:none}
+
+/* =====================================================================
+   Tipografia do flixfibra.com.br (medida no site em 17/11/2026)
+   Títulos em SF Pro Display/Segoe UI, peso 600; chamada em maiúsculas espaçadas; texto 17→19 px.
+   ===================================================================== */
+.gx-hero-titulo,.titulo-pagina h1,.gx-quem h1{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Helvetica,Arial,sans-serif}
+/* Chamada acima do título ("Líder em ultra velocidade") */
+.gx-sobre{font-size:15px;font-weight:500;letter-spacing:.16em;margin-bottom:0}
+/* Título principal: 42 → 68 (768 px) → 78 (1024 px) */
+.gx-hero-titulo{margin:var(--s3) 0 var(--s3);font-size:42px;font-weight:600;line-height:1.03;letter-spacing:-.02em}
+/* Texto de apoio: 17 → 19 px, entrelinha folgada, largura de leitura confortável */
+.gx-hero-desc{margin:28px 0 var(--s4);font-size:17px;line-height:1.625;max-width:576px;opacity:.7}
+.gx-chips{margin:0}
+/* Botões: principal com 56 px de altura, 16 px, peso 500 */
+.gx-btn{min-height:56px;padding:0 32px;font-size:16px;font-weight:500}
+.gx-acoes{gap:12px}
+/* Título de seção/página: 32 → 42 px */
+.titulo-pagina h1{font-size:32px;font-weight:600;line-height:1.12;letter-spacing:-.02em}
+.titulo-pagina p{margin-top:12px;font-size:17px;line-height:1.625}
+/* Menu: 13 px, como no site */
+.gx-nav-item span{font-size:13px}
+@media (min-width:768px){
+  .gx-hero-titulo{font-size:68px}
+  .gx-hero-desc{font-size:19px}
+  .titulo-pagina h1{font-size:42px}
+  .titulo-pagina p{font-size:19px}
+}
+@media (min-width:1024px){.gx-hero-titulo{font-size:78px}}
+@media (max-width:899px){.gx-nav-item span{font-size:11px}} /* barra de baixo do celular: rótulo curto embaixo do ícone */
+
+/* Botão de perfil do topo com a foto do rosto do personagem criado */
+.avatar{overflow:hidden}
+.avatar-foto{width:100%;height:100%;display:block;object-fit:cover;image-rendering:pixelated;transform:scale(1.12)}
+.gx-categoria svg{width:14px;height:14px}
+.gx-categoria.fav svg{color:#FF6961}
+.gx-categoria.fav.ativo svg{color:#D4142C}
+
+/* =====================================================================
+   Tema claro = flixfibra.com.br/contratar (medido em 17/11/2026)
+   Fundo #FAFAFA liso (sem o degradê nas cores do jogo), superfícies brancas com borda #E5E5EA de 1 px,
+   sem sombra, texto #1D1D1F e secundário #6E6E73, campos com cantos de 12 px, topo claro.
+   Só vale no tema claro; o escuro não muda.
+   ===================================================================== */
+:root:not([data-theme=dark]){--bg:#FAFAFA;--card:#FFFFFF;--hover:#F1F1F3;--ink:#1D1D1F;--muted:#6E6E73;--line:#E5E5EA;--shadow:none}
+:root:not([data-theme=dark]) body{background:#FAFAFA}
+:root:not([data-theme=dark]) .gx-fundo{display:none}
+
+
+/* Barra de baixo do celular, clara */
+@media (max-width:899px){
+  :root:not([data-theme=dark]) .gx-nav{background:rgba(250,250,250,.9);border-top-color:#E5E5EA}
+}
+
+/* Cartões e botões secundários: brancos, borda fina, sem sombra */
+:root:not([data-theme=dark]) .card{background:#FFFFFF;border:1px solid #E5E5EA;box-shadow:none}
+:root:not([data-theme=dark]) .gx-btn-sec{background:#FFFFFF;border:1px solid #E5E5EA;color:#1D1D1F}
+:root:not([data-theme=dark]) .gx-btn-jogar{box-shadow:0 1px 2px rgba(0,0,0,.08)}
+:root:not([data-theme=dark]) .gx-chip{background:#FFFFFF;border-color:#E5E5EA}
+:root:not([data-theme=dark]) .gx-categoria{background:#FFFFFF;border-color:#E5E5EA}
+:root:not([data-theme=dark]) .gx-categoria.ativo{background:#1D1D1F;border-color:#1D1D1F;color:#FFFFFF}
+
+/* Campos de formulário como no site: brancos, borda #E5E5EA, cantos de 12 px, 15 px */
+:root:not([data-theme=dark]) .perfil-form input:not([type=checkbox]),
+:root:not([data-theme=dark]) .gx-quem-novo input{background:#FFFFFF;border:1px solid #E5E5EA;border-radius:12px;font-size:15px;color:#1D1D1F}
+
+/* Texto de apoio na cor secundária do site (em vez de transparência) */
+:root:not([data-theme=dark]) .gx-hero-desc,
+:root:not([data-theme=dark]) .titulo-pagina p{color:#6E6E73;opacity:1}
+
+/* Item selecionado na fileira: contorno escuro (o branco sumia no fundo claro) e sombra leve */
+:root:not([data-theme=dark]) .gx-tile.ativo{box-shadow:0 0 0 2px #1D1D1F,0 6px 16px rgba(0,0,0,.12)}
+:root:not([data-theme=dark]) .gx-cartao-capa{box-shadow:none}
+@media (hover:hover){:root:not([data-theme=dark]) .gx-cartao-jogo:hover .gx-cartao-capa{box-shadow:0 8px 20px rgba(0,0,0,.12)}}
+
+
+/* ---------- Cartão do jogo: botões Jogar (vermelho) e Ver (cinza) ---------- */
+.gx-cartao-jogo{list-style:none}
+button.gx-cartao-capa{width:100%;border:0;padding:0;cursor:pointer}
+.gx-cartao-botoes{display:flex;gap:8px}
+.gx-cartao-jogar,.gx-cartao-ver{border:0;cursor:pointer}
+.gx-cartao-ver{display:inline-flex;align-items:center;min-height:34px;padding:0 16px;border-radius:999px;background:var(--hover);
+  color:var(--ink);font-size:13px;font-weight:600;transition:background .2s}
+@media (hover:hover){.gx-cartao-ver:hover{background:color-mix(in srgb,var(--ink) 14%,transparent)}}
+
+/* ---------- Página do jogo (estilo página de produto da Apple) ----------
+   Coluna central estreita (760 px), topo compacto com a nota discreta ao lado do Jogar, seções separadas só por
+   uma linha fina, títulos de 22 px e respiro de 48 px entre seções. Sem caixas pesadas. */
+.gx-detalhe{max-width:760px;margin-inline:auto}
+/* Voltar: só a seta e o texto, em cinza, sem fundo nem contorno (fica com a cor do texto ao passar o mouse) */
+.gx-voltar{display:inline-flex;align-items:center;gap:2px;margin:0 0 var(--s3);min-height:34px;padding:0;border:0;
+  background:none;color:var(--muted);font-size:15px;font-weight:500;cursor:pointer;transition:color .2s}
+@media (hover:hover){.gx-voltar:hover{color:var(--ink)}}
+
+.gx-detalhe-topo{display:flex;align-items:center;gap:20px;padding-bottom:var(--s4)}
+.gx-detalhe-capa{flex:none;width:112px;border-radius:24px;box-shadow:0 0 0 1px var(--line)}
+.gx-detalhe-capa .gx-capa-img{width:86%;height:86%}
+.gx-detalhe-info{min-width:0}
+.gx-detalhe-nome{margin:0;font-size:26px;font-weight:600;line-height:1.15;letter-spacing:-.02em}
+.gx-detalhe-sub{margin:4px 0 0;font-size:15px;color:var(--muted)}
+.gx-media{white-space:nowrap}
+.gx-detalhe-acoes{display:flex;align-items:center;flex-wrap:wrap;gap:12px 20px;margin-top:var(--s2)}
+.gx-detalhe-jogar{min-height:40px;min-width:0;padding:0 28px;font-size:15px;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.gx-detalhe-jogar svg{width:16px;height:16px}
+
+/* Nota discreta: estrelas pequenas e cinza; douradas só ao passar o mouse ou depois de avaliar */
+.gx-avaliar{display:flex;align-items:center;gap:8px}
+.gx-estrelas{display:flex;gap:0;margin:0}
+.gx-estrela{width:24px;height:32px;border:0;background:none;padding:0;font-size:18px;line-height:1;color:var(--line);cursor:pointer;transition:color .15s}
+.gx-estrela.cheia{color:#F5B301}
+.gx-avaliar-rotulo{font-size:13px;color:var(--muted)}
+
+/* Seções */
+.gx-secao{padding:var(--s5) 0 0;margin-top:var(--s1);border-top:1px solid var(--line)}
+.gx-secao + .gx-secao{margin-top:var(--s5)}
+.gx-secao-titulo{display:flex;align-items:baseline;gap:8px;margin:0 0 var(--s2);font-size:22px;font-weight:600;letter-spacing:-.015em}
+.gx-secao-conta{font-size:15px;font-weight:400;color:var(--muted)}
+.gx-secao-texto{margin:0;max-width:600px;font-size:17px;line-height:1.5;color:var(--ink);opacity:.85}
+.gx-secao-nota{margin:-8px 0 var(--s2);font-size:13px;color:var(--muted)}
+.gx-detalhe-ranking{max-width:520px}
+.gx-detalhe-ranking .gx-linha{padding:10px 0}
+
+/* Comentários */
+.gx-novo-comentario{display:flex;gap:12px;margin-bottom:var(--s3);max-width:600px}
+.gx-novo-campo{flex:1;min-width:0}
+.gx-novo-campo textarea{width:100%;min-height:72px;resize:vertical;padding:12px 14px;border:1px solid var(--line);border-radius:12px;
+  background:var(--card);color:var(--ink);font:inherit;font-size:15px;line-height:1.5;outline:none;transition:border-color .2s,box-shadow .2s}
+.gx-novo-campo textarea:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(var(--red-rgb),.15)}
+.gx-novo-rodape{display:flex;align-items:center;gap:12px;margin-top:8px}
+.gx-novo-rodape small:first-child{flex:1}
+.gx-novo-erro{color:var(--red);font-weight:600}
+.gx-novo-rodape .btn{min-height:34px;padding:0 16px;border-radius:999px;font-size:13px}
+.gx-novo-rodape .btn:disabled{opacity:.4}
+.gx-com-av{flex:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:700}
+.gx-lista-comentarios{list-style:none;margin:0;padding:0;display:grid;max-width:600px}
+.gx-comentario{display:flex;gap:12px;padding:var(--s2) 0;border-top:1px solid var(--line)}
+.gx-com-corpo{flex:1;min-width:0}
+.gx-com-cab{display:flex;align-items:baseline;gap:8px;margin:0 0 2px;font-size:14px}
+.gx-com-cab span{color:var(--muted);font-size:12px}
+.gx-com-texto{margin:0;font-size:15px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.gx-com-acoes{display:flex;align-items:center;gap:10px;margin-top:4px;font-size:12px;color:var(--muted)}
+.gx-com-acoes button{border:0;background:none;padding:4px 0;color:var(--muted);font-size:12px;font-weight:500;cursor:pointer}
+.gx-com-acoes button:hover{color:var(--ink)}
+
+@media (min-width:768px){
+  .gx-detalhe-topo{gap:28px}
+  .gx-detalhe-capa{width:144px;border-radius:32px}
+  .gx-detalhe-nome{font-size:32px}
+}
+
+/* Página do jogo: comentários à esquerda e ranking à direita (a página passa a 980 px, largura de página da Apple) */
+.gx-detalhe{max-width:980px}
+.gx-detalhe-colunas{display:grid;gap:0}
+@media (min-width:900px){
+  .gx-detalhe-colunas{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:var(--s6);align-items:start;
+    margin-top:var(--s5);border-top:1px solid var(--line)}
+  .gx-detalhe-colunas .gx-secao{margin-top:0;border-top:0}
+  .gx-detalhe-ranking{max-width:none}
+}
+
+/* Favoritar ao lado do Jogar, no mesmo tamanho compacto; coração vermelho quando já é favorito */
+.gx-detalhe-fav{min-height:40px;min-width:0;padding:0 20px;font-size:15px;font-weight:600}
+.gx-detalhe-fav svg{width:16px;height:16px}
+.gx-detalhe-fav[aria-pressed=true] svg{color:#FF453A}
+
+/* ---------- Espaçamento entre os botões do menu superior igual ao flixfibra.com.br ----------
+   No site, o texto de um item fica a 40 px do próximo. Aqui cada botão tem 12 px de respiro interno de cada lado
+   (a "pílula" do ativo/hover), então o espaço entre eles é 16 px: 12 + 16 + 12 = 40 px de texto a texto.
+   Só o espaçamento muda; design e comportamento do menu continuam os mesmos. */
+@media (min-width:900px){.gx-nav{gap:16px}}
+
+/* ---------- Botão Favoritar: só o coração fica vermelho, com pulo e preenchimento ao favoritar ---------- */
+.gx-btn-fav[aria-pressed=true]{color:var(--ink)} /* o texto não fica vermelho */
+.gx-coracao{width:18px;height:18px;overflow:visible;flex:none}
+.gx-coracao-contorno{fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round;transition:stroke .25s}
+.gx-coracao-cheio{fill:#FF3B30;transform-box:fill-box;transform-origin:center;transform:scale(0);transition:transform .2s ease-in}
+.gx-coracao.cheio .gx-coracao-cheio{transform:scale(1)}
+.gx-coracao.cheio .gx-coracao-contorno{stroke:#FF3B30}
+/* Só depois do clique: o coração pula e o vermelho se expande de dentro para fora, passando um pouco do tamanho */
+.gx-coracao.cheio.anima{animation:gx-coracao-pulo .45s cubic-bezier(.2,.9,.3,1.3)}
+.gx-coracao.cheio.anima .gx-coracao-cheio{animation:gx-coracao-enche .45s cubic-bezier(.2,.9,.3,1.3)}
+@keyframes gx-coracao-pulo{0%{transform:scale(1)}35%{transform:scale(1.32)}65%{transform:scale(.92)}100%{transform:scale(1)}}
+@keyframes gx-coracao-enche{0%{transform:scale(0)}55%{transform:scale(1.15)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.gx-coracao.anima,.gx-coracao.anima .gx-coracao-cheio{animation:none}}
+
+/* ---------- Abertura do jogo: a capa voa até o quadro do jogo e se desfaz sobre ele ---------- */
+.gx-lanca{position:fixed;inset:0;z-index:85} /* acima do jogo (80): a capa se desfaz sobre ele */
+.gx-lanca-capa{position:fixed;left:0;top:0;transform-origin:0 0;display:grid;place-items:center;overflow:hidden;color:#fff;
+  background:linear-gradient(145deg,var(--t1),var(--t2));box-shadow:0 30px 80px rgba(0,0,0,.55);will-change:transform}
+.gx-lanca-capa .gx-capa-img{width:86%;height:86%}
+.gx-lanca-capa>svg{width:42%;height:42%}
+
+/* ---------- Jogo aberto no navegador, com a plataforma desfocada ao fundo ----------
+   Sem fundo preto/colorido: a própria plataforma aparece atrás, desfocada e um pouco escurecida. O desfoque
+   entra junto com o clique; o jogo aparece no lugar onde a capa se desfaz (sem pausa). */
+.gx-jogo,.gx-jogo.pc{background:rgba(8,8,10,.38);-webkit-backdrop-filter:blur(24px) saturate(1.15);backdrop-filter:blur(24px) saturate(1.15);
+  animation:gx-jogo-fundo .45s cubic-bezier(.22,1,.36,1) both}
+@keyframes gx-jogo-fundo{from{background:rgba(8,8,10,0);-webkit-backdrop-filter:blur(0);backdrop-filter:blur(0)}}
+.gx-jogo .gx-jogo-barra{background:transparent}
+.gx-jogo.cheia .gx-jogo-barra{background:linear-gradient(rgba(0,0,0,.55),transparent)}
+/* Com o lançamento: barra e quadro do jogo surgem quando a capa chega e começa a se desfazer */
+.gx-jogo.entrando .gx-jogo-palco,.gx-jogo.entrando .gx-jogo-barra,.gx-jogo.entrando .gx-jogo-aviso{animation:gx-jogo-entra .28s ease-out .5s both} /* começa quando a capa chega (~520 ms) */
+@keyframes gx-jogo-entra{from{opacity:0;transform:scale(.985)}}
+.gx-lanca{background:none;pointer-events:none}
+@media (prefers-reduced-motion:reduce){.gx-jogo,.gx-jogo.entrando *{animation:none!important}}
+
+/* ---------- Menu superior: a pílula de seleção desliza até o botão escolhido ----------
+   Um indicador só, atrás dos botões; mede o botão ativo e anda (posição e largura) com uma curva que desacelera
+   suave no fim. Só no computador; a barra de baixo do celular continua marcando só pela cor. */
+.gx-nav-indicador{display:none}
+@media (min-width:900px){
+  .gx-nav{position:relative}
+  .gx-nav-item{position:relative;z-index:1}
+  .gx-nav-item.ativo{background:transparent}
+  .gx-nav-indicador{display:block;position:absolute;left:0;top:0;border-radius:999px;
+    background:var(--hover);pointer-events:none;z-index:0}
+  .gx-nav-indicador.pronto{transition:transform .5s cubic-bezier(.22,1,.36,1),width .5s cubic-bezier(.22,1,.36,1),background-color .3s}
+}
+@media (prefers-reduced-motion:reduce){.gx-nav-indicador.pronto{transition:none}}
+
+/* =====================================================================
+   Tema escuro = flixfibra.com.br/contratar no tema escuro (medido em 17/11/2026)
+   Fundo grafite liso #313438 (sem o degradê vermelho), superfícies #3A3D42, borda branca a 12%,
+   texto #F5F5F7 e secundário #A1A1A6 (estes dois e a borda já eram iguais).
+   ===================================================================== */
+:root[data-theme=dark]{--bg:#313438;--card:#3A3D42}
+:root[data-theme=dark] body{background:#313438}
+:root[data-theme=dark] .gx-fundo{display:none}
+:root[data-theme=dark] .card{-webkit-backdrop-filter:none;backdrop-filter:none}
+
+/* ---------- Tema escuro: detalhe em degradê no topo, na cor do card selecionado ----------
+   Um brilho suave só no alto da página (some ao rolar), nas cores do card escolhido no Início (--c1/--c2) ou do jogo
+   aberto. As cores são registradas com @property para se fundirem (0,6 s) em vez de pularem ao trocar de card. */
+@property --c1{syntax:'<color>';inherits:true;initial-value:#D4142C}
+@property --c2{syntax:'<color>';inherits:true;initial-value:#7B2FF7}
+:root{transition:--c1 .6s ease,--c2 .6s ease}
+:root[data-theme=dark] .gx-fundo{display:block;position:absolute;inset:0 0 auto 0;height:min(66vh,620px); /* só o alto da tela */
+  /* mesma direção do degradê original: a cor nasce no canto superior direito e se espalha para a esquerda */
+  background:
+    radial-gradient(120% 75% at 80% -10%,color-mix(in srgb,var(--c1) 45%,transparent) 0%,transparent 70%),
+    radial-gradient(85% 70% at -10% 30%,color-mix(in srgb,var(--c2) 38%,transparent) 0%,transparent 70%);
+  -webkit-mask-image:linear-gradient(#000 55%,transparent);mask-image:linear-gradient(#000 55%,transparent)}
+@media (prefers-reduced-motion:reduce){:root{transition:none}}
+
+/* ---------- Tema escuro: degradê do topo animado, estilo PS5 ----------
+   Duas manchas de luz enormes e desfocadas (cor principal à direita, secundária à esquerda) derivam devagar:
+   deslizam, "respiram" (escala) e giram de leve, em ciclos longos e diferentes (26 s e 34 s, ida e volta), para
+   nunca repetirem igual. Só transform (feito pela placa de vídeo): leve no celular. As cores seguem o card. */
+:root[data-theme=dark] .gx-fundo{background:none;overflow:hidden}
+:root[data-theme=dark] .gx-fundo::before,
+:root[data-theme=dark] .gx-fundo::after{content:"";position:absolute;border-radius:50%;filter:blur(30px);will-change:transform}
+:root[data-theme=dark] .gx-fundo::before{width:115vw;height:150%;right:-42vw;top:-70%;
+  background:radial-gradient(closest-side,color-mix(in srgb,var(--c1) 55%,transparent),color-mix(in srgb,var(--c1) 18%,transparent) 55%,transparent);
+  animation:gx-onda-a 26s ease-in-out infinite alternate}
+:root[data-theme=dark] .gx-fundo::after{width:100vw;height:135%;left:-42vw;top:-48%;
+  background:radial-gradient(closest-side,color-mix(in srgb,var(--c2) 48%,transparent),color-mix(in srgb,var(--c2) 14%,transparent) 55%,transparent);
+  animation:gx-onda-b 34s ease-in-out infinite alternate}
+@keyframes gx-onda-a{
+  0%{transform:translate3d(0,0,0) scale(1) rotate(0deg)}
+  50%{transform:translate3d(-9vw,5%,0) scale(1.14) rotate(9deg)}
+  100%{transform:translate3d(-16vw,-3%,0) scale(1.04) rotate(-6deg)}}
+@keyframes gx-onda-b{
+  0%{transform:translate3d(0,0,0) scale(1.06) rotate(0deg)}
+  50%{transform:translate3d(11vw,7%,0) scale(.94) rotate(-8deg)}
+  100%{transform:translate3d(18vw,-4%,0) scale(1.12) rotate(5deg)}}
+@media (prefers-reduced-motion:reduce){:root[data-theme=dark] .gx-fundo::before,:root[data-theme=dark] .gx-fundo::after{animation:none}}
+
+/* Plasma (WebGL) no lugar das manchas em CSS quando o navegador tem WebGL; canvas só aparece no tema escuro */
+.gx-plasma{display:none}
+:root[data-theme=dark] .gx-fundo.plasma .gx-plasma{display:block;position:absolute;inset:-48px;width:calc(100% + 96px);height:calc(100% + 96px);filter:blur(36px)} /* desfoque forte: só luz difusa, transições bem suaves */
+:root[data-theme=dark] .gx-fundo.plasma::before,:root[data-theme=dark] .gx-fundo.plasma::after{display:none}

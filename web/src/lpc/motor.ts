@@ -266,3 +266,19 @@ export function umaPorArea(itemId: string) {
 
 /** Grupo de seleção de uma peça (para saber se já está escolhida). */
 export const grupoDe = (id: string) => getSelectionGroup(id);
+
+/**
+ * Desenha o personagem que está no motor agora, esperando o catálogo do LPC terminar de carregar
+ * (antes disso, desenharSeMudou não desenha). Devolve false se o catálogo não ficar pronto a tempo.
+ */
+export async function desenharQuandoPronto(limiteMs = 8000): Promise<boolean> {
+  const { catalogo, pronto } = obterMotor();
+  await pronto;
+  const fim = Date.now() + limiteMs;
+  while (!catalogo.isLayersReady() || !catalogo.isPaletteReady()) {
+    if (Date.now() > fim) return false;
+    await new Promise((r) => setTimeout(r, 150));
+  }
+  await desenharSeMudou();
+  return true;
+}

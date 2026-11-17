@@ -26,3 +26,13 @@ O iframe usa `sandbox="allow-scripts allow-pointer-lock"`, **sem** `allow-same-o
 `games/_teste-hub/index.html` é um jogo mínimo que fala o contrato v2 (toque para manter a bolinha no ar; botão "Enviar pontuação absurda" para testar a recusa). Em desenvolvimento, o `semear` aponta G01, G02 e G15 para ele. Quando os jogos reais tiverem pasta, trocar `jogos.pasta` e apagar o jogo de teste.
 
 O servidor de desenvolvimento serve `/games/<pasta>/` a partir de `games/<pasta>/dist` (build) ou `games/<pasta>/` (sem build), recusando caminhos que saiam da pasta.
+
+## Nome e capa vêm do próprio jogo
+
+O jogo é a fonte do seu nome e da sua capa; o portal lê do catálogo (`jogos`), que é atualizado a partir do jogo na entrega:
+
+1. No `games/<pasta>/game.json`: `"catalogo": "g03"` (id no catálogo), `"name"` (nome mostrado na plataforma) e `"capa"` (imagem dentro da pasta do jogo, de preferência quadrada e com fundo transparente, ex.: `"img/logo.png"`).
+2. `npm run catalogo:conferir` valida tudo sem gravar; `npm run catalogo` grava nome, capa e pasta no banco local (`scripts/sincronizar-catalogo.mjs`). Em produção, o mesmo script roda no deploy.
+3. O portal mostra a capa a partir de `/games/<pasta>/<capa>`; sem capa, usa o ícone desenhado. O banco recusa caminhos que saiam da pasta do jogo (migração 006).
+
+Publicar continua sendo decisão do catálogo (ex.: G10 depende do jurídico), não do `game.json`. O hub só lista jogos com pasta real (não `_teste-hub`).

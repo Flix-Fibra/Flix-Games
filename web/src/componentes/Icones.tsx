@@ -26,21 +26,49 @@ const DESENHO_DO_JOGO: Record<string, string> = {
 
 export const IconeJogo = ({ id }: { id: string }) => <Svg>{DESENHOS[DESENHO_DO_JOGO[id] ?? 'blocos']}</Svg>;
 
-/** Quadradinho colorido com o ícone do jogo */
+/** Endereço da capa do jogo (servida junto com o jogo, em /games/<pasta>/<capa>), ou null. */
+export function urlDaCapa(jogo: Jogo): string | null {
+  if (!jogo.pasta || !jogo.capa) return null;
+  return `/games/${encodeURIComponent(jogo.pasta)}/${jogo.capa.split('/').map(encodeURIComponent).join('/')}`;
+}
+
+/** Capa do jogo (imagem que vem do próprio jogo); sem capa, o ícone desenhado. */
+export function CapaJogo({ jogo }: { jogo: Jogo }) {
+  const url = urlDaCapa(jogo);
+  return url ? <img className="gx-capa-img" src={url} alt="" loading="lazy" decoding="async" draggable={false} /> : <IconeJogo id={jogo.id} />;
+}
+
+/** Quadradinho colorido com a capa do jogo */
 export function Mini({ jogo }: { jogo: Jogo }) {
   return (
     <span className="gx-mini" style={{ '--t1': jogo.cor1, '--t2': jogo.cor2 } as CSSProperties}>
-      <IconeJogo id={jogo.id} />
+      <CapaJogo jogo={jogo} />
     </span>
   );
 }
 
 export const Trofeu = () => <Svg><path d="M7 4h10v3a5 5 0 0 1-4 4.9V15h3v3H8v-3h3v-3.1A5 5 0 0 1 7 7zM4 5h2v2a2 2 0 0 1-2-2zm16 0a2 2 0 0 1-2 2V5z" /></Svg>;
+/**
+ * Coração do botão Favoritar: contorno + preenchimento vermelho. Marcado, o vermelho preenche o coração; com
+ * `animar` (só logo depois do clique), o coração dá um "pulo" e o vermelho se expande de dentro para fora.
+ */
+export function CoracaoFavorito({ cheio, animar }: { cheio: boolean; animar: boolean }) {
+  return (
+    <svg className={'gx-coracao' + (cheio ? ' cheio' : '') + (animar ? ' anima' : '')} viewBox="0 0 24 24" aria-hidden="true">
+      <path className="gx-coracao-cheio" d="M12 21s-7.5-4.6-9.5-9.3C1.1 8.3 3.3 4.5 7 4.5c2 0 3.6 1.1 5 3 1.4-1.9 3-3 5-3 3.7 0 5.9 3.8 4.5 7.2C19.5 16.4 12 21 12 21z" />
+      <path className="gx-coracao-contorno" d="M12 21s-7.5-4.6-9.5-9.3C1.1 8.3 3.3 4.5 7 4.5c2 0 3.6 1.1 5 3 1.4-1.9 3-3 5-3 3.7 0 5.9 3.8 4.5 7.2C19.5 16.4 12 21 12 21z" />
+    </svg>
+  );
+}
+
 export const Coracao = () => <Svg><path d="M12 21s-7.5-4.6-9.5-9.3C1.1 8.3 3.3 4.5 7 4.5c2 0 3.6 1.1 5 3 1.4-1.9 3-3 5-3 3.7 0 5.9 3.8 4.5 7.2C19.5 16.4 12 21 12 21z" /></Svg>;
 export const Lixeira = () => <Svg><path d="M9 3h6l1 2h4v2H4V5h4zM6 9h12l-1 12H7z" /></Svg>;
 export const Play = () => <Svg><path d="M8 5v14l11-7z" /></Svg>;
 export const Barras = () => <Svg><path d="M4 20V10h4v10zm6 0V4h4v16zm6 0v-7h4v7z" /></Svg>;
 export const Casa = () => <Svg><path d="M3 11 12 4l9 7v9h-6v-6H9v6H3z" /></Svg>;
+export const Controle = () => (
+  <Svg><path d="M7 7h10a5 5 0 0 1 4.9 6l-.8 3.8a2.5 2.5 0 0 1-4.3 1.2L14.5 16h-5l-2.3 2a2.5 2.5 0 0 1-4.3-1.2L2.1 13A5 5 0 0 1 7 7zm1 3v1.5H6.5v2H8V15h2v-1.5h1.5v-2H10V10zm7.5 1a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4zm2.5-2a1.2 1.2 0 1 0 0 2.4A1.2 1.2 0 0 0 18 9z" /></Svg>
+);
 export const Pessoa = () => <Svg><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6z" /></Svg>;
 export const Trocar = () => (
   <Svg><path d="M7 7h11l-3-3m3 3-3 3M17 17H6l3 3m-3-3 3-3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></Svg>
