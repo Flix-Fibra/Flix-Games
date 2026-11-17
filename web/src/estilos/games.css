@@ -343,24 +343,19 @@ main{padding-bottom:16px}
 }
 
 
-/* ---------- Foco estilo PS5 na fileira de jogos ---------- */
-.gx-tile{overflow:visible;transition:width .35s var(--ease),height .35s var(--ease),box-shadow .35s,transform .25s var(--ease)}
-/* capa em foco: contorno branco com brilho na cor do jogo, e um reflexo de luz que atravessa a capa */
-.gx-tile.ativo{box-shadow:0 0 0 3px #fff,0 0 22px 4px color-mix(in srgb,var(--t1) 70%,transparent),0 14px 30px rgba(0,0,0,.45);animation:gx-foco .45s var(--ease)}
-.gx-tile::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;
-  background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.45) 50%,transparent 65%);background-size:250% 100%;background-position:120% 0}
-.gx-tile.ativo::before{animation:gx-reflexo .75s .12s var(--ease) both}
-.gx-tile.ativo svg{animation:gx-pulo .45s var(--ease)}
-@keyframes gx-foco{0%{transform:scale(.94)}60%{transform:scale(1.04)}100%{transform:scale(1)}}
-@keyframes gx-reflexo{0%{opacity:1;background-position:120% 0}100%{opacity:1;background-position:-30% 0}}
-@keyframes gx-pulo{0%{transform:scale(1)}40%{transform:scale(1.18) translateY(-3px)}100%{transform:scale(1.08)}}
-/* com mouse: as outras capas sobem um pouco ao passar por cima */
+/* ---------- Foco na fileira de jogos (leve) ---------- */
+/* Só uma mudança por vez: a capa cresce devagar e ganha um contorno fino. Sem quique, reflexo ou pulo do ícone. */
+.gx-tile{overflow:visible;transition:width .5s var(--ease),height .5s var(--ease),box-shadow .4s ease,transform .3s var(--ease),filter .3s ease}
+.gx-tile.ativo{box-shadow:0 0 0 2px rgba(255,255,255,.85),0 10px 24px rgba(0,0,0,.3)}
+.gx-tile svg{transition:transform .5s var(--ease)}
+.gx-tile.ativo svg{transform:scale(1.04)}
+/* com mouse: as outras capas só clareiam um pouco */
 @media (hover:hover){
-  .gx-tile:not(.ativo):hover{transform:translateY(-5px);box-shadow:0 0 0 2px rgba(255,255,255,.55),0 16px 28px rgba(0,0,0,.45)}
+  .gx-tile:not(.ativo):hover{transform:translateY(-2px);filter:brightness(1.08)}
 }
-/* nome e descrição entram suavemente quando o jogo muda */
-.gx-hero{animation:gx-hero .4s var(--ease) both}
-@keyframes gx-hero{from{opacity:0;transform:translateX(-12px)}}
+/* nome e descrição trocam com um fade curto */
+.gx-hero{animation:gx-hero .3s ease both}
+@keyframes gx-hero{from{opacity:0}}
 
 /* ---------- Barra de rolagem: invisível parada; fina e discreta só enquanto rola ---------- */
 html{scrollbar-width:none}

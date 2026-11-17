@@ -20,9 +20,18 @@ Reaproveitado do LPC sem alterar: catálogo, estado e seleção (`state/`), rend
 
 ## Regra de licença das peças
 
-Só entram peças cujas **imagens realmente usadas** (por tipo de corpo e variação) têm ao menos uma licença sem "compartilhar igual": **CC0, OGA-BY ou CC-BY**. Fora: CC-BY-SA, OGA-SA, GPL e a subcategoria de ferimentos. Assim o personagem gerado não herda "compartilhar igual". Aplicada no editor (`itemPermitido`, `pecasBloqueadas`) e na API (`lpc_permitidos.json`). Resultado no commit atual: 513 de 657 peças.
+Só entram peças cujas **imagens realmente usadas** (por tipo de corpo e variação) têm ao menos uma licença sem "compartilhar igual": **CC0, OGA-BY ou CC-BY**. Fora: CC-BY-SA, OGA-SA, GPL e a subcategoria de ferimentos. Assim o personagem gerado não herda "compartilhar igual". Aplicada no editor (`itemPermitido`, `pecasBloqueadas`) e na API (`lpc_permitidos.json`). Depois disso vale a regra do perfil (abaixo): 235 de 657 peças.
 
 Consequência: o corpo **Musculoso** fica de fora (o corpo base dele só existe em CC-BY-SA/GPL). Corpos oferecidos: Masculino, Feminino e Adolescente.
+
+## Personagem "normal" (perfil do portal)
+
+Decisão do solicitante em 17/11/2026: nada de fantasia, armas ou objetos. Fica tudo num arquivo só, `web/src/lpc/fora-do-perfil.json`, lido pelo editor e pelo gerador da lista da API:
+- **Fora:** chapéus e capacetes (aba Extras), ferramentas e armas (aba Objetos), asas, caudas, chifres, orelhas de bicho e élficas, olhos especiais, cabeças não humanas, cascos e ferimentos.
+- **Tom de pele:** só os 7 tons humanos.
+- **Cores:** só a paleta principal de cada peça, com o título "Cor". As versões "LPC revisado" ficam fora, inclusive na API.
+- **Uma peça por área:** escolher um cabelo, uma parte de cima, uma de baixo ou um calçado tira a anterior da mesma área (`umaPorArea` em `motor.ts`). No LPC, extensões de cabelo, camisa e jaqueta são camadas que se empilham. Essa regra é só do editor; a API não verifica.
+- Personagem salvo antes com uma peça que saiu: a API devolve `null` (o perfil mostra as iniciais) até a pessoa salvar de novo. Se for carregado no editor, as peças que saíram são removidas.
 
 O filtro de licença do próprio LPC é mais fraco (aceita a peça se **qualquer** imagem tiver licença permitida); por isso o portal aplica a regra acima por cima dele.
 

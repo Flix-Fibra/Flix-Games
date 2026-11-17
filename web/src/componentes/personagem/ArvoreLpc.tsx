@@ -2,11 +2,13 @@ import { useEffect, useRef } from 'react';
 import type {
   ItemWithRecolorsModel, ItemWithVariantsModel, PaletteTileModel, RecolorPaletteOptionModel, TreeItemModel, TreeNodeModel, VariantItemModel,
 } from '@lpc/category-tree';
-import { atualizar, itemPermitido } from '../../lpc/motor';
+import { atualizar, categoriaLiberada, corLiberada, itemPermitido, obterMotor, umaPorArea } from '../../lpc/motor';
 import { pt } from '../../lpc/traducao';
 
 /** Executa a ação original do LPC e avisa o React (no LPC, quem redesenha é o Mithril). */
 const acao = (f: () => unknown) => () => { f(); atualizar(); };
+/** Escolher uma peça: ação do LPC + tirar a peça anterior da mesma área. */
+const escolher = (id: string, f: () => unknown) => () => { f(); umaPorArea(id); atualizar(); };
 
 /**
  * Renderiza os MODELOS do LPC (models/category-tree.ts, item-with-variants.ts, item-with-recolors.ts,
@@ -47,7 +49,7 @@ function ComVariacoes({ id, criar }: { id: string; criar: () => ItemWithVariants
       {m.isExpanded && (
         <div className="lpc-grade">
           {variacoes.map((v) => (
-            <button key={v.key} type="button" className={'lpc-op' + (v.isSelected ? ' ativo' : '')} aria-pressed={v.isSelected} title={pt(v.label)} onClick={acao(() => v.select())}>
+            <button key={v.key} type="button" className={'lpc-op' + (v.isSelected ? ' ativo' : '')} aria-pressed={v.isSelected} title={pt(v.label)} onClick={escolher(id, () => v.select())}>
               <Miniatura v={v} /><span>{pt(v.label)}</span>
             </button>
           ))}
@@ -57,31 +59,36 @@ function ComVariacoes({ id, criar }: { id: string; criar: () => ItemWithVariants
   );
 }
 
-function Peca({ t }: { t: PaletteTileModel }) {
+function Peca({ id, t }: { id: string; t: PaletteTileModel }) {
   return (
-    <button type="button" className={'lpc-cor' + (t.isSelected ? ' ativo' : '')} aria-pressed={t.isSelected} title={pt(t.label)} onClick={acao(() => t.select())}>
+    <button type="button" className={'lpc-cor' + (t.isSelected ? ' ativo' : '')} aria-pressed={t.isSelected} title={pt(t.label)} onClick={escolher(id, () => t.select())}>
       <span style={{ background: `linear-gradient(90deg, ${t.colors.slice(0, 6).join(', ')})` }} />
     </button>
   );
 }
 
-function Paleta({ op }: { op: RecolorPaletteOptionModel }) {
-  const modal = op.createModalModel();
+function Paleta({ id, op, varias }: { id: string; op: RecolorPaletteOptionModel; varias: boolean }) {
+  let modal = op.createModalModel();
   if ('loadingMessage' in modal) return <p className="perfil-dica">Carregando cores…</p>;
+  // O LPC só monta as cores das versões abertas: abre todas para achar a principal.
+  if (modal.versions.some((v) => !v.isExpanded)) {
+    const { estado } = obterMotor();
+    modal.versions.forEach((v) => { estado.expandedNodes[v.key] = true; });
+    modal = op.createModalModel();
+    if ('loadingMessage' in modal) return <p className="perfil-dica">Carregando cores…</p>;
+  }
+  // Só a paleta principal (cores sem prefixo de versão, como "light"); "LPC revisado" e as outras ficam de fora.
+  const ver = modal.versions.find((v) => v.tiles.length > 0 && v.tiles.every((t) => !t.key.includes('.') && t.key !== 'source')) ?? modal.versions[0];
+  if (!ver) return null;
   return (
     <div className="lpc-paleta">
-      {op.label && <h5>{pt(op.label)}</h5>}
-      {modal.versions.map((ver) => (
-        <div key={ver.key}>
-          <button type="button" className={'lpc-sub' + (ver.isExpanded ? ' aberto' : '')} onClick={acao(() => ver.toggle())}>{pt(ver.label)}</button>
-          {ver.isExpanded && <div className="lpc-cores">{ver.tiles.map((t) => <Peca key={t.key} t={t} />)}</div>}
-        </div>
-      ))}
+      <h5>{varias && op.label ? `Cor · ${pt(op.label)}` : 'Cor'}</h5>
+      <div className="lpc-cores">{ver.tiles.filter((t) => !ver.key.includes('-body.') || corLiberada(t.label)).map((t) => <Peca key={t.key} id={id} t={t} />)}</div>
     </div>
   );
 }
 
-function ComCores({ criar }: { criar: () => ItemWithRecolorsModel }) {
+function ComCores({ id, criar }: { id: string; criar: () => ItemWithRecolorsModel }) {
   const m = criar();
   const tela = useRef<HTMLCanvasElement>(null);
   useEffect(() => { if (tela.current) void m.drawPreview(tela.current).catch(() => {}); }); // atualiza a miniatura a cada mudança
@@ -90,7 +97,7 @@ function ComCores({ criar }: { criar: () => ItemWithRecolorsModel }) {
       <button type="button" className={'lpc-cab com-mini' + (m.isExpanded ? ' aberto' : '') + (m.isSelected ? ' escolhido' : '')} onClick={acao(() => m.toggle())}>
         <canvas ref={tela} width={64} height={64} className="lpc-mini" />{pt(m.name)}
       </button>
-      {m.isExpanded && (m.paletteReady ? m.paletteOptions.map((op, i) => <Paleta key={i} op={op} />) : <p className="perfil-dica">Carregando cores…</p>)}
+      {m.isExpanded && (m.paletteReady ? m.paletteOptions.map((op, i) => <Paleta key={i} id={id} op={op} varias={m.paletteOptions.length > 1} />) : <p className="perfil-dica">Carregando cores…</p>)}
     </div>
   );
 }
@@ -100,20 +107,20 @@ function Item({ it }: { it: TreeItemModel }) {
   const id = it.key;
   if (!itemPermitido(id)) return null;
   if (it.kind === 'simple') {
-    return <button type="button" className={'lpc-op texto' + (it.isSelected ? ' ativo' : '')} aria-pressed={it.isSelected} onClick={acao(() => it.select())}>{pt(it.name)}</button>;
+    return <button type="button" className={'lpc-op texto' + (it.isSelected ? ' ativo' : '')} aria-pressed={it.isSelected} onClick={escolher(id, () => it.select())}>{pt(it.name)}</button>;
   }
   if (it.kind === 'variants') return <ComVariacoes id={id} criar={it.createModel} />;
-  return <ComCores criar={it.createModel} />;
+  return <ComCores id={id} criar={it.createModel} />;
 }
 
 /** Um nó da árvore de categorias do LPC (com subcategorias recolhíveis). */
-export function NoLpc({ no, nivel = 0 }: { no: TreeNodeModel; nivel?: number }) {
-  if (no.name.toLowerCase() === 'wounds') return null; // ferimentos: fora do portal
-  const filhos = no.children.map((c) => ({ key: c.key, m: c.createModel() })).filter((c) => c.m);
+export function NoLpc({ no, caminho, nivel = 0 }: { no: TreeNodeModel; caminho: string; nivel?: number }) {
+  if (!categoriaLiberada(caminho.split('/'))) return null; // fantasia, ferimentos etc.: fora do portal
+  const filhos = no.children.filter((c) => categoriaLiberada([...caminho.split('/'), c.key])).map((c) => ({ key: c.key, m: c.createModel() })).filter((c) => c.m);
   const conteudo = (
     <>
       {no.items.map((it) => <Item key={it.key} it={it} />)}
-      {filhos.map((c) => <NoLpc key={c.key} no={c.m!} nivel={nivel + 1} />)}
+      {filhos.map((c) => <NoLpc key={c.key} no={c.m!} caminho={`${caminho}/${c.key}`} nivel={nivel + 1} />)}
     </>
   );
   if (nivel === 0) return <div className="lpc-no">{conteudo}</div>;

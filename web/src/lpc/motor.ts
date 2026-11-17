@@ -12,6 +12,25 @@ import { configureStateCatalog, createState, getSelectionGroup, resetAll, select
 import { isItemLicenseCompatible } from '@lpc/filters';
 import { creditsToTxt, getAllCredits } from '@lpc/credits-utils';
 import type { CatalogReader, CategoryTreeNode } from '@lpc/catalog';
+import FORA from './fora-do-perfil.json';
+
+/** Categoria liberada no editor (fora: chapéus, objetos, armas e partes de fantasia; ver fora-do-perfil.json). */
+export function categoriaLiberada(caminho: readonly string[]): boolean {
+  const p = caminho.join('/');
+  return !FORA.categorias.some((f) => p === f || p.startsWith(f + '/'));
+}
+
+/** Cor de paleta liberada: tira os tons de pele de fantasia (verde, azul, zumbi, pelo). */
+export const corLiberada = (nome: string) => !FORA.coresDePeleFora.includes(nome.toLowerCase().replace(/\s+/g, '_'));
+
+/** Remove do personagem as peças de categorias fora do editor (ex.: personagem salvo antes da mudança). */
+function limpar(selecoes: Selections): Selections {
+  const { catalogo } = obterMotor();
+  return Object.fromEntries(Object.entries(selecoes).filter(([, s]) => {
+    const meta = s?.itemId ? catalogo.getItemMerged(s.itemId).unwrapOr(null) : null;
+    return !meta || categoriaLiberada(meta.path);
+  })) as Selections;
+}
 
 /** Licenças liberadas no editor: sem "compartilhar igual" (CC-BY-SA e GPL ficam de fora). */
 export const LICENCAS_PERMITIDAS = ['CC0', 'OGA-BY', 'CC-BY'] as const;
@@ -87,7 +106,7 @@ export async function carregar(p: PersonagemLpc | null) {
   await pronto;
   if (p && p.motor === 'lpc') {
     estado.bodyType = p.bodyType;
-    estado.selections = JSON.parse(JSON.stringify(p.selections)) as Selections;
+    estado.selections = limpar(JSON.parse(JSON.stringify(p.selections)) as Selections);
     avisar();
   } else {
     estado.selections = {};
@@ -103,7 +122,7 @@ export async function restaurarPadrao() {
 
 export function exportarConfig(): PersonagemLpc {
   const { estado } = obterMotor();
-  return { v: 2, motor: 'lpc', bodyType: estado.bodyType, selections: JSON.parse(JSON.stringify(estado.selections)) as Selections };
+  return { v: 2, motor: 'lpc', bodyType: estado.bodyType, selections: limpar(JSON.parse(JSON.stringify(estado.selections)) as Selections) };
 }
 
 /** Desenha o personagem atual no canvas interno do LPC (spritesheet universal 832x3456). */
@@ -111,6 +130,24 @@ export async function desenhar(alvo?: HTMLCanvasElement) {
   const { catalogo, estado, pronto } = obterMotor();
   await pronto; // o canvas do LPC só existe depois de initCanvas()
   await renderer.renderCharacter(catalogo, estado, estado.selections, estado.bodyType, alvo ?? null);
+}
+
+/**
+ * Desenha só se o personagem mudou (corpo, peças, cores ou etapa do catálogo). Abrir/fechar categorias
+ * também avisa o React, mas não muda o desenho. Um desenho por vez, na ordem (o canvas do LPC é único).
+ */
+let ultimaChave = '';
+let fila: Promise<void> = Promise.resolve();
+export function desenharSeMudou(): Promise<void> {
+  const { catalogo, estado } = obterMotor();
+  // desenho parcial (sem camadas ou cores) seria refeito logo depois: espera o catálogo; a mudança de etapa avisa de novo
+  if (!catalogo.isLayersReady() || !catalogo.isPaletteReady()) return fila;
+  const chave = JSON.stringify([estado.bodyType, estado.selections]);
+  if (chave !== ultimaChave) {
+    ultimaChave = chave;
+    fila = fila.catch(() => {}).then(() => desenhar());
+  }
+  return fila;
 }
 
 /** CC0, OGA-BY (qualquer versão) e CC-BY (sem -SA). Mesma regra de scripts/lpc-gerar.mjs e da API. */
@@ -127,7 +164,7 @@ export function licencaPermitida(l: string): boolean {
 export function itemPermitido(itemId: string, variante?: string): boolean {
   const { catalogo, estado } = obterMotor();
   const meta = catalogo.getItemMerged(itemId).unwrapOr(null);
-  if (!meta || meta.path.includes('wounds')) return false;
+  if (!meta || !categoriaLiberada(meta.path)) return false;
   if (!isItemLicenseCompatible(catalogo, estado, itemId)) return false;
   // imagens realmente usadas por este corpo/variação (função original do LPC)
   const v = variante ?? meta.variants[0] ?? null;
@@ -177,7 +214,7 @@ function vestir(id: string) {
     const v = sortear(meta.variants.filter((x) => itemPermitido(id, x)));
     if (v) selectItem(estado, id, v);
   } else {
-    selectItem(estado, id, sortear(meta.recolors[0]?.variants ?? []) ?? '');
+    selectItem(estado, id, sortear((meta.recolors[0]?.variants ?? []).filter((c) => !c.includes('.'))) ?? '');
   }
 }
 
@@ -189,8 +226,7 @@ export async function aleatorio() {
   await selectDefaults(estado); // corpo, cabeça e expressão básicos do LPC
   // tom de pele: a cor do corpo; "combinar cor do corpo" leva a mesma cor para cabeça e orelhas
   // só tons de pele humanos (o LPC também tem cores de fantasia: verde, azul, zumbi...)
-  const HUMANOS = ['light', 'amber', 'olive', 'taupe', 'bronze', 'brown', 'black'];
-  const corPele = sortear((catalogo.getItemMerged('body').unwrapOr(null)?.recolors[0]?.variants ?? []).filter((c) => HUMANOS.includes(c)));
+  const corPele = sortear((catalogo.getItemMerged('body').unwrapOr(null)?.recolors[0]?.variants ?? []).filter(corLiberada));
   if (corPele) selectItem(estado, 'body', corPele);
   const cabeca = estado.bodyType === 'female' ? 'heads_human_female' : 'heads_human_male';
   if (itemPermitido(cabeca)) selectItem(estado, cabeca, corPele ?? 'light');
@@ -198,8 +234,34 @@ export async function aleatorio() {
     const id = sortear(pecasDe(caminho).filter((x) => !/beard|mustache/.test(x)));
     if (id) vestir(id);
   }
-  if (Math.random() < 0.3) { const chapeu = sortear(pecasDe(['headwear', 'hats'])); if (chapeu) vestir(chapeu); }
   avisar();
+}
+
+// ---------- Uma peça por área ----------
+// No LPC, extensões de cabelo, camisa, jaqueta e armadura são camadas diferentes e se empilham.
+// No portal, escolher uma peça de uma área tira a anterior da mesma área.
+const AREAS: string[][] = [
+  ['hair/afro', 'hair/curly', 'hair/bald', 'hair/short', 'hair/spiky', 'hair/pigtails', 'hair/bob', 'hair/braids', 'hair/long', 'hair/xlong', 'hair/extensions'],
+  ['torso/dresses', 'torso/shirts', 'torso/jacket', 'torso/vest', 'torso/armour', 'torso/torso_chainmail', 'torso/torso_bandages'],
+  ['legs'],
+  ['feet/shoes', 'feet/boots', 'feet/feet_armour', 'feet/feet_slippers', 'feet/feet_sandals'],
+];
+const naArea = (caminho: readonly string[], area: string[]) => {
+  const p = caminho.join('/');
+  return area.some((a) => p === a || p.startsWith(a + '/'));
+};
+
+/** Depois de escolher `itemId`, tira as outras peças da mesma área (cabelo, parte de cima, de baixo, calçado). */
+export function umaPorArea(itemId: string) {
+  const { catalogo, estado } = obterMotor();
+  const meta = catalogo.getItemMerged(itemId).unwrapOr(null);
+  const area = meta && AREAS.find((a) => naArea(meta.path, a));
+  if (!area) return;
+  for (const [grupo, s] of Object.entries(estado.selections)) {
+    if (!s?.itemId || s.itemId === itemId) continue;
+    const outra = catalogo.getItemMerged(s.itemId).unwrapOr(null);
+    if (outra && naArea(outra.path, area)) delete estado.selections[grupo];
+  }
 }
 
 /** Grupo de seleção de uma peça (para saber se já está escolhida). */

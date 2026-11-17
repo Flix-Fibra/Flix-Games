@@ -2,12 +2,15 @@
 // (web/lpc/scripts/generate_sources.ts, GPL-3.0). Saída em web/lpc-gerado/ (não versionada).
 // Também gera api/app/lpc_permitidos.json: peças liberadas pela regra de licença do portal, para a API validar.
 // Uso: node scripts/lpc-gerar.mjs   (Node 22.19+ ou 24, que executam .ts direto)
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const web = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+// mesma regra do editor (src/lpc/motor.ts): categorias e cores de pele fora do perfil
+const FORA = JSON.parse(readFileSync(path.join(web, 'src', 'lpc', 'fora-do-perfil.json'), 'utf8'));
+const categoriaLiberada = (caminho) => { const p = caminho.join('/'); return !FORA.categorias.some((f) => p === f || p.startsWith(f + '/')); };
 const lpc = path.join(web, 'lpc');
 const saida = path.join(web, 'lpc-gerado');
 
@@ -55,8 +58,8 @@ const itens = {};
 let fora = 0;
 for (const id of Object.keys(ite.itemMetadata)) {
   const meta = reader.getItemMerged(id).unwrapOr(null);
-  if (!meta || (meta.path ?? []).includes('wounds')) { fora++; continue; }
-  const r = (meta.recolors ?? []).map((rc, i) => ({ g: i === 0 ? meta.type_name : (rc.type_name ?? meta.type_name), c: rc.variants ?? [] }));
+  if (!meta || !categoriaLiberada(meta.path ?? [])) { fora++; continue; }
+  const r = (meta.recolors ?? []).map((rc, i) => ({ g: i === 0 ? meta.type_name : (rc.type_name ?? meta.type_name), c: (rc.variants ?? []).filter((c) => !c.includes('.') && !((rc.variants ?? []).includes('zombie') && FORA.coresDePeleFora.includes(c))) }));
   const variacoes = meta.variants?.length ? meta.variants : [''];
   // b: por tipo de corpo, as variações em que todas as imagens usadas têm licença permitida
   const b = {};

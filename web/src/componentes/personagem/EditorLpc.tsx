@@ -17,10 +17,8 @@ const ABAS: { id: string; nome: string; raizes: string[] }[] = [
   { id: 'rosto', nome: 'Rosto', raizes: ['head'] },
   { id: 'cabelo', nome: 'Cabelo', raizes: ['hair'] },
   { id: 'roupa', nome: 'Roupa', raizes: ['torso', 'legs', 'feet', 'arms'] },
-  { id: 'extras', nome: 'Extras', raizes: ['headwear'] },
-  { id: 'objetos', nome: 'Objetos', raizes: ['tools', 'weapons'] },
 ];
-const NOMES_RAIZ: Record<string, string> = { torso: 'Parte de cima', legs: 'Parte de baixo', feet: 'Calçados', arms: 'Braços e mãos', tools: 'Ferramentas', weapons: 'Itens de ação' };
+const NOMES_RAIZ: Record<string, string> = { torso: 'Parte de cima', legs: 'Parte de baixo', feet: 'Calçados', arms: 'Braços e mãos' };
 
 function baixar(nome: string, dados: Blob) {
   const url = URL.createObjectURL(dados);
@@ -148,7 +146,7 @@ export function EditorLpc({ perfil, onSalvo, onFechar }: Props) {
                 return (
                   <div key={r}>
                     {ABAS.find((a) => a.id === aba)!.raizes.length > 1 && <h4>{NOMES_RAIZ[r] ?? r}</h4>}
-                    <NoLpc no={no} />
+                    <NoLpc no={no} caminho={r} />
                   </div>
                 );
               })}

@@ -251,5 +251,9 @@ def test_personagem_lpc_recusa_peca_fora_da_licenca_ou_corpo(app_ativo):
     p = copy.deepcopy(LPC_OK); p["selections"]["body"]["itemId"] = "nao_existe"; ruins.append(p)
     p = copy.deepcopy(LPC_OK); p["selections"]["head"]["name"] = "<script>"; ruins.append(p)
     p = copy.deepcopy(LPC_OK); p["extra"] = 1; ruins.append(p)
+    p = copy.deepcopy(LPC_OK); p["selections"]["hat"] = {"itemId": "hat_magic_celestial", "name": "x", "variant": "", "recolor": ""}; ruins.append(p)  # chapéus fora do perfil
+    p = copy.deepcopy(LPC_OK); p["selections"]["body"]["recolor"] = "zombie"; ruins.append(p)        # pele de fantasia
+    p = copy.deepcopy(LPC_OK); p["selections"]["body"]["recolor"] = "all.lpcr.blue"; ruins.append(p)  # outra versão de paleta
+    p = copy.deepcopy(LPC_OK); p["selections"]["head"]["itemId"] = "heads_orc_male"; ruins.append(p)    # cabeça de fantasia
     for corpo in ruins:
         assert c.put(f"/api/perfis/{pid}/personagem", json=corpo).status_code == 422, corpo

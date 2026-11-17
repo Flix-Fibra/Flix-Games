@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { desenhar, renderer } from '../../lpc/motor';
+import { desenharSeMudou, renderer } from '../../lpc/motor';
 import { usarMotor } from '../../lpc/usarMotor';
 
 /** Linhas da folha universal do LPC (sources/state/constants.ts): andar começa na 8; cada direção é uma linha. */
@@ -16,10 +16,10 @@ export function PreviaLpc({ tamanho = 256, direcao = 2, animar = true }: { taman
   const tela = useRef<HTMLCanvasElement>(null);
   const [pronto, setPronto] = useState(0);
 
-  // Recompõe quando qualquer escolha muda
+  // Recompõe só quando o personagem muda (desenharSeMudou ignora avisos que não mudam o desenho)
   useEffect(() => {
     let ativo = true;
-    desenhar().then(() => { if (ativo) setPronto((n) => n + 1); }).catch(() => {});
+    desenharSeMudou().then(() => { if (ativo) setPronto((n) => n + 1); }).catch(() => {});
     return () => { ativo = false; };
   }, [versao]);
 
