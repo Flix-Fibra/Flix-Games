@@ -12,6 +12,7 @@ import {
 
 const STRIDE_PX = 35; // distância percorrida a cada troca de quadro da corrida (4 quadros)
 const FIRE_BTN = { x: GAME_W - 70, y: GAME_H - 84, r: 46 }; // botão de tiro (toque), só aparece com munição
+const HELP_BTN = { x: GAME_W - 44, y: 112, r: 22 }; // botão "?" com os controles
 const PICKUP_R = 32; // raio de colisão dos bônus
 const VIRUS_EXTRA_SPEED = 40; // o vírus avança um pouco mais rápido que o cenário
 const TOWER_H = 520; // altura da torre 5G na tela (o jogo tem 540); a base fica na borda inferior
@@ -77,6 +78,9 @@ export class PlayScene extends Phaser.Scene {
   private nextPickupIn = 0;
   private nextVirusIn = 0;
   private fireTimer = 0;
+  private helpOpen = false;
+  private helpBtn!: Phaser.GameObjects.Container;
+  private helpPanel!: Phaser.GameObjects.Container;
   private firePressed = false;
   private fireBtn!: Phaser.GameObjects.Container;
 
@@ -89,7 +93,7 @@ export class PlayScene extends Phaser.Scene {
   private animT = 0;
   private jumpBuffer = 0;
 
-  private keys!: Record<'space' | 'up' | 'w' | 'down' | 's' | 'enter', Phaser.Input.Keyboard.Key>;
+  private keys!: Record<'help' | 'esc' | 'space' | 'up' | 'w' | 'down' | 's' | 'enter', Phaser.Input.Keyboard.Key>;
   private jumpPointers = new Set<number>();
   private duckPointers = new Set<number>();
 
@@ -107,6 +111,7 @@ export class PlayScene extends Phaser.Scene {
   create(): void {
     this.bridge = this.registry.get('bridge') as HubBridge;
     this.state = 'playing';
+    this.helpOpen = false;
     this.overShown = false;
     this.player = createPlayer();
     this.run = createRun();
@@ -125,6 +130,7 @@ export class PlayScene extends Phaser.Scene {
     this.buildScenery();
     this.buildPlayer();
     this.buildHud();
+    this.buildHelp();
     this.bindInput();
 
     const onRestart = () => this.scene.restart();
@@ -216,15 +222,57 @@ export class PlayScene extends Phaser.Scene {
     this.time.delayedCall(6000, () => this.tweens.add({ targets: this.hints, alpha: 0, duration: 600 }));
   }
 
+  /** Botão "?" (canto superior direito) e painel com os controles. O jogo fica parado enquanto o painel está aberto. */
+  private buildHelp(): void {
+    const circle = this.add.circle(0, 0, HELP_BTN.r, 0x0a4fb5, 0.8).setStrokeStyle(3, 0xffffff, 0.9);
+    const q = this.add.text(0, 0, '?', { fontFamily: FONT, fontSize: '30px', color: '#FFFFFF' }).setOrigin(0.5);
+    this.helpBtn = this.add.container(HELP_BTN.x, HELP_BTN.y, [circle, q]).setDepth(DEPTH.hud + 5);
+
+    const lines: Array<[string, string]> = [
+      ['PULAR', '↑ ou W, ou toque no lado direito da tela (segurar pula mais alto)'],
+      ['ABAIXAR', '↓ ou S, ou toque no lado esquerdo (segurar)'],
+      ['ATIRAR', 'ESPAÇO, ou botão ATIRAR no toque (só com a arma de wifi)'],
+      ['ROTEADOR', 'vira jetpack: segure PULAR para subir. Só gasta no ar'],
+      ['ARMA WI-FI', '10 disparos: mire na altura do vírus e atire'],
+      ['ENERGIA', 'pontos x3 por 15 segundos'],
+      ['VÍRUS', 'encostar = fim de jogo. Pule, abaixe ou atire neles'],
+      ['PONTOS', '10 por segundo correndo e 50 por vírus abatido'],
+    ];
+    const objs: Phaser.GameObjects.GameObject[] = [
+      this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x03122e, 0.62),
+      this.add.rectangle(GAME_W / 2, GAME_H / 2, 800, 430, 0x06214d, 0.96).setStrokeStyle(4, 0x66ddff),
+      this.add.text(GAME_W / 2, 92, 'COMO JOGAR', { fontFamily: FONT, fontSize: '36px', color: '#FFFFFF' }).setOrigin(0.5),
+    ];
+    lines.forEach(([k, v], i) => {
+      const y = 142 + i * 42;
+      objs.push(this.add.text(120, y, k, { fontFamily: FONT, fontSize: '20px', color: '#66DDFF' }).setOrigin(0, 0.5));
+      objs.push(this.add.text(290, y, v, { fontFamily: FONT_TEXT, fontSize: '18px', color: '#FFFFFF' }).setOrigin(0, 0.5));
+    });
+    objs.push(this.add.text(GAME_W / 2, 470, 'Toque na tela, aperte H ou ESC para voltar ao jogo', { fontFamily: FONT_TEXT, fontSize: '18px', color: COLORS.textMuted }).setOrigin(0.5));
+    this.helpPanel = this.add.container(0, 0, objs).setDepth(DEPTH.over + 5).setVisible(false);
+  }
+
+  private toggleHelp(open: boolean): void {
+    if (this.helpOpen === open) return;
+    this.helpOpen = open;
+    this.helpPanel.setVisible(open);
+    if (open) {
+      this.jumpPointers.clear();
+      this.duckPointers.clear();
+    }
+  }
+
   private bindInput(): void {
     const kb = this.input.keyboard!;
     const K = Phaser.Input.Keyboard.KeyCodes;
     this.keys = {
-      space: kb.addKey(K.SPACE), up: kb.addKey(K.UP), w: kb.addKey(K.W), down: kb.addKey(K.DOWN), s: kb.addKey(K.S), enter: kb.addKey(K.ENTER),
+      help: kb.addKey(K.H), esc: kb.addKey(K.ESC), space: kb.addKey(K.SPACE), up: kb.addKey(K.UP), w: kb.addKey(K.W), down: kb.addKey(K.DOWN), s: kb.addKey(K.S), enter: kb.addKey(K.ENTER),
     };
     kb.addCapture([K.SPACE, K.UP, K.DOWN]);
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       if (this.state !== 'playing') return;
+      if (this.helpOpen) return this.toggleHelp(false); // qualquer toque fecha a ajuda
+      if (Phaser.Math.Distance.Between(p.x, p.y, HELP_BTN.x, HELP_BTN.y) < HELP_BTN.r + 10) return this.toggleHelp(true);
       if (this.run.gunAmmo > 0 && Phaser.Math.Distance.Between(p.x, p.y, FIRE_BTN.x, FIRE_BTN.y) < FIRE_BTN.r + 12) {
         this.firePressed = true;
       } else if (p.x < GAME_W * 0.3) {
@@ -258,6 +306,10 @@ export class PlayScene extends Phaser.Scene {
       }
       return;
     }
+
+    if (Phaser.Input.Keyboard.JustDown(this.keys.help)) this.toggleHelp(!this.helpOpen);
+    if (this.helpOpen && Phaser.Input.Keyboard.JustDown(this.keys.esc)) this.toggleHelp(false);
+    if (this.helpOpen) return; // jogo parado enquanto a ajuda está aberta
 
     this.seconds += dt;
     const speed = speedAt(this.seconds);
@@ -557,6 +609,8 @@ export class PlayScene extends Phaser.Scene {
   private die(): void {
     if (this.state === 'dead') return;
     this.state = 'dead';
+    this.toggleHelp(false);
+    this.helpBtn.setVisible(false);
     this.jumpPointers.clear();
     this.duckPointers.clear();
     this.sprite.setTint(0xff5a5a).setAlpha(1);

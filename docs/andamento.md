@@ -1,6 +1,6 @@
 # FLIX Games — andamento
 
-Situação inicial: 13/11/2026. Última conferência: 16/11/2026 (jogos, portal e API conferidos pelos registros de “Onde parou”).
+Situação inicial: 13/11/2026. Última conferência: 17/11/2026 (jogos G01, G03 e G10 conferidos no repositório; portal e API pelos registros de “Onde parou”).
 
 Painel do estado atual, bloqueios e próxima entrega para qualquer pessoa ou IA continuar sem depender da conversa original.
 
@@ -22,7 +22,7 @@ Uma parte só está ✅ com todos os critérios aplicáveis ✅; qualquer crité
 
 ## 2. Próxima fase
 
-**Fase 3 — jogos, em andamento [F].** Entrega imediata [H]: levar o G03 (Fibra Conecta) a “testado em celular e integrado ao hub real” e abrir a onda 1 (G01 Runner, G02 Flappy-like e G15 Cesta de um toque) com o mesmo fluxo de cada jogo: ficha de gameplay → código → teste → revisão do jurídico → publicação (tabela por jogo na [Fase 3](#fase-3--jogos-e-ranking)). A Fase 0 segue parcial: faltam escopo e aceite da v1 (Q43), documentação da API de login (Q01–Q10) e conferência de licenças (Q12) [D].
+**Fase 3 — jogos, em andamento [F].** Entrega imediata [H]: levar o G03 (Fibra Conecta) a “testado em celular e integrado ao hub real” e fechar a onda 1 (G01 Runner já jogável; faltam G02 Flappy-like e G15 Cesta de um toque) com o mesmo fluxo de cada jogo: ficha de gameplay → código → teste → revisão do jurídico → publicação (tabela por jogo na [Fase 3](#fase-3--jogos-e-ranking)). A Fase 0 segue parcial: faltam escopo e aceite da v1 (Q43), documentação da API de login (Q01–Q10) e conferência de licenças (Q12) [D].
 
 **Pré-requisitos:** Node.js e npm (usados Node 26 e npm 11) [F]; ler o [prompt dos minigames](prompt-inicio-minigames-flix.md) (decisões de 16/11 no topo), [DECISIONS](DECISIONS.md), [HUB_CONTRACT](HUB_CONTRACT.md) e [hub-iframe](hub-iframe.md); escrever a ficha de gameplay do jogo antes de codar [C]. O designer do kit do personagem ainda não foi definido [D].
 
@@ -54,11 +54,13 @@ Portal (`web/`) e API (`api/`): comandos no README e nas entradas de “Onde par
 | 0 | Descoberta e escopo | 0/3 partes | 🟡 Contexto e perguntas Q01–Q49 registrados; aceite da v1 e integração real pendentes [C/D] |
 | 1 | Base técnica reproduzível | 0/3 partes | 🟡 `web/`, `api/` e o monorepo dos jogos existem e têm testes; faltam verificações automáticas em conjunto, homologação e deploy [F/D] |
 | 2 | Acesso do cliente e portal | 0/3 partes | 🟡 Portal com login simulado, perfis e catálogo; login real depende da API do App Flix [F/D] |
-| 3 | Jogos e ranking | 0/5 partes | 🟡 G03 jogável e testado no simulador; 14 jogos do catálogo ainda sem código; kit do designer e jurídico pendentes [F/D] |
+| 3 | Jogos e ranking | 0/5 partes | 🟡 G01, G03 e G10 jogáveis e testados no simulador; 12 jogos do catálogo ainda sem código; kit do designer e jurídico pendentes [F/D] |
 | 4 | Piloto e lançamento | 0/3 partes | ⬜ Depende dos fluxos anteriores e aceite operacional [D] |
-| **Total** | **Plano preliminar** | **0/17 partes** | **[F] Fluxos parciais em portal, API e jogo G03; nenhuma parte validada nem entregável (16/11)** |
+| **Total** | **Plano preliminar** | **0/17 partes** | **[F] Fluxos parciais em portal, API e jogos G01, G03 e G10; nenhuma parte validada nem entregável (17/11)** |
 
 ## 4. Onde parou
+
+**17/11/2026 — [F]** G01 Flix Runner (`games/runner`, Phaser 3.90 + TypeScript) jogável do início ao fim de partida (detalhes em [DECISIONS](DECISIONS.md) e [ASSETS](../ASSETS.md)): cenário infinito alternando duas cidades com a torre 5G à frente da personagem e ponte sobre o rio; corrida com o GIF do gestor, pulo, abaixar com sprites do gestor; bônus roteador (jetpack de ondas wifi com barra que só gasta no ar), energia (pontos x3 por 15 s) e arma de wifi (10 disparos no espaço, botão no toque); vírus que encerram a partida (`gameover` ao hub com pontuação e vírus abatidos), mais vírus com o tempo e menos bônus; botão “?” com os controles. Velocidade e frequências ajustadas várias vezes a pedido do solicitante. 104 testes no repositório passam (20 do runner); conferido no navegador desktop, sem teste em celular nem no hub real. Também no repositório, sem registro neste painel até agora [F]: G10 Estoque Flix (`games/estoque`, 20 testes de regras, bloqueado pelo jurídico) e as pastas originais de assets do Network Snake. Próximo [H]: obstáculos do G01 (poste caído já enviado), ficha de gameplay, teste em celular e hub real.
 
 **16/11/2026 — [C]** Editor de personagem substituído pelo **Universal LPC** (decisão do solicitante, após auditoria de licenças): código e sprites do LPC como submódulo `web/lpc` (commit `0414067`, sem alterações), catálogo gerado pelo gerador original, editor React sobre os modelos do LPC, aleatório, exportação PNG com créditos, página **Créditos e Licenças** (`#creditos`) e salvamento validado na API (migração 005, `api/app/lpc_permitidos.json`, 26 testes). **O portal `web/` passa a ser GPL-3.0**; `api/` continua proprietário. **Decisão 6 (sem sprites de terceiros) revogada.** Só peças CC0/OGA-BY/CC-BY nas imagens usadas (513 de 657); corpo Musculoso fora (só CC-BY-SA/GPL). [D] Fonte do portal com repositório privado (Q44), deploy com submódulo, personagem LPC dentro dos jogos e parecer jurídico. Detalhes em [personagem-lpc.md](personagem-lpc.md).
 
@@ -156,7 +158,7 @@ Fluxo de cada jogo [C]: ficha de gameplay (`docs/GAMEPLAY_SHEETS/`) → código 
 
 | Parte | Funciona | Validado | Testado | Entregável | Data | Obs. |
 |---|---|---|---|---|---|---|
-| F3.1 Catálogo aprovado e jogos integrados | 🟡 | ⬜ | 🟡 | ⬜ | 16/11 | [C] Catálogo de trabalho G01–G15, meta de 20. [F] 1 de 15 com código (G03, `games/snake`); ver tabela por jogo abaixo. [D] Falta aprovação do catálogo, licença/aprovação por título e teste em celular. |
+| F3.1 Catálogo aprovado e jogos integrados | 🟡 | ⬜ | 🟡 | ⬜ | 16/11 | [C] Catálogo de trabalho G01–G15, meta de 20. [F] 3 de 15 com código (G01 `games/runner`, G03 `games/snake`, G10 `games/estoque`); ver tabela por jogo abaixo. [D] Falta aprovação do catálogo, licença/aprovação por título e teste em celular. |
 | F3.2 Partida, progresso e resultado verificável | 🟡 | ⬜ | 🟡 | ⬜ | 16/11 | [F] G03 envia `ready`/`started`/`gameover` com `runId`, `score` inteiro e `durationMs`; a API recusa partida curta, pontuação absurda e `runId` repetido (registro de 16/11). [D] Faixa plausível do G03 na API é provisória; salvamento de progresso por jogo não implementado (Q26); sem prevenção de fraude além disso (Q29). |
 | F3.3 Ranking de clientes | 🟡 | ⬜ | 🟡 | ⬜ | 16/11 | [F] API com ranking por jogo (`maior`/`menor` vence) e perfis ocultos; `web/` exibe. [D] Desempate por jogo (Q19) e revisão no painel (Q35) pendentes; o G03 ainda não gravou partida real pelo hub. |
 | F3.4 Identidade visual e personagem dos jogos | 🟡 | ⬜ | 🟡 | ⬜ | 16/11 | [F] `packages/flix-avatar` com personagem placeholder (retrato; inicial careca com brilho) validado por catálogo; G03 com arte própria em pixel art feita por código ([DECISIONS](DECISIONS.md)). [D] Kit do designer (rig 32x32, visões `side`/`top`/`fp_hands`), cores e logo oficiais e editor de personagem no hub não existem ([AVATAR_SPEC](AVATAR_SPEC.md)). |
@@ -170,7 +172,7 @@ Fluxo de cada jogo [C]: ficha de gameplay (`docs/GAMEPLAY_SHEETS/`) → código 
 | Teste do G03 em celular real (Android simples e iPhone) | ⬜ | 16/11 | [D] Meta de 30 FPS estáveis, toque/deslize, retomada ao trocar de aba; registrar em `docs/TEST_REPORTS/`. |
 | Rever o visual novo do G03 rodando | ⬜ | 16/11 | [D] Conector RJ45 nas duas pontas, travessia da parede e emblema sem fundo foram verificados só por testes e imagem gerada; conferir no navegador. |
 | Ficha de gameplay revisada do G03 | 🟡 | 16/11 | [F] Rascunho em [snake.md](GAMEPLAY_SHEETS/snake.md); [D] falta observador jogar uma referência e segunda pessoa revisar. |
-| Fichas de gameplay G01–G15 | 🟡 | 16/11 | [F] 1 de 15 (rascunho). [H] Começar por G01, G02 e G15 (onda 1). |
+| Fichas de gameplay G01–G15 | 🟡 | 17/11 | [F] 1 de 15 (rascunho, G03); o G01 e o G10 foram codados sem ficha. [H] Escrever a do G01 com as regras abaixo e depois G02 e G15 (onda 1). |
 | Validar o nome “Network Snake” com o marketing | 🟡 | 16/11 | [F] O logo enviado pelo gestor usa “FLIX Network Snake”; [D] confirmar como nome oficial (Q52). |
 | Frases de game over | 🟡 | 16/11 | [F] Três causas em `GameOverScene.ts` (`CAUSE_TEXT`: equipamento, cabo enrolado, tempo esgotado); [C] o solicitante vai sugerir alternativas (Q54). |
 | Revisão do jurídico por jogo (G02, G03, G04, G05, G10, G13, G14, G15) | ⬜ | 16/11 | [C] Obrigatória antes de publicar; apresentar o jogo pronto. |
@@ -182,7 +184,7 @@ Colunas: **Ficha** = ficha de gameplay revisada; **Código** = jogo executa o ci
 
 | ID | Jogo (nome de trabalho) | Onda | Risco | Ficha | Código | Testado | Arte Flix | Jurídico | No portal | Data | Obs. |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| G01 | Runner infinito de um botão (`games/runner`) | 1 | baixo | ⬜ | 🟡 | 🟡 | 🟡 | ⬜ | ⬜ | 17/11 | [F] Protótipo jogável: cenário único em laço, personagem de lado em pixel art (corre, salta, abaixa), roteador que vira jetpack de ondas wifi; sem inimigos nem fim de partida (não envia `gameover`). 11 testes da lógica. [D] Ficha, inimigos, som, celular, personagem do kit/avatar, orientação no hub, licença do cenário. |
+| G01 | Runner infinito (Flix Runner, `games/runner`) | 1 | baixo | ⬜ | 🟡 | 🟡 | 🟡 | ⬜ | ⬜ | 17/11 | [F] Jogável do início ao fim de partida: corrida lateral com cenário infinito (duas cidades alternadas, torre 5G em primeiro plano, ponte sobre o rio), personagem de lado com corrida (GIF do gestor), pulo, abaixar (sprites do gestor, também com jetpack ou arma), roteador que vira jetpack de ondas wifi (barra de uso, só gasta no ar), arma de wifi com 10 disparos no espaço, energia x3 por 15 s, vírus inimigo (encostar = fim; envia `gameover` com pontuação e vírus abatidos), pontuação (10/s e 50 por vírus), vírus +10% a cada 10 s até +40%, botão “?” com os controles, botão de reiniciar. 20 testes da lógica; verificado no navegador desktop. [H] Velocidade inicial, intervalo de bônus e população de vírus são valores de teste. [D] Ficha, obstáculos (próxima etapa; poste caído já recebido), som, celular, personagem do kit/avatar, orientação e hub real, licença das imagens (geradas por IA). |
 | G02 | Flappy-like (voo com um toque) | 1 | médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Evitar pássaro, canos e paleta do original. |
 | G03 | Network Snake (tipo Snake) | 1 | baixo | 🟡 | 🟡 | 🟡 | 🟡 | ⬜ | 🟡 | 16/11 | [F] Jogável com o cenário e os modelos do gestor: cobra RJ45 nas duas pontas com corpo contínuo, 7 itens de pontuação sorteados, muro provisório, logo, onda vermelha e LEVEL UP. Ficha é rascunho; 75 testes passam; simulador do hub ok. [D] Faltam muro, peça de curva e demais assets; celular; jurídico; hub real; origem/licença das imagens. |
 | G04 | Arkanoid-like (quebra-blocos) | 2 | médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Evitar nome, raquete e cápsulas do original. |

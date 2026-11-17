@@ -126,3 +126,5 @@ Registro das decisões de engenharia dos jogos. Decisões de produto ficam em `a
 [C] 9º ajuste: **menos bônus**: intervalo entre bônus (roteador, energia, arma) de 960–1520 px para 2400–3800 px (2,5x), porque com a velocidade nova eles surgiam a cada 3–4 s e o jogo ficava fácil. [H] Valor inicial para teste; ajustar conforme o ritmo desejado.
 
 [C] 10º ajuste: **abaixar com sprites do gestor** (`duck_0`, `duck_1`, alternados a cada passo) e **abaixar em qualquer situação**: com jetpack, com arma e no ar (antes só no chão sem jetpack). Substituem o `duck` derivado por código. A imagem de origem também traz um poste caído, reservado para os obstáculos.
+
+[C] 11º ajuste: **botão "?" com a explicação dos controles**, no canto superior direito, disponível a qualquer momento da partida. Abre o painel "Como jogar" (pular, abaixar, atirar, bônus, vírus e pontos); [H] o jogo fica **parado** enquanto o painel está aberto, para não punir quem consulta. Fecha com toque na tela, H ou ESC; H também abre. Some quando a partida termina.
