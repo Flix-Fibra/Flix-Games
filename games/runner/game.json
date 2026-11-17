@@ -1,0 +1,9 @@
+{
+  "id": "runner",
+  "name": "Flix Runner",
+  "_nome_de_trabalho": "Validar o nome com o marketing antes de publicar. G01 em teste: sem inimigos nem fim de partida por enquanto.",
+  "avatarTier": "A",
+  "avatarViews": ["side"],
+  "rankingMetric": "score_distance",
+  "sdkVersion": "0.1.0"
+}

@@ -182,7 +182,7 @@ Colunas: **Ficha** = ficha de gameplay revisada; **Código** = jogo executa o ci
 
 | ID | Jogo (nome de trabalho) | Onda | Risco | Ficha | Código | Testado | Arte Flix | Jurídico | No portal | Data | Obs. |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| G01 | Runner infinito de um botão | 1 | baixo | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Próximo da onda 1; referências no prompt (seção 3). |
+| G01 | Runner infinito de um botão (`games/runner`) | 1 | baixo | ⬜ | 🟡 | 🟡 | 🟡 | ⬜ | ⬜ | 17/11 | [F] Protótipo jogável: cenário único em laço, personagem de lado em pixel art (corre, salta, abaixa), roteador que vira jetpack de ondas wifi; sem inimigos nem fim de partida (não envia `gameover`). 11 testes da lógica. [D] Ficha, inimigos, som, celular, personagem do kit/avatar, orientação no hub, licença do cenário. |
 | G02 | Flappy-like (voo com um toque) | 1 | médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Evitar pássaro, canos e paleta do original. |
 | G03 | Network Snake (tipo Snake) | 1 | baixo | 🟡 | 🟡 | 🟡 | 🟡 | ⬜ | 🟡 | 16/11 | [F] Jogável com o cenário e os modelos do gestor: cobra RJ45 nas duas pontas com corpo contínuo, 7 itens de pontuação sorteados, muro provisório, logo, onda vermelha e LEVEL UP. Ficha é rascunho; 75 testes passam; simulador do hub ok. [D] Faltam muro, peça de curva e demais assets; celular; jurídico; hub real; origem/licença das imagens. |
 | G04 | Arkanoid-like (quebra-blocos) | 2 | médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Evitar nome, raquete e cápsulas do original. |
