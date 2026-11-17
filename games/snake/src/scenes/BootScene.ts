@@ -36,8 +36,49 @@ export class BootScene extends Phaser.Scene {
     for (const [key, file] of IMAGES) this.load.image(key, `img/${file}`);
   }
 
+  /** Céu noturno provisório (gradiente, estrelas e lua), desenhado aqui até existir um asset próprio: troque a textura 'ceu_noite'. */
+  private makeNightSky(): void {
+    if (this.textures.exists('ceu_noite')) return;
+    const w = 1080;
+    const h = 296;
+    const tex = this.textures.createCanvas('ceu_noite', w, h);
+    if (!tex) return;
+    const c = tex.getContext();
+    const g = c.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, '#050a24');
+    g.addColorStop(1, '#1a2a63');
+    c.fillStyle = g;
+    c.fillRect(0, 0, w, h);
+    let a = 12345;
+    const rnd = () => ((a = (a * 1664525 + 1013904223) >>> 0) / 4294967296);
+    for (let i = 0; i < 130; i++) {
+      c.fillStyle = `rgba(255,255,255,${0.35 + rnd() * 0.65})`;
+      const r = rnd() < 0.15 ? 2.4 : 1.2;
+      c.beginPath();
+      c.arc(rnd() * w, rnd() * h * 0.85, r, 0, Math.PI * 2);
+      c.fill();
+    }
+    const mx = w * 0.74;
+    const my = 80;
+    const glow = c.createRadialGradient(mx, my, 10, mx, my, 110);
+    glow.addColorStop(0, 'rgba(255,248,210,0.55)');
+    glow.addColorStop(1, 'rgba(255,248,210,0)');
+    c.fillStyle = glow;
+    c.fillRect(mx - 120, my - 120, 240, 240);
+    c.fillStyle = '#fff6d0';
+    c.beginPath();
+    c.arc(mx, my, 34, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = '#10194a'; // crescente
+    c.beginPath();
+    c.arc(mx + 16, my - 8, 30, 0, Math.PI * 2);
+    c.fill();
+    tex.refresh();
+  }
+
   create(): void {
     ensureGlowTexture(this);
+    this.makeNightSky();
     const existing = this.registry.get('hubInit') as Extract<HubToGame, { type: 'init' }> | undefined;
     if (existing) {
       this.finish(existing.avatar, existing.muted);

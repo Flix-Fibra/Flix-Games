@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BOOST_MS, COLS, FOOD_KINDS, MAPS, MAP_BARS, ROWS, START_LENGTH, createState, enqueueDir, freeCell, levelFor, mulberry32, nextFoodKind, step, tickMs, type GameState,
+  resetToCenter,
 } from './logic';
 
 const rng = () => mulberry32(42);
@@ -326,6 +327,21 @@ describe('globo de ponto extra', () => {
       s.food = { x: head.x + 1, y: head.y };
       step(s, mulberry32(i));
       expect(s.signal).toBeNull();
+    }
+  });
+});
+
+describe('segunda chance (resetToCenter)', () => {
+  it('mantém o tamanho do cabo e o deixa livre de muros e de si mesmo', () => {
+    for (const len of [6, 12, 30]) {
+      const s = createState(mulberry32(3));
+      s.snake = Array.from({ length: len }, (_, i) => ({ x: i % COLS, y: 2 }));
+      resetToCenter(s, mulberry32(4));
+      expect(s.snake).toHaveLength(len);
+      expect(s.snake[0]).toEqual({ x: 9, y: 10 });
+      const keys = new Set(s.snake.map((p) => `${p.x},${p.y}`));
+      expect(keys.size).toBe(len);
+      expect(s.snake.some((p) => s.obstacles.some((o) => o.x === p.x && o.y === p.y))).toBe(false);
     }
   });
 });
