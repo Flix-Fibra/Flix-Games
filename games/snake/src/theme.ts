@@ -7,14 +7,14 @@
 export const GAME_W = 540;
 export const GAME_H = 960;
 
-/** Campo de jogo: 15 colunas x 20 linhas de 36 px (540 x 720): largura inteira, entre o topo (céu e cidade, só um pouco maior que o menu) e o rodapé. */
+/** Campo de jogo: 15 colunas x 20 linhas de 36 px (540 x 720): largura inteira, entre o topo (céu, só um pouco maior que o menu) e o rodapé. */
 export const CELL = 36;
 export const FIELD_X = 0;
 export const FIELD_Y = 148;
 export const FIELD_COLS = 15;
 export const FIELD_ROWS = 20;
 
-/** Fundo do campo: painel escuro com a grade, da base do topo (céu e cidade) até o fim da tela. */
+/** Fundo do campo: painel escuro com a grade, da base do topo (céu) até o fim da tela. */
 export const PANEL = { x: 0, y: 148, w: 540, h: 812, radius: 0 };
 
 /** Menu superior (desenhado por código sobre o topo do cenário): quadro do avatar e as caixas SCORE, TEMPO e NÍVEL. */
@@ -48,7 +48,6 @@ export const FONT_TEXT = "'Segoe UI', 'Trebuchet MS', Arial, sans-serif";
 /** Imagens carregadas na abertura: [chave, arquivo em `public/img/`]. */
 export const IMAGES: ReadonlyArray<readonly [string, string]> = [
   ['ceu', 'ceu.jpg'],
-  ['cidade', 'cidade.png'],
   ['rodape', 'rodape.png'],
   ['cobra_azul_cabeca', 'cobra_azul_cabeca.png'],
   ['cobra_azul_corpo', 'cobra_azul_corpo.png'],

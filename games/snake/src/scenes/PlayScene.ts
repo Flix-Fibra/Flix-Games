@@ -373,7 +373,7 @@ export class PlayScene extends Phaser.Scene {
   // ---------- construção da cena ----------
 
   /**
-   * Fundo: no topo, o céu com a cidade na frente (o menu fica por cima dos dois); abaixo, o painel escuro com a grade
+   * Fundo: no topo, o céu (o menu fica por cima); abaixo, o painel escuro com a grade
    * do jogo e, no fim da tela, o rodapé do gestor (calçada, arbustos, van e cones).
    */
   private buildScenery(): void {
@@ -384,8 +384,6 @@ export class PlayScene extends Phaser.Scene {
     const onTheme = (e: MediaQueryListEvent) => sky.setTexture(e.matches ? 'ceu_noite' : 'ceu').setDisplaySize(GAME_W, FIELD_Y);
     dark?.addEventListener?.('change', onTheme);
     this.events.once('shutdown', () => dark?.removeEventListener?.('change', onTheme));
-    const city = this.add.image(GAME_W / 2, FIELD_Y, 'cidade').setOrigin(0.5, 1).setDepth(0.5);
-    city.setScale(GAME_W / city.width);
 
     const g = this.add.graphics().setDepth(DEPTH_PANEL);
     g.fillStyle(COLORS.panel, 1);
@@ -440,13 +438,17 @@ export class PlayScene extends Phaser.Scene {
     this.pills = [];
     this.heads = [];
     this.tails = [];
-    for (let i = 0; i < 4; i++) {
-      const hd = this.add.image(0, 0, 'cobra_azul_cabeca').setVisible(false);
-      const tl = this.add.image(0, 0, 'cobra_azul_cauda').setVisible(false);
-      this.snakeLayer.add([hd, tl]);
-      this.heads.push(hd);
-      this.tails.push(tl);
+  }
+
+  /** Cabeça/cauda de cada cópia do cabo, criadas sob demanda (um cabo longo que cruza as bordas pode ter até 9 cópias). */
+  private endAt(list: Phaser.GameObjects.Image[], i: number, key: string): Phaser.GameObjects.Image {
+    let img = list[i];
+    if (!img) {
+      img = this.add.image(0, 0, key);
+      this.snakeLayer.add(img);
+      list[i] = img;
     }
+    return img;
   }
 
   /**
@@ -456,7 +458,7 @@ export class PlayScene extends Phaser.Scene {
   private buildHud(): void {
     const pl = HUD.plate;
     const g = this.add.graphics().setDepth(DEPTH_HUD);
-    g.fillStyle(0x10131b, 0.5); // translúcido: dá para ver o céu e a cidade atrás do menu
+    g.fillStyle(0x10131b, 0.5); // translúcido: dá para ver o céu atrás do menu
     g.fillRoundedRect(pl.x, pl.y, pl.w, pl.h, pl.radius);
     g.lineStyle(10, 0xd4142c, 0.3);
     g.strokeRoundedRect(pl.x, pl.y, pl.w, pl.h, pl.radius);
@@ -719,8 +721,8 @@ export class PlayScene extends Phaser.Scene {
         g.strokePoints(shifted.map((v) => ({ x: v.x - 2, y: v.y - 5 })), false, false);
       }
 
-      const headImg = this.heads[ci]!;
-      const tailImg = this.tails[ci]!;
+      const headImg = this.endAt(this.heads, ci, `cobra_${skin}_cabeca`);
+      const tailImg = this.endAt(this.tails, ci, `cobra_${skin}_cauda`);
       ci++;
       headImg.setTexture(`cobra_${skin}_cabeca`).setVisible(true).setScale(SPRITE_K * pulse);
       headImg.setPosition(path[0]!.x - headDir.x * (headW / 2 - HEAD_FRONT) + ox, path[0]!.y - headDir.y * (headW / 2 - HEAD_FRONT) + oy);
@@ -737,10 +739,8 @@ export class PlayScene extends Phaser.Scene {
         pill.setPosition(sp.x + ox, sp.y + oy).setRotation(sp.angle).setScale(((spacing * 1.25) / pillTex.width), SPRITE_K);
       }
     }
-    for (let i = ci; i < this.heads.length; i++) {
-      this.heads[i]?.setVisible(false);
-      this.tails[i]?.setVisible(false);
-    }
+    for (let i = ci; i < this.heads.length; i++) this.heads[i]?.setVisible(false);
+    for (let i = ci; i < this.tails.length; i++) this.tails[i]?.setVisible(false);
     for (let i = pi; i < this.pills.length; i++) this.pills[i]?.setVisible(false);
   }
 }
