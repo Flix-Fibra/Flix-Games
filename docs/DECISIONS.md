@@ -118,3 +118,11 @@ Registro das decisões de engenharia dos jogos. Decisões de produto ficam em `a
 - O bundle tem cerca de 1,2 MB (327 KB gzip), quase todo o Phaser. Está dentro da meta de 3 MB.
 - Teste em celular real ainda não feito (ver `docs/TEST_REPORTS/snake-01.md`).
 - O Phaser pausa o jogo quando a janela do iframe perde o foco. Dentro do hub, clicar fora do jogo pausa a partida. Se não for desejado, ajustar na integração com o hub.
+
+[C] 7º ajuste (pedidos do solicitante, G01): (1) **corrida com o GIF do gestor** (`corrida_4_frames.gif`): quadros gravados em `personagem/run_0..3.png`, trocando a cada 19,5 px (~6 quadros/s no início). (2) **Velocidade inicial** ajustada várias vezes: -50%, +30% e +50%, ficando em 187,2 px/s (teto 315) e depois +80% (336,96 px/s, teto 567; passo da corrida 35 px para manter o ritmo dos quadros), com +1% da inicial a cada 2 s. (3) **Arma de wifi com 10 disparos** (`GUN_SHOTS`): o jogador escolhe quando atirar com **espaço** (no toque, botão ATIRAR no canto inferior direito); a arma some ao acabar a munição e a barra mostra os disparos restantes. [H] Com munição o espaço só atira e o pulo fica em ↑/W/toque; sem munição o espaço volta a pular. (4) **Jetpack com barra de uso** que só gasta fora do chão (ou ao decolar); parado no chão não consome.
+
+[C] 8º ajuste: **população de vírus** +10% a cada 10 s de partida, até +40% (`virusDensityAt`, `logic.ts`): o intervalo entre vírus (800–1500 px) é dividido pelo fator, então chegam mais vírus por distância percorrida.
+
+[C] 9º ajuste: **menos bônus**: intervalo entre bônus (roteador, energia, arma) de 960–1520 px para 2400–3800 px (2,5x), porque com a velocidade nova eles surgiam a cada 3–4 s e o jogo ficava fácil. [H] Valor inicial para teste; ajustar conforme o ritmo desejado.
+
+[C] 10º ajuste: **abaixar com sprites do gestor** (`duck_0`, `duck_1`, alternados a cada passo) e **abaixar em qualquer situação**: com jetpack, com arma e no ar (antes só no chão sem jetpack). Substituem o `duck` derivado por código. A imagem de origem também traz um poste caído, reservado para os obstáculos.

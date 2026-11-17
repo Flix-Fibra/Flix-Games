@@ -1,16 +1,17 @@
 import Phaser from 'phaser';
 import type { HubBridge } from '@flix/game-sdk';
 import {
-  ENERGY_MS, FIRE_INTERVAL, GUN_MS, JETPACK_MS, JETPACK_WARN_MS, SHOT_R, SHOT_SPEED, VIRUS_HIT_R, VIRUS_R,
-  addKill, circleHitsBox, circlesOverlap, createPlayer, createRun, giveEnergy, giveGun, giveJetpack, hitbox, multiplier, mulberry32,
-  nextPickupGap, nextPickupHeight, nextVirusGap, nextVirusHeight, onGround, pickPickupKind, speedAt, stepPlayer, tickRun,
+  ENERGY_MS, FIRE_COOLDOWN, GUN_SHOTS, JETPACK_MS, JETPACK_WARN_MS, SHOT_R, SHOT_SPEED, VIRUS_HIT_R, VIRUS_R,
+  addKill, circleHitsBox, circlesOverlap, createPlayer, createRun, giveEnergy, giveGun, giveJetpack, hitbox, multiplier, mulberry32, useShot,
+  nextPickupGap, nextPickupHeight, nextVirusGap, nextVirusHeight, virusDensityAt, onGround, pickPickupKind, speedAt, stepPlayer, tickRun,
   type Controls, type PickupKind,
 } from '../logic';
 import {
   BRIDGE, COLORS, FONT, FONT_TEXT, GAME_H, GAME_W, GROUND_Y, GUN_SPRITE_FIX, PLAYER_X, SPRITE_ANCHOR, SPRITE_SCALE,
 } from '../theme';
 
-const STRIDE_PX = 30; // distância percorrida a cada troca de quadro da corrida (4 quadros)
+const STRIDE_PX = 35; // distância percorrida a cada troca de quadro da corrida (4 quadros)
+const FIRE_BTN = { x: GAME_W - 70, y: GAME_H - 84, r: 46 }; // botão de tiro (toque), só aparece com munição
 const PICKUP_R = 32; // raio de colisão dos bônus
 const VIRUS_EXTRA_SPEED = 40; // o vírus avança um pouco mais rápido que o cenário
 const TOWER_H = 520; // altura da torre 5G na tela (o jogo tem 540); a base fica na borda inferior
@@ -38,7 +39,7 @@ interface Shot { x: number; y: number; img: Phaser.GameObjects.Image }
 const PICKUP_LOOK: Record<PickupKind, { tex: string; scale: number; glow: number; toast: string }> = {
   router: { tex: 'router', scale: 3, glow: 0x66b8ff, toast: 'WI-FI JETPACK!' },
   energy: { tex: 'bateria', scale: 0.42, glow: 0x66ff99, toast: 'ENERGIA! PONTOS x3' },
-  gun: { tex: 'arma', scale: 0.55, glow: 0x66ddff, toast: 'ARMA WI-FI! ATIRA SOZINHA' },
+  gun: { tex: 'arma', scale: 0.55, glow: 0x66ddff, toast: 'ARMA WI-FI! 10 TIROS (ESPAÇO)' },
 };
 
 type BarId = 'jet' | 'energy' | 'gun';
@@ -76,6 +77,8 @@ export class PlayScene extends Phaser.Scene {
   private nextPickupIn = 0;
   private nextVirusIn = 0;
   private fireTimer = 0;
+  private firePressed = false;
+  private fireBtn!: Phaser.GameObjects.Container;
 
   private waves: Wave[] = [];
   private wavePool: Phaser.GameObjects.Image[] = [];
@@ -206,6 +209,10 @@ export class PlayScene extends Phaser.Scene {
         .setOrigin(0.5)
         .setDepth(DEPTH.hud);
     this.hints = [hint(GAME_W * 0.15, '▼ ABAIXAR\n(segurar)'), hint(GAME_W * 0.65, '▲ PULAR\n(segurar = voar com o roteador)')];
+    // botão de tiro para toque: aparece enquanto houver munição (no teclado: espaço)
+    const fb = this.add.circle(0, 0, FIRE_BTN.r, 0x0a4fb5, 0.55).setStrokeStyle(4, 0x66ddff);
+    const ft = this.add.text(0, 0, 'ATIRAR', { fontFamily: FONT, fontSize: '20px', color: '#FFFFFF' }).setOrigin(0.5);
+    this.fireBtn = this.add.container(FIRE_BTN.x, FIRE_BTN.y, [fb, ft]).setDepth(DEPTH.hud).setVisible(false);
     this.time.delayedCall(6000, () => this.tweens.add({ targets: this.hints, alpha: 0, duration: 600 }));
   }
 
@@ -218,7 +225,9 @@ export class PlayScene extends Phaser.Scene {
     kb.addCapture([K.SPACE, K.UP, K.DOWN]);
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       if (this.state !== 'playing') return;
-      if (p.x < GAME_W * 0.3) {
+      if (this.run.gunAmmo > 0 && Phaser.Math.Distance.Between(p.x, p.y, FIRE_BTN.x, FIRE_BTN.y) < FIRE_BTN.r + 12) {
+        this.firePressed = true;
+      } else if (p.x < GAME_W * 0.3) {
         this.duckPointers.add(p.id);
       } else {
         this.jumpPointers.add(p.id);
@@ -255,10 +264,15 @@ export class PlayScene extends Phaser.Scene {
 
     // controles
     const k = this.keys;
-    if (Phaser.Input.Keyboard.JustDown(k.space) || Phaser.Input.Keyboard.JustDown(k.up) || Phaser.Input.Keyboard.JustDown(k.w)) {
+    if ((!this.run.gunAmmo && Phaser.Input.Keyboard.JustDown(k.space)) || Phaser.Input.Keyboard.JustDown(k.up) || Phaser.Input.Keyboard.JustDown(k.w)) {
       this.jumpBuffer = 0.12;
     }
-    const jumpHeld = k.space.isDown || k.up.isDown || k.w.isDown || this.jumpPointers.size > 0;
+    // com munição, o espaço atira (pular fica em ↑/W/toque); sem munição, o espaço volta a pular
+    const gunArmed = this.run.gunAmmo > 0;
+    const spaceJump = !gunArmed && k.space.isDown;
+    const fire = gunArmed && (Phaser.Input.Keyboard.JustDown(k.space) || this.firePressed);
+    this.firePressed = false;
+    const jumpHeld = spaceJump || k.up.isDown || k.w.isDown || this.jumpPointers.size > 0;
     const duckHeld = k.down.isDown || k.s.isDown || this.duckPointers.size > 0;
     const ctl: Controls = { jumpHeld, duckHeld, jumpPressed: this.jumpBuffer > 0 && onGround(this.player) };
     if (ctl.jumpPressed) this.jumpBuffer = 0;
@@ -270,7 +284,7 @@ export class PlayScene extends Phaser.Scene {
 
     this.scrollScenery(speed * dt);
     this.updateSpawns(speed, dt);
-    this.updateGun(dt);
+    this.updateGun(dt, fire);
     this.updateShots(dt);
     this.updatePickups(speed, dt);
     this.updateViruses(speed, dt);
@@ -309,20 +323,20 @@ export class PlayScene extends Phaser.Scene {
   /** Ponta da arma de wifi na tela (de onde sai o tiro). */
   private muzzle(): { x: number; y: number } {
     const p = this.player;
-    return { x: PLAYER_X + 38, y: GROUND_Y - p.y - (p.ducking && onGround(p) && p.jetMs <= 0 ? 36 : 62) };
+    return { x: PLAYER_X + 38, y: GROUND_Y - p.y - (p.ducking ? 36 : 62) };
   }
 
   private updatePlayerSprite(dt: number): void {
     const p = this.player;
     const jet = p.jetMs > 0;
     const grounded = onGround(p);
-    const gun = this.run.gunMs > 0;
+    const gun = this.run.gunAmmo > 0;
     this.animT += dt;
 
     let name: string;
-    if (jet) name = `fly_${Math.floor(this.animT * (p.thrusting ? 4 : 2.5)) % 2}`; // troca lenta, para não piscar
+    if (p.ducking) name = `duck_${Math.floor(this.stride / STRIDE_PX) % 2}`; // abaixada: vale com jetpack, arma ou no ar
+    else if (jet) name = `fly_${Math.floor(this.animT * (p.thrusting ? 4 : 2.5)) % 2}`; // troca lenta, para não piscar
     else if (!grounded) name = p.vy > 0 ? 'jump' : 'fall';
-    else if (p.ducking) name = 'duck';
     else if (gun) name = 'gun';
     else name = `run_${Math.floor(this.stride / STRIDE_PX) % 4}`;
     this.sprite.setTexture(`pl_${name}`).setOrigin(SPRITE_ANCHOR[name] ?? 0.5, 1);
@@ -400,7 +414,7 @@ export class PlayScene extends Phaser.Scene {
     if (this.nextVirusIn <= 0) {
       if (this.clearAtSpawn()) {
         this.spawnVirus();
-        this.nextVirusIn = nextVirusGap(this.rng);
+        this.nextVirusIn = nextVirusGap(this.rng, virusDensityAt(this.seconds));
       } else {
         this.nextVirusIn = 150;
       }
@@ -455,7 +469,7 @@ export class PlayScene extends Phaser.Scene {
       giveEnergy(this.run);
     } else {
       giveGun(this.run);
-      this.fireTimer = 0.15; // o primeiro tiro sai logo
+      this.fireTimer = 0;
     }
   }
 
@@ -468,12 +482,11 @@ export class PlayScene extends Phaser.Scene {
 
   // ---- arma de wifi e tiros -------------------------------------------------------------------------------------
 
-  /** Com a arma ligada ela atira sozinha, em linha reta, a cada FIRE_INTERVAL. Para acertar, alinhe a altura com o vírus. */
-  private updateGun(dt: number): void {
-    if (this.run.gunMs <= 0) return;
-    this.fireTimer -= dt;
-    if (this.fireTimer > 0) return;
-    this.fireTimer = FIRE_INTERVAL;
+  /** Espaço (ou o botão de tiro, no toque) dispara em linha reta; são GUN_SHOTS disparos. Para acertar, alinhe a altura com o vírus. */
+  private updateGun(dt: number, fire: boolean): void {
+    this.fireTimer = Math.max(0, this.fireTimer - dt);
+    if (!fire || this.fireTimer > 0 || !useShot(this.run)) return;
+    this.fireTimer = FIRE_COOLDOWN;
     const m = this.muzzle();
     const img = this.add.image(m.x, m.y, 'wifi_wave').setAngle(-90).setScale(0.45).setDepth(DEPTH.shot).setBlendMode(Phaser.BlendModes.ADD);
     this.shots.push({ x: m.x, y: m.y, img });
@@ -593,11 +606,12 @@ export class PlayScene extends Phaser.Scene {
     this.hudScore.setText(String(this.score)).setColor(r.energyMs > 0 ? '#5CFF9A' : COLORS.text);
     this.hudMult.setVisible(r.energyMs > 0).setX(this.hudScore.x + this.hudScore.width + 10);
     this.hudKills.setText(String(r.kills));
+    this.fireBtn.setVisible(r.gunAmmo > 0);
 
     const left: Record<BarId, { ms: number; max: number }> = {
       jet: { ms: this.player.jetMs, max: JETPACK_MS },
       energy: { ms: r.energyMs, max: ENERGY_MS },
-      gun: { ms: r.gunMs, max: GUN_MS },
+      gun: { ms: r.gunAmmo, max: GUN_SHOTS },
     };
     let row = 0;
     for (const b of this.bars) {
@@ -609,9 +623,9 @@ export class PlayScene extends Phaser.Scene {
       row++;
       b.bg.setY(y);
       b.fill.setY(y);
-      b.label.setY(y).setText(`${BARS.find((x) => x.id === b.id)!.label} · ${Math.ceil(info.ms / 1000)}s`);
+      b.label.setY(y).setText(b.id === 'gun' ? `ARMA WI-FI · ${info.ms}/${GUN_SHOTS} · ESPAÇO` : `${BARS.find((x) => x.id === b.id)!.label} · ${Math.ceil(info.ms / 1000)}s`);
       b.fill.width = 292 * (info.ms / info.max);
-      const warn = info.ms < (b.id === 'jet' ? JETPACK_WARN_MS : 2000) && Math.floor(this.animT * 8) % 2 === 0;
+      const warn = info.ms < (b.id === 'jet' ? JETPACK_WARN_MS : b.id === 'gun' ? 3 : 2000) && Math.floor(this.animT * 8) % 2 === 0;
       b.fill.setFillStyle(warn ? 0xff4a5a : BARS.find((x) => x.id === b.id)!.color);
     }
   }

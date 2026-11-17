@@ -16,9 +16,9 @@ export const JETPACK_MAX_UP = 420;
 export const JETPACK_MAX_DOWN = 380;
 export const JETPACK_CEILING = 330; // altura máxima dos pés
 
-export const SPEED_BASE = 192; // 60% mais lenta que a primeira versão (380), depois +10% e +15%
+export const SPEED_BASE = 336.96; // 187,2 (versão anterior) +80%
 export const SPEED_RAMP = SPEED_BASE * 0.005; // +1% da velocidade inicial a cada 2 s
-export const SPEED_MAX = 324;
+export const SPEED_MAX = 567;
 
 export const STAND_HIT = { halfW: 18, h: 87 };
 export const DUCK_HIT = { halfW: 28, h: 62 };
@@ -54,8 +54,9 @@ export function stepPlayer(p: Player, c: Controls, dt: number): void {
   const grounded = onGround(p);
 
   if (p.jetMs > 0) {
-    p.jetMs = Math.max(0, p.jetMs - dt * 1000);
-    p.ducking = false;
+    // a barra do jetpack só gasta fora do chão (ou ao decolar); parado no chão ele não consome
+    if (!grounded || c.jumpHeld) p.jetMs = Math.max(0, p.jetMs - dt * 1000);
+    p.ducking = c.duckHeld; // abaixa também voando
     let a = -JETPACK_GRAVITY;
     if (c.jumpHeld) {
       a += JETPACK_THRUST;
@@ -71,7 +72,7 @@ export function stepPlayer(p: Player, c: Controls, dt: number): void {
         p.ducking = false;
       }
     } else {
-      p.ducking = false;
+      p.ducking = c.duckHeld; // abaixa também no ar
       if (!c.jumpHeld && p.vy > JUMP_CUT_VELOCITY) p.vy = JUMP_CUT_VELOCITY;
     }
     let a = -GRAVITY;
@@ -116,8 +117,8 @@ export function mulberry32(seed: number): () => number {
   };
 }
 
-export const PICKUP_GAP_MIN = 960; // distância percorrida entre roteadores
-export const PICKUP_GAP_MAX = 1520;
+export const PICKUP_GAP_MIN = 2400; // distância percorrida entre roteadores
+export const PICKUP_GAP_MAX = 3800;
 export const PICKUP_LOW = 46; // altura do centro: ao alcance andando
 export const PICKUP_HIGH_MIN = 170; // exige saltar
 export const PICKUP_HIGH_MAX = 230;
@@ -137,10 +138,10 @@ export type PickupKind = 'router' | 'energy' | 'gun';
 
 export const ENERGY_MS = 15000; // pontuação x3 por 15 s
 export const ENERGY_MULT = 3;
-export const GUN_MS = 10000; // arma de wifi: atira sozinha por 10 s
+export const GUN_SHOTS = 10; // arma de wifi: 10 disparos, o jogador escolhe quando atirar (espaço)
 export const POINTS_PER_SECOND = 10; // cada segundo de corrida vale 10 pontos
 export const POINTS_PER_VIRUS = 50; // cada vírus abatido vale 50 pontos
-export const FIRE_INTERVAL = 0.5; // segundos entre tiros da arma de wifi
+export const FIRE_COOLDOWN = 0.18; // segundos mínimos entre dois disparos
 export const SHOT_SPEED = 720;
 export const SHOT_R = 14;
 export const VIRUS_R = 30; // raio do vírus (tiro acerta por aqui)
@@ -154,18 +155,18 @@ export interface Run {
   /** pontos (fracionário; mostre com Math.floor) */
   score: number;
   energyMs: number;
-  gunMs: number;
+  /** disparos restantes da arma de wifi (0 = sem arma) */
+  gunAmmo: number;
   kills: number;
 }
 
-export const createRun = (): Run => ({ score: 0, energyMs: 0, gunMs: 0, kills: 0 });
+export const createRun = (): Run => ({ score: 0, energyMs: 0, gunAmmo: 0, kills: 0 });
 export const multiplier = (r: Run): number => (r.energyMs > 0 ? ENERGY_MULT : 1);
 
 /** Avança o relógio da partida: 10 pontos por segundo (x3 com a energia) e os bônus temporizados. */
 export function tickRun(r: Run, dt: number): void {
   r.score += POINTS_PER_SECOND * multiplier(r) * dt;
   r.energyMs = Math.max(0, r.energyMs - dt * 1000);
-  r.gunMs = Math.max(0, r.gunMs - dt * 1000);
 }
 
 /** Vírus abatido: 50 pontos (x3 com a energia). Devolve os pontos ganhos. */
@@ -176,7 +177,13 @@ export function addKill(r: Run): number {
   return pts;
 }
 export const giveEnergy = (r: Run): void => void (r.energyMs = ENERGY_MS);
-export const giveGun = (r: Run): void => void (r.gunMs = GUN_MS);
+export const giveGun = (r: Run): void => void (r.gunAmmo = GUN_SHOTS);
+/** Gasta um disparo. Devolve false se não há munição. */
+export function useShot(r: Run): boolean {
+  if (r.gunAmmo <= 0) return false;
+  r.gunAmmo -= 1;
+  return true;
+}
 
 export function circlesOverlap(ax: number, ay: number, ar: number, bx: number, by: number, br: number): boolean {
   const dx = ax - bx, dy = ay - by, rr = ar + br;
@@ -189,5 +196,12 @@ export function pickPickupKind(rng: () => number): PickupKind {
   return v < 0.34 ? 'router' : v < 0.68 ? 'energy' : 'gun';
 }
 
-export const nextVirusGap = (rng: () => number): number => VIRUS_GAP_MIN + rng() * (VIRUS_GAP_MAX - VIRUS_GAP_MIN);
+export const VIRUS_DENSITY_STEP = 0.1; // +10% de vírus a cada 10 s...
+export const VIRUS_DENSITY_EVERY = 10;
+export const VIRUS_DENSITY_MAX = 1.4; // ...até 40% a mais
+/** Fator de população de vírus após `seconds` de partida (1 = inicial). */
+export const virusDensityAt = (seconds: number): number =>
+  Math.min(VIRUS_DENSITY_MAX, 1 + VIRUS_DENSITY_STEP * Math.floor(seconds / VIRUS_DENSITY_EVERY));
+/** Distância até o próximo vírus; mais população = intervalo menor. */
+export const nextVirusGap = (rng: () => number, density = 1): number => (VIRUS_GAP_MIN + rng() * (VIRUS_GAP_MAX - VIRUS_GAP_MIN)) / density;
 export const nextVirusHeight = (rng: () => number): number => (rng() < 0.6 ? VIRUS_LOW : VIRUS_HIGH);

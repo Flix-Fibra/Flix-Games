@@ -13,7 +13,7 @@ export const PLAYER_X = 250;
 export const SPRITE_SCALE = 0.49;
 /** Posição horizontal do tronco em cada sprite (0 = esquerda, 1 = direita), para o personagem não "andar" entre quadros. */
 export const SPRITE_ANCHOR: Record<string, number> = {
-  gun: 0.502, run_0: 0.532, run_1: 0.514, run_2: 0.503, run_3: 0.517, duck: 0.417, jump: 0.503, fall: 0.551, fly_0: 0.513, fly_1: 0.54,
+  gun: 0.502, run_0: 0.513, run_1: 0.513, run_2: 0.513, run_3: 0.513, duck_0: 0.494, duck_1: 0.52, jump: 0.503, fall: 0.551, fly_0: 0.513, fly_1: 0.54,
 };
 
 /** O sprite com a arma de wifi (`gun`) é um pouco maior que os outros: reduzido para ficar do mesmo tamanho. */
@@ -45,5 +45,5 @@ export const IMAGES: ReadonlyArray<readonly [string, string]> = [
   ['bateria', 'itens/bateria.png'], // sinal de energia (bônus x3), 78x143
   ['virus', 'itens/virus.png'], // vírus (inimigo), 156x161 // tabuleiro da ponte vermelha, sem fundo e sem a treliça de cima (1360x382)
   // personagem de lado (recortado da folha do gestor): corrida (run_2 e run_3 têm as pernas trocadas), agachada, salto, queda e jetpack
-  ...(['run_0', 'run_1', 'run_2', 'run_3', 'duck', 'gun', 'jump', 'fall', 'fly_0', 'fly_1'] as const).map((n) => [`pl_${n}`, `personagem/${n}.png`] as const),
+  ...(['run_0', 'run_1', 'run_2', 'run_3', 'duck_0', 'duck_1', 'gun', 'jump', 'fall', 'fly_0', 'fly_1'] as const).map((n) => [`pl_${n}`, `personagem/${n}.png`] as const),
 ];

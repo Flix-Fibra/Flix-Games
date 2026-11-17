@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ENERGY_MS, GUN_MS, addKill, circlesOverlap, createRun, giveEnergy, giveGun, multiplier, pickPickupKind, tickRun,
-  VIRUS_GAP_MAX, VIRUS_GAP_MIN, nextVirusGap, nextVirusHeight,
+  ENERGY_MS, GUN_SHOTS, useShot, addKill, circlesOverlap, createRun, giveEnergy, giveGun, multiplier, pickPickupKind, tickRun,
+  VIRUS_GAP_MAX, VIRUS_GAP_MIN, nextVirusGap, nextVirusHeight, virusDensityAt,
   JETPACK_CEILING, JETPACK_MS, PICKUP_GAP_MAX, PICKUP_GAP_MIN, SPEED_MAX, circleHitsBox, createPlayer, giveJetpack, hitbox,
   mulberry32, nextPickupGap, nextPickupHeight, onGround, speedAt, stepPlayer, type Controls,
 } from './logic';
@@ -17,6 +17,15 @@ const run = (p: ReturnType<typeof createPlayer>, c: Controls, secs: number, dt =
 };
 
 describe('salto', () => {
+  it('população de vírus: +10% a cada 10 s, até +40%', () => {
+    expect(virusDensityAt(0)).toBe(1);
+    expect(virusDensityAt(9.9)).toBe(1);
+    expect(virusDensityAt(10)).toBeCloseTo(1.1, 5);
+    expect(virusDensityAt(35)).toBeCloseTo(1.3, 5);
+    expect(virusDensityAt(40)).toBeCloseTo(1.4, 5);
+    expect(virusDensityAt(9999)).toBeCloseTo(1.4, 5);
+    expect(nextVirusGap(() => 0, 1.4)).toBeCloseTo(VIRUS_GAP_MIN / 1.4, 5);
+  });
   it('sobe cerca de 150 px e volta ao chão', () => {
     const p = createPlayer();
     stepPlayer(p, { jumpHeld: true, jumpPressed: true, duckHeld: false }, 1 / 60);
@@ -59,6 +68,24 @@ describe('jetpack wifi', () => {
     expect(max).toBeCloseTo(JETPACK_CEILING, 0);
     expect(p.thrusting).toBe(true);
   });
+  it('no chão o jetpack não gasta; no ar gasta', () => {
+    const p = createPlayer();
+    giveJetpack(p);
+    run(p, none, 2);
+    expect(p.jetMs).toBe(JETPACK_MS);
+    p.y = 300;
+    run(p, none, 0.5);
+    expect(p.jetMs).toBeLessThan(JETPACK_MS - 400);
+  });
+  it('abaixa também com o jetpack ligado', () => {
+    const p = createPlayer();
+    giveJetpack(p);
+    p.y = 100;
+    stepPlayer(p, { jumpHeld: false, jumpPressed: false, duckHeld: true }, 0.016);
+    expect(p.ducking).toBe(true);
+    stepPlayer(p, none, 0.016);
+    expect(p.ducking).toBe(false);
+  });
   it('sem segurar flutua para baixo devagar', () => {
     const p = createPlayer();
     giveJetpack(p);
@@ -92,9 +119,9 @@ describe('colisão e sorteio', () => {
     expect(circleHitsBox(330, 50, 30, b)).toBe(false);
   });
   it('velocidade cresce e tem teto', () => {
-    expect(speedAt(0)).toBe(192);
-    expect(speedAt(2)).toBeCloseTo(192 * 1.01, 5);
-    expect(speedAt(60)).toBeCloseTo(192 * 1.3, 5);
+    expect(speedAt(0)).toBe(336.96);
+    expect(speedAt(2)).toBeCloseTo(336.96 * 1.01, 5);
+    expect(speedAt(60)).toBeCloseTo(336.96 * 1.3, 5);
     expect(speedAt(0)).toBeLessThan(speedAt(10));
     expect(speedAt(9999)).toBe(SPEED_MAX);
   });
@@ -136,12 +163,15 @@ describe('pontuação e bônus', () => {
     expect(addKill(r)).toBe(50);
     expect(r.kills).toBe(1);
   });
-  it('arma de wifi dura GUN_MS', () => {
+  it('arma de wifi tem GUN_SHOTS disparos', () => {
     const r = createRun();
     giveGun(r);
-    expect(r.gunMs).toBe(GUN_MS);
-    tickRun(r, GUN_MS / 1000 + 0.1);
-    expect(r.gunMs).toBe(0);
+    expect(r.gunAmmo).toBe(GUN_SHOTS);
+    tickRun(r, 30);
+    expect(r.gunAmmo).toBe(GUN_SHOTS); // não gasta com o tempo
+    for (let i = 0; i < GUN_SHOTS; i++) expect(useShot(r)).toBe(true);
+    expect(useShot(r)).toBe(false);
+    expect(r.gunAmmo).toBe(0);
   });
   it('círculos: tiro acerta o vírus', () => {
     expect(circlesOverlap(100, 50, 14, 130, 50, 30)).toBe(true);
