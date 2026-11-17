@@ -13,7 +13,7 @@ export interface Pt {
 }
 export type Rng = () => number;
 export type Cause = 'self' | 'obstacle' | 'timeout';
-export type StepEvent = 'none' | 'item' | 'signal' | 'crash' | 'bounce';
+export type StepEvent = 'none' | 'item' | 'signal' | 'crash';
 
 export const COLS = 15;
 export const ROWS = 20;
@@ -186,15 +186,8 @@ export function step(state: GameState, rng: Rng): void {
   // a parede é uma passagem: o cabo sai por um lado e surge do lado oposto
   const target: Pt = { x: (head.x + d.x + COLS) % COLS, y: (head.y + d.y + ROWS) % ROWS };
 
-  if (state.obstacles.some((o) => same(o, target))) {
-    // com o ponto extra ligado o cabo é imortal contra muros: para onde bateu, o bônus acaba e a cena dá a segunda chance
-    if (state.boostLeft > 0) {
-      state.boostLeft = 0;
-      state.lastEvent = 'bounce';
-      return;
-    }
-    return die(state, 'obstacle');
-  }
+  // com o ponto extra ligado o cabo atravessa os muros (fantasma); sem ele, bater num muro termina a partida
+  if (state.boostLeft === 0 && state.obstacles.some((o) => same(o, target))) return die(state, 'obstacle');
 
   const eating = same(target, state.food);
   // Se não está crescendo, a ponta do cabo sai do lugar, então não conta como colisão.
@@ -233,30 +226,6 @@ export function step(state: GameState, rng: Rng): void {
     state.boostLeft = Math.ceil(BOOST_MS / tickMs(levelFor(state.eaten)));
     state.lastEvent = 'signal';
   }
-}
-
-/** Segunda chance: devolve o cabo ao meio da tela, do mesmo tamanho que tinha, parado e sem curvas pendentes. */
-export function resetToCenter(state: GameState, rng: Rng): void {
-  // cabeça em (9,10) olhando para a direita; o corpo vai para a esquerda e, se for longo, volta em zigue-zague pelas linhas 11, 12...
-  // (as linhas 8 a 12 nunca têm muro)
-  const length = state.snake.length;
-  const body: Pt[] = [];
-  for (let row = 0; body.length < length && row < ROWS; row++) {
-    const y = 10 + row;
-    const xs = row === 0 ? Array.from({ length: 10 }, (_, i) => 9 - i) : Array.from({ length: COLS }, (_, i) => (row % 2 === 1 ? i : COLS - 1 - i));
-    for (const x of xs) if (body.length < length) body.push({ x, y: y % ROWS });
-  }
-  state.snake = body;
-  state.dir = 'right';
-  state.queue = [];
-  state.prevTail = null;
-  state.lastEvent = 'none';
-  const onSnake = (p: Pt) => state.snake.some((c) => same(c, p));
-  if (onSnake(state.food)) {
-    const placed = freeCell(state, rng, state.snake[0], 4);
-    if (placed) state.food = placed;
-  }
-  if (state.signal && onSnake(state.signal)) state.signal = null;
 }
 
 function die(state: GameState, cause: Cause): void {

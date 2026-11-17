@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   BOOST_MS, COLS, FOOD_KINDS, MAPS, MAP_BARS, ROWS, START_LENGTH, createState, enqueueDir, freeCell, levelFor, mulberry32, nextFoodKind, step, tickMs, type GameState,
-  resetToCenter,
 } from './logic';
 
 const rng = () => mulberry32(42);
@@ -331,17 +330,24 @@ describe('globo de ponto extra', () => {
   });
 });
 
-describe('segunda chance (resetToCenter)', () => {
-  it('mantém o tamanho do cabo e o deixa livre de muros e de si mesmo', () => {
-    for (const len of [6, 12, 30]) {
-      const s = createState(mulberry32(3));
-      s.snake = Array.from({ length: len }, (_, i) => ({ x: i % COLS, y: 2 }));
-      resetToCenter(s, mulberry32(4));
-      expect(s.snake).toHaveLength(len);
-      expect(s.snake[0]).toEqual({ x: 9, y: 10 });
-      const keys = new Set(s.snake.map((p) => `${p.x},${p.y}`));
-      expect(keys.size).toBe(len);
-      expect(s.snake.some((p) => s.obstacles.some((o) => o.x === p.x && o.y === p.y))).toBe(false);
-    }
+describe('ponto extra atravessa muros', () => {
+  it('com bônus o cabo passa pelo muro; sem bônus morre', () => {
+    const mk = () => {
+      const s = createState(mulberry32(1));
+      s.snake = Array.from({ length: 4 }, (_, i) => ({ x: 4 - i, y: 10 }));
+      s.dir = 'right';
+      s.obstacles = [{ x: 5, y: 10 }];
+      s.food = { x: 0, y: 0 };
+      return s;
+    };
+    const ghost = mk();
+    ghost.boostLeft = 5;
+    step(ghost, mulberry32(2));
+    expect(ghost.alive).toBe(true);
+    expect(ghost.snake[0]).toEqual({ x: 5, y: 10 });
+    const normal = mk();
+    step(normal, mulberry32(2));
+    expect(normal.alive).toBe(false);
+    expect(normal.cause).toBe('obstacle');
   });
 });

@@ -3,7 +3,7 @@ import type { Expression } from '@flix/avatar';
 import type { HubBridge } from '@flix/game-sdk';
 import { sfx } from '../audio';
 import {
-  COLS, ITEM_BONUS_MS, ROUND_MS, ROWS, createState, enqueueDir, levelFor, mulberry32, resetToCenter, step, tickMs, type Cause, type Dir, type GameState, type Pt,
+  COLS, ITEM_BONUS_MS, ROUND_MS, ROWS, createState, enqueueDir, levelFor, mulberry32, step, tickMs, type Cause, type Dir, type GameState, type Pt,
 } from '../logic';
 import { buildTrack, endDirection, lerp, roundedPath, sampleTrack, type V } from '../cablePath';
 import { loadBest } from '../storage';
@@ -15,8 +15,6 @@ import { portraitKey } from './BootScene';
 
 const READY_MS = 800;
 const BLINK_PHASE_MS = 150;
-/** 3 piscadas entre vermelho e azul (6 fases) — na batida e nos últimos segundos do ponto extra. */
-const BOUNCE_MS = BLINK_PHASE_MS * 6;
 const BOOST_WARN_MS = 1800;
 const SWIPE_PX = 28;
 const WAVE_MS = 800;
@@ -51,8 +49,9 @@ export class PlayScene extends Phaser.Scene {
   private steps = 0;
   private lastLevel = 1;
   private headPulse = 0;
-  /** Tempo que falta da pausa em que o cabo pisca parado depois de bater com o ponto extra. */
-  private blinkLeft = 0;
+  /** Ângulo mostrado da cabeça (gira aos poucos até o ângulo real) e duração do último quadro. */
+  private headAngle: number | null = null;
+  private frameMs = 16;
 
   private fx!: Phaser.GameObjects.Graphics;
   private waves: Wave[] = [];
@@ -97,7 +96,7 @@ export class PlayScene extends Phaser.Scene {
     this.steps = 0;
     this.lastLevel = 1;
     this.headPulse = 0;
-    this.blinkLeft = 0;
+    this.headAngle = null;
     this.tracking = false;
     this.waves = [];
     this.shownKind = -1;
@@ -154,6 +153,7 @@ export class PlayScene extends Phaser.Scene {
 
   update(_time: number, rawDelta: number): void {
     const delta = Math.min(rawDelta, 100);
+    this.frameMs = delta;
     this.advanceWaves(delta);
     this.headPulse = Math.max(0, this.headPulse - delta / 260);
     if (this.over) return;
@@ -167,19 +167,6 @@ export class PlayScene extends Phaser.Scene {
     }
 
     this.elapsed += delta;
-    if (this.blinkLeft > 0) {
-      // segunda chance: o cabo fica parado onde bateu, piscando; depois volta ao meio da tela
-      this.blinkLeft -= delta;
-      if (this.blinkLeft <= 0) {
-        this.blinkLeft = 0;
-        resetToCenter(this.state, Math.random);
-        this.acc = 0;
-        this.steps = 0;
-        this.headPulse = 1;
-      }
-      this.render();
-      return;
-    }
     if (this.elapsed >= ROUND_MS + this.bonusMs) {
       this.elapsed = ROUND_MS + this.bonusMs;
       this.finish('timeout');
@@ -194,7 +181,6 @@ export class PlayScene extends Phaser.Scene {
       step(this.state, Math.random);
       this.steps++;
       this.handleEvent();
-      if (this.blinkLeft > 0) break;
       if (!this.state.alive) {
         this.finish(this.state.cause ?? 'self');
         break;
@@ -205,13 +191,6 @@ export class PlayScene extends Phaser.Scene {
 
   private handleEvent(): void {
     const s = this.state;
-    if (s.lastEvent === 'bounce') {
-      sfx('crash');
-      this.blinkLeft = BOUNCE_MS;
-      this.cameras.main.shake(200, 0.008);
-      this.setExpression('sad', BOUNCE_MS);
-      return;
-    }
     if (s.lastEvent === 'signal') {
       sfx('signal');
       this.setExpression('happy', 600);
@@ -605,7 +584,7 @@ export class PlayScene extends Phaser.Scene {
     if (!head) return;
 
     const tick = tickMs(levelFor(s.eaten));
-    const p = this.steps === 0 || !s.alive || this.readyLeft > 0 || this.blinkLeft > 0 ? 1 : Phaser.Math.Clamp(this.acc / tick, 0, 1);
+    const p = this.steps === 0 || !s.alive || this.readyLeft > 0 ? 1 : Phaser.Math.Clamp(this.acc / tick, 0, 1);
     const center = (c: Pt): V => ({ x: FIELD_X + c.x * CELL + CELL / 2, y: FIELD_Y + c.y * CELL + CELL / 2 });
     const unwrap = (d: number, size: number): number => (d > size / 2 ? d - size : d < -size / 2 ? d + size : d);
 
@@ -639,13 +618,19 @@ export class PlayScene extends Phaser.Scene {
       x: s.dir === 'right' ? 1 : s.dir === 'left' ? -1 : 0,
       y: s.dir === 'down' ? 1 : s.dir === 'up' ? -1 : 0,
     };
+    // a cabeça gira suavemente até a nova direção (em vez de virar de uma vez); o caminho do cabo já vem arredondado
+    const targetA = Math.atan2(headDir.y, headDir.x);
+    if (this.headAngle === null || this.readyLeft > 0) this.headAngle = targetA;
+    else {
+      const diff = Math.atan2(Math.sin(targetA - this.headAngle), Math.cos(targetA - this.headAngle));
+      this.headAngle += diff * (1 - Math.exp(-this.frameMs / 50));
+    }
+    const shownHead: V = { x: Math.cos(this.headAngle), y: Math.sin(this.headAngle) };
     const tailDir = endDirection(path, true) ?? { x: -headDir.x, y: -headDir.y };
 
-    // no ponto extra a cobra fica vermelha; ao bater e nos últimos segundos do bônus ela pisca entre vermelho e azul
+    // no ponto extra a cobra fica vermelha; nos últimos segundos do bônus ela pisca entre vermelho e azul
     const warn = s.boostLeft > 0 && s.boostLeft * tick <= BOOST_WARN_MS;
-    let red = s.boostLeft > 0;
-    if (this.blinkLeft > 0) red = Math.floor((BOUNCE_MS - this.blinkLeft) / BLINK_PHASE_MS) % 2 === 0;
-    else if (warn) red = Math.floor(this.time.now / BLINK_PHASE_MS) % 2 === 0;
+    const red = s.boostLeft > 0 && (!warn || Math.floor(this.time.now / BLINK_PHASE_MS) % 2 === 0);
     const skin = red ? 'metal' : 'azul';
     const tubeColors = TUBE[skin];
     const headTex = this.textures.get(`cobra_${skin}_cabeca`).getSourceImage();
@@ -725,8 +710,8 @@ export class PlayScene extends Phaser.Scene {
       const tailImg = this.endAt(this.tails, ci, `cobra_${skin}_cauda`);
       ci++;
       headImg.setTexture(`cobra_${skin}_cabeca`).setVisible(true).setScale(SPRITE_K * pulse);
-      headImg.setPosition(path[0]!.x - headDir.x * (headW / 2 - HEAD_FRONT) + ox, path[0]!.y - headDir.y * (headW / 2 - HEAD_FRONT) + oy);
-      orient(headImg, headDir, true);
+      headImg.setPosition(path[0]!.x - shownHead.x * (headW / 2 - HEAD_FRONT) + ox, path[0]!.y - shownHead.y * (headW / 2 - HEAD_FRONT) + oy);
+      orient(headImg, shownHead, true);
       const end = path[path.length - 1]!;
       tailImg.setTexture(`cobra_${skin}_cauda`).setVisible(true).setScale(SPRITE_K);
       tailImg.setPosition(end.x - tailDir.x * (tailW / 2 - TAIL_BACK) + ox, end.y - tailDir.y * (tailW / 2 - TAIL_BACK) + oy);
