@@ -7,12 +7,14 @@ import {
   type Controls, type PickupKind,
 } from '../logic';
 import {
-  BRIDGE, COLORS, FONT, FONT_TEXT, GAME_H, GAME_W, GROUND_Y, GUN_SPRITE_FIX, PLAYER_X, SPRITE_ANCHOR, SPRITE_SCALE,
+  BRIDGE, COLORS, FONT, FONT_TEXT, GAME_H, GAME_W, GROUND_Y, PLAYER_X, SCENES, SCENE_REPEAT, SCENE_W, SPRITE_ANCHOR, START_OFFSET, SPRITE_SCALE,
 } from '../theme';
 
 const STRIDE_PX = 35; // distância percorrida a cada troca de quadro da corrida (4 quadros)
 const FIRE_BTN = { x: GAME_W - 70, y: GAME_H - 84, r: 46 }; // botão de tiro (toque), só aparece com munição
 const HELP_BTN = { x: GAME_W - 44, y: 112, r: 22 }; // botão "?" com os controles
+const SLIDE_STEP = 0.06; // segundos por quadro ao entrar no deslize
+const GETUP_S = 0.14; // tempo do quadro de levantar ao soltar o botão de abaixar
 const PICKUP_R = 32; // raio de colisão dos bônus
 const VIRUS_EXTRA_SPEED = 40; // o vírus avança um pouco mais rápido que o cenário
 const TOWER_H = 520; // altura da torre 5G na tela (o jogo tem 540); a base fica na borda inferior
@@ -57,12 +59,10 @@ export class PlayScene extends Phaser.Scene {
   private state: 'playing' | 'dead' = 'playing';
   private overShown = false;
 
-  /** Ciclo do cenário: [cidade A, cidade B]; cada uma aparece duas vezes (ciclo atual e próximo). */
+  /** Cenário em 3 posições que se revezam (cidade, torre 5G na emenda e ponte); `bgX` é a distância total percorrida. */
   private cities: Phaser.GameObjects.Image[] = [];
   private towers: Phaser.GameObjects.Image[] = [];
-  private cityStarts: number[] = []; // início de cada cidade dentro de um ciclo
-  private bridges: Phaser.GameObjects.Image[] = []; // uma ponte sobre o rio de cada cidade B
-  private cycleW = 0; // largura de um ciclo (A + B)
+  private bridges: Phaser.GameObjects.Image[] = [];
   private bgX = 0;
 
   private player = createPlayer();
@@ -78,6 +78,10 @@ export class PlayScene extends Phaser.Scene {
   private nextPickupIn = 0;
   private nextVirusIn = 0;
   private fireTimer = 0;
+  private wasAir = false;
+  private landT = 0; // agachada de aterrissagem do salto com arma
+  private slideT = 0; // tempo deslizando (0 = de pé)
+  private getupT = 0; // levantando depois do deslize
   private helpOpen = false;
   private helpBtn!: Phaser.GameObjects.Container;
   private helpPanel!: Phaser.GameObjects.Container;
@@ -116,7 +120,11 @@ export class PlayScene extends Phaser.Scene {
     this.player = createPlayer();
     this.run = createRun();
     this.seconds = this.stride = this.animT = this.jumpBuffer = this.waveTimer = this.fireTimer = 0;
-    this.bgX = 250; // começa com a torre da primeira emenda já fora da tela
+    // começa no cenário mostrado no menu (ou num sorteado, se o hub reiniciou direto) e com a primeira torre fora da tela
+    const picked = this.registry.get('startScene') as number | undefined;
+    this.registry.remove('startScene');
+    const startIdx = picked ?? Math.floor(Math.random() * SCENES.length);
+    this.bgX = startIdx * SCENE_REPEAT * SCENE_W + START_OFFSET;
     this.waves = [];
     this.wavePool = [];
     this.pickups = [];
@@ -144,26 +152,20 @@ export class PlayScene extends Phaser.Scene {
   // ---- montagem ---------------------------------------------------------------------------------------------------
 
   /**
-   * Cenário infinito: cidade A, torre 5G, cidade B, torre 5G, e de novo. A torre fica em cima de cada emenda e esconde o corte
-   * entre as duas imagens (sem fade). Quatro cidades e quatro torres revezam de posição conforme o cenário rola.
+   * Cenário infinito: a lista `SCENES` com cada cenário repetido `SCENE_REPEAT` vezes e uma torre 5G sobre cada emenda, que esconde o
+   * corte entre as imagens (sem fade). Só três posições existem; elas trocam de imagem conforme o cenário rola.
    */
   private buildScenery(): void {
-    const wA = this.textures.get('cidade_a').getSourceImage().width as number;
-    const wB = this.textures.get('cidade_b').getSourceImage().width as number;
-    this.cityStarts = [0, wA];
-    this.cycleW = wA + wB;
     this.cities = [];
     this.towers = [];
     this.bridges = [];
-    for (let n = 0; n < 2; n++) {
-      for (const key of ['cidade_a', 'cidade_b']) {
-        this.cities.push(this.add.image(0, 0, key).setOrigin(0, 0).setDepth(DEPTH.city));
-        // a torre é o plano da frente: a personagem passa por trás dela
-        const t = this.add.image(0, GAME_H, 'torre').setOrigin(0.5, 1).setDepth(DEPTH.tower);
-        t.setScale(TOWER_H / t.height);
-        this.towers.push(t);
-      }
-      // o rio está na cidade B: a ponte fica por cima da água, com o piso na linha do chão, e a personagem corre sobre ela
+    for (let i = 0; i < 3; i++) {
+      this.cities.push(this.add.image(0, 0, SCENES[0].key).setOrigin(0, 0).setDepth(DEPTH.city));
+      // a torre é o plano da frente: a personagem passa por trás dela
+      const t = this.add.image(0, GAME_H, 'torre').setOrigin(0.5, 1).setDepth(DEPTH.tower);
+      t.setScale(TOWER_H / t.height);
+      this.towers.push(t);
+      // cenário com rio: a ponte fica por cima da água, com o piso na linha do chão, e a personagem corre sobre ela
       this.bridges.push(this.add.image(0, GROUND_Y - BRIDGE.deckTop, 'ponte').setOrigin(0, 0).setDepth(DEPTH.bridge));
     }
     this.positionScenery();
@@ -302,7 +304,7 @@ export class PlayScene extends Phaser.Scene {
     if (this.state === 'dead') {
       this.updateWaves(dt);
       if (this.overShown && (Phaser.Input.Keyboard.JustDown(this.keys.enter) || Phaser.Input.Keyboard.JustDown(this.keys.space))) {
-        this.scene.restart();
+        this.goMenu();
       }
       return;
     }
@@ -346,27 +348,23 @@ export class PlayScene extends Phaser.Scene {
   }
 
   private scrollScenery(dx: number): void {
-    this.bgX = (this.bgX + dx) % this.cycleW;
+    this.bgX += dx;
     this.positionScenery();
   }
 
-  /** Posiciona as cidades e as torres (uma torre sobre o início de cada cidade). */
+  /** Posiciona as três imagens visíveis e a torre 5G no início de cada uma. */
   private positionScenery(): void {
     const off = Math.floor(this.bgX);
-    let i = 0;
-    for (let n = 0; n < 2; n++) {
-      for (const start of this.cityStarts) {
-        const x = n * this.cycleW + start - off;
-        this.cities[i]!.setPosition(x, 0).setVisible(x < GAME_W && x + this.cities[i]!.width > 0);
-        const t = this.towers[i]!;
-        t.setPosition(x, GAME_H).setVisible(Math.abs(x - GAME_W / 2) < GAME_W / 2 + t.displayWidth / 2);
-        if (i % 2 === 1) {
-          const br = this.bridges[(i - 1) / 2]!;
-          br.x = x + BRIDGE.x;
-          br.setVisible(br.x < GAME_W && br.x + br.width > 0);
-        }
-        i++;
-      }
+    const first = Math.floor(off / SCENE_W);
+    for (let j = 0; j < 3; j++) {
+      const k = first + j; // índice do trecho no cenário infinito
+      const scene = SCENES[Math.floor(k / SCENE_REPEAT) % SCENES.length]!;
+      const x = k * SCENE_W - off;
+      this.cities[j]!.setTexture(scene.key).setPosition(x, 0).setVisible(x < GAME_W && x + SCENE_W > 0);
+      const t = this.towers[j]!;
+      t.setPosition(x, GAME_H).setVisible(Math.abs(x - GAME_W / 2) < GAME_W / 2 + t.displayWidth / 2);
+      const br = this.bridges[j]!;
+      br.setPosition(x + BRIDGE.x, GROUND_Y - BRIDGE.deckTop).setVisible(scene.bridge && br.x < GAME_W && br.x + br.width > 0);
     }
   }
 
@@ -385,14 +383,35 @@ export class PlayScene extends Phaser.Scene {
     const gun = this.run.gunAmmo > 0;
     this.animT += dt;
 
+    const pre = gun ? 'slideg' : 'slide';
+    if (!p.ducking && this.slideT > 0) {
+      this.slideT = 0;
+      this.getupT = grounded && !jet ? GETUP_S : 0;
+    }
+    if (!grounded || jet) this.getupT = 0;
+    if (!grounded && !jet) this.wasAir = true;
+    else if (grounded && this.wasAir) {
+      this.wasAir = false;
+      this.landT = gun ? 0.09 : 0;
+    }
+    this.landT = Math.max(0, this.landT - dt);
     let name: string;
-    if (p.ducking) name = `duck_${Math.floor(this.stride / STRIDE_PX) % 2}`; // abaixada: vale com jetpack, arma ou no ar
-    else if (jet) name = `fly_${Math.floor(this.animT * (p.thrusting ? 4 : 2.5)) % 2}`; // troca lenta, para não piscar
+    if (p.ducking) {
+      // deslizando (vale com jetpack, arma ou no ar): quadros 1 a 3 do GIF e fica no último enquanto segurar
+      this.slideT += dt;
+      this.getupT = 0;
+      name = `${pre}_${1 + Math.min(2, Math.floor(this.slideT / SLIDE_STEP))}`;
+    } else if (this.getupT > 0 && grounded && !jet) {
+      this.getupT -= dt; // levanta: quadros 4 e 5 do GIF
+      name = `${pre}_${this.getupT > GETUP_S / 2 ? 4 : 5}`;
+    } else if (jet) name = `fly_${Math.floor(this.animT * (p.thrusting ? 4 : 2.5)) % 2}`; // troca lenta, para não piscar
+    else if (!grounded && gun) name = p.vy > 500 ? 'jumpg_1' : p.vy > -150 ? 'jumpg_2' : 'jumpg_3'; // subindo, topo, descendo
     else if (!grounded) name = p.vy > 0 ? 'jump' : 'fall';
-    else if (gun) name = 'gun';
+    else if (gun && this.landT > 0) name = 'jumpg_0'; // aterrissando agachada
+    else if (gun) name = `rung_${Math.floor(this.stride / STRIDE_PX) % 4}`;
     else name = `run_${Math.floor(this.stride / STRIDE_PX) % 4}`;
     this.sprite.setTexture(`pl_${name}`).setOrigin(SPRITE_ANCHOR[name] ?? 0.5, 1);
-    this.sprite.setScale(SPRITE_SCALE * (name === 'gun' ? GUN_SPRITE_FIX : 1));
+    this.sprite.setScale(SPRITE_SCALE);
 
     const feetY = GROUND_Y - p.y;
     this.sprite.y = feetY;
@@ -401,7 +420,7 @@ export class PlayScene extends Phaser.Scene {
 
     // arma pequena quando o sprite não é o da pose armada
     const m = this.muzzle();
-    this.gunImg.setVisible(gun && name !== 'gun').setPosition(m.x - 14, m.y);
+    this.gunImg.setVisible(gun && !/^(rung|slideg|jumpg)_/.test(name)).setPosition(m.x - 14, m.y);
 
     // pisca nos últimos segundos do jetpack
     const warn = jet && p.jetMs < JETPACK_WARN_MS;
@@ -523,6 +542,11 @@ export class PlayScene extends Phaser.Scene {
       giveGun(this.run);
       this.fireTimer = 0;
     }
+  }
+
+  /** Depois de perder, volta à tela de início (que sorteia um novo cenário). */
+  private goMenu(): void {
+    this.scene.start('Menu');
   }
 
   private showToast(text: string): void {
@@ -647,7 +671,7 @@ export class PlayScene extends Phaser.Scene {
       txt(372, 'REINICIAR', 30, '#FFFFFF');
       btn.on('pointerover', () => btn.setFillStyle(0xf0304a));
       btn.on('pointerout', () => btn.setFillStyle(COLORS.flixRed));
-      btn.once('pointerdown', () => this.scene.restart());
+      btn.once('pointerdown', () => this.goMenu());
     } else {
       txt(372, 'Toque em “Jogar de novo”', 22, COLORS.textMuted, FONT_TEXT);
     }

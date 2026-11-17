@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { createHubBridge, type HubToGame } from '@flix/game-sdk';
 import game_json from '../game.json';
 import { BootScene } from './scenes/BootScene';
+import { MenuScene } from './scenes/MenuScene';
 import { PlayScene } from './scenes/PlayScene';
 import { COLORS, GAME_H, GAME_W } from './theme';
 
@@ -24,7 +25,7 @@ const game = new Phaser.Game({
   roundPixels: false,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   input: { activePointers: 3 },
-  scene: [BootScene, PlayScene],
+  scene: [BootScene, MenuScene, PlayScene],
 } as Phaser.Types.Core.GameConfig);
 
 game.registry.set('bridge', bridge);

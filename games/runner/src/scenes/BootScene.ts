@@ -41,6 +41,6 @@ export class BootScene extends Phaser.Scene {
 
   private finish(muted: boolean): void {
     this.game.sound.mute = muted;
-    this.scene.start('Play');
+    this.scene.start('Menu');
   }
 }
