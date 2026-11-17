@@ -1,6 +1,6 @@
 /**
  * Identidade do Flix Runner (G01). Jogo em paisagem 960x540 (padrão do prompt dos minigames), escala "fit" para a tela.
- * O cenário percorre 10 cenários (`cenarios/*.jpg`, 1620x540), cada uma repetida duas vezes, separadas por uma torre 5G (`torre.png`), em laço infinito.
+ * O cenário percorre 18 cenários (`cenarios/*.jpg`, 1620x540), cada uma repetida duas vezes, separadas por uma torre 5G (`torre.png`), em laço infinito.
  */
 export const GAME_W = 960;
 export const GAME_H = 540;
@@ -9,8 +9,8 @@ export const GAME_H = 540;
 export const GROUND_Y = 478;
 /** Posição horizontal fixa do personagem. */
 export const PLAYER_X = 250;
-/** Os sprites do personagem (`public/img/personagem/`) são mostrados nesta escala: ~115 px de altura na tela. */
-export const SPRITE_SCALE = 0.49;
+/** Os sprites do personagem (`public/img/personagem/`) são mostrados nesta escala: ~80 px de altura na tela. */
+export const SPRITE_SCALE = 0.343; // 0.49 (versão anterior) -30%
 /** Posição horizontal do tronco em cada sprite (0 = esquerda, 1 = direita), para o personagem não "andar" entre quadros. */
 export const SPRITE_ANCHOR: Record<string, number> = {
   run_0: 0.513, run_1: 0.513, run_2: 0.513, run_3: 0.513, jump: 0.503, fall: 0.551, fly_0: 0.513, fly_1: 0.54, jumpg_0: 0.524, jumpg_1: 0.489, jumpg_2: 0.522, jumpg_3: 0.532,
@@ -36,6 +36,14 @@ export const SCENES = [
   { key: 'cen_pi', file: 'cenarios/pi.jpg', bridge: false }, // Serra da Capivara
   { key: 'cen_rr', file: 'cenarios/rr.jpg', bridge: false }, // Monte Roraima
   { key: 'cen_sc', file: 'cenarios/sc.jpg', bridge: false }, // Serra Catarinense
+  { key: 'cen_am', file: 'cenarios/am.jpg', bridge: false }, // Amazonas, fauna e flora
+  { key: 'cen_ba', file: 'cenarios/ba.jpg', bridge: false }, // Salvador
+  { key: 'cen_ce', file: 'cenarios/ce.jpg', bridge: false }, // Falésias e jangadas do Ceará
+  { key: 'cen_df', file: 'cenarios/df.jpg', bridge: false }, // Brasília
+  { key: 'cen_go', file: 'cenarios/go.jpg', bridge: false }, // Pirenópolis e cerrado
+  { key: 'cen_ma', file: 'cenarios/ma.jpg', bridge: false }, // Lençóis Maranhenses
+  { key: 'cen_rn', file: 'cenarios/rn.jpg', bridge: false }, // Forte dos Reis Magos
+  { key: 'cen_rs', file: 'cenarios/rs.jpg', bridge: false }, // Estação no pampa gaúcho
 ] as const;
 export const SCENE_REPEAT = 2;
 /** Deslocamento inicial do cenário na partida (a torre da primeira emenda começa fora da tela); o menu usa o mesmo. */

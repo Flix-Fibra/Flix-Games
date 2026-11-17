@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import type { HubBridge } from '@flix/game-sdk';
 import {
   ENERGY_MS, FIRE_COOLDOWN, GUN_SHOTS, JETPACK_MS, JETPACK_WARN_MS, SHOT_R, SHOT_SPEED, VIRUS_HIT_R, VIRUS_R,
-  addKill, circleHitsBox, circlesOverlap, createPlayer, createRun, giveEnergy, giveGun, giveJetpack, hitbox, multiplier, mulberry32, useShot,
+  addKill, distanceM, scoreOf, circleHitsBox, circlesOverlap, createPlayer, createRun, giveEnergy, giveGun, giveJetpack, hitbox, multiplier, mulberry32, useShot,
   nextPickupGap, nextPickupHeight, nextVirusGap, nextVirusHeight, virusDensityAt, onGround, pickPickupKind, speedAt, stepPlayer, tickRun,
   type Controls, type PickupKind,
 } from '../logic';
@@ -10,13 +10,14 @@ import {
   BRIDGE, COLORS, FONT, FONT_TEXT, GAME_H, GAME_W, GROUND_Y, PLAYER_X, SCENES, SCENE_REPEAT, SCENE_W, SPRITE_ANCHOR, START_OFFSET, SPRITE_SCALE,
 } from '../theme';
 
-const STRIDE_PX = 35; // distância percorrida a cada troca de quadro da corrida (4 quadros)
+const STRIDE_PX = 24.5; // distância percorrida a cada troca de quadro da corrida (4 quadros)
 const FIRE_BTN = { x: GAME_W - 70, y: GAME_H - 84, r: 46 }; // botão de tiro (toque), só aparece com munição
 const HELP_BTN = { x: GAME_W - 44, y: 112, r: 22 }; // botão "?" com os controles
 const SLIDE_STEP = 0.06; // segundos por quadro ao entrar no deslize
 const GETUP_S = 0.14; // tempo do quadro de levantar ao soltar o botão de abaixar
 const PICKUP_R = 32; // raio de colisão dos bônus
-const VIRUS_EXTRA_SPEED = 40; // o vírus avança um pouco mais rápido que o cenário
+// velocidade própria do vírus (além do cenário): na largada ele cruza a tela a 490 px/s, 30% mais que os 377 de antes
+const VIRUS_EXTRA_SPEED = 254;
 const TOWER_H = 520; // altura da torre 5G na tela (o jogo tem 540); a base fica na borda inferior
 const WAVE_INTERVAL = 0.11; // segundos entre ondas de wifi com o jetpack subindo
 
@@ -41,7 +42,7 @@ interface Shot { x: number; y: number; img: Phaser.GameObjects.Image }
 
 const PICKUP_LOOK: Record<PickupKind, { tex: string; scale: number; glow: number; toast: string }> = {
   router: { tex: 'router', scale: 3, glow: 0x66b8ff, toast: 'WI-FI JETPACK!' },
-  energy: { tex: 'bateria', scale: 0.42, glow: 0x66ff99, toast: 'ENERGIA! PONTOS x3' },
+  energy: { tex: 'bateria', scale: 0.42, glow: 0x66ff99, toast: 'ENERGIA! DISTÂNCIA x3' },
   gun: { tex: 'arma', scale: 0.55, glow: 0x66ddff, toast: 'ARMA WI-FI! 10 TIROS (ESPAÇO)' },
 };
 
@@ -103,6 +104,7 @@ export class PlayScene extends Phaser.Scene {
 
   private hudScore!: Phaser.GameObjects.Text;
   private hudMult!: Phaser.GameObjects.Text;
+  private hudDist!: Phaser.GameObjects.Text;
   private hudKills!: Phaser.GameObjects.Text;
   private bars: Array<{ id: BarId; bg: Phaser.GameObjects.Rectangle; fill: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Text }> = [];
   private hints: Phaser.GameObjects.GameObject[] = [];
@@ -172,16 +174,17 @@ export class PlayScene extends Phaser.Scene {
   }
 
   private buildPlayer(): void {
-    this.shadow = this.add.ellipse(PLAYER_X, GROUND_Y + 2, 80, 14, 0x000000, 0.32).setDepth(DEPTH.shadow);
+    this.shadow = this.add.ellipse(PLAYER_X, GROUND_Y + 2, 56, 10, 0x000000, 0.32).setDepth(DEPTH.shadow);
     this.sprite = this.add.image(PLAYER_X, GROUND_Y, 'pl_run_0').setOrigin(SPRITE_ANCHOR.run_0, 1).setScale(SPRITE_SCALE).setDepth(DEPTH.player);
     // arma pequena nas mãos quando ela não está na pose de corrida armada (salto, voo, agachada)
-    this.gunImg = this.add.image(0, 0, 'arma').setScale(0.3).setAngle(25).setDepth(DEPTH.shot).setVisible(false);
+    this.gunImg = this.add.image(0, 0, 'arma').setScale(0.21).setAngle(25).setDepth(DEPTH.shot).setVisible(false);
   }
 
   private buildHud(): void {
     const stroke = { stroke: '#0a2a5c', strokeThickness: 6 };
     this.add.text(24, 14, 'PONTOS', { fontFamily: FONT_TEXT, fontSize: '18px', color: COLORS.textMuted, ...stroke }).setDepth(DEPTH.hud);
     this.hudScore = this.add.text(24, 34, '0', { fontFamily: FONT, fontSize: '46px', color: COLORS.text, ...stroke }).setDepth(DEPTH.hud);
+    this.hudDist = this.add.text(26, 88, '0 m x 0', { fontFamily: FONT_TEXT, fontSize: '20px', color: COLORS.textMuted, ...stroke }).setDepth(DEPTH.hud);
     this.hudMult = this.add.text(0, 44, 'x3', { fontFamily: FONT, fontSize: '30px', color: '#5CFF9A', ...stroke }).setDepth(DEPTH.hud).setVisible(false);
     this.add
       .text(GAME_W - 24, 14, 'VÍRUS ABATIDOS', { fontFamily: FONT_TEXT, fontSize: '18px', color: COLORS.textMuted, ...stroke })
@@ -236,9 +239,9 @@ export class PlayScene extends Phaser.Scene {
       ['ATIRAR', 'ESPAÇO, ou botão ATIRAR no toque (só com a arma de wifi)'],
       ['ROTEADOR', 'vira jetpack: segure PULAR para subir. Só gasta no ar'],
       ['ARMA WI-FI', '10 disparos: mire na altura do vírus e atire'],
-      ['ENERGIA', 'pontos x3 por 15 segundos'],
+      ['ENERGIA', 'a distância vale x3 por 15 segundos'],
       ['VÍRUS', 'encostar = fim de jogo. Pule, abaixe ou atire neles'],
-      ['PONTOS', '10 por segundo correndo e 50 por vírus abatido'],
+      ['PONTOS', 'distância percorrida (m) x vírus abatidos'],
     ];
     const objs: Phaser.GameObjects.GameObject[] = [
       this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x03122e, 0.62),
@@ -333,7 +336,7 @@ export class PlayScene extends Phaser.Scene {
     else this.jumpBuffer = Math.max(0, this.jumpBuffer - dt);
 
     stepPlayer(this.player, ctl, dt);
-    tickRun(this.run, dt);
+    tickRun(this.run, dt, speed);
     this.stride += speed * dt;
 
     this.scrollScenery(speed * dt);
@@ -373,7 +376,7 @@ export class PlayScene extends Phaser.Scene {
   /** Ponta da arma de wifi na tela (de onde sai o tiro). */
   private muzzle(): { x: number; y: number } {
     const p = this.player;
-    return { x: PLAYER_X + 38, y: GROUND_Y - p.y - (p.ducking ? 36 : 62) };
+    return { x: PLAYER_X + 27, y: GROUND_Y - p.y - (p.ducking ? 25 : 43) };
   }
 
   private updatePlayerSprite(dt: number): void {
@@ -420,7 +423,7 @@ export class PlayScene extends Phaser.Scene {
 
     // arma pequena quando o sprite não é o da pose armada
     const m = this.muzzle();
-    this.gunImg.setVisible(gun && !/^(rung|slideg|jumpg)_/.test(name)).setPosition(m.x - 14, m.y);
+    this.gunImg.setVisible(gun && !/^(rung|slideg|jumpg)_/.test(name)).setPosition(m.x - 10, m.y);
 
     // pisca nos últimos segundos do jetpack
     const warn = jet && p.jetMs < JETPACK_WARN_MS;
@@ -431,7 +434,7 @@ export class PlayScene extends Phaser.Scene {
       this.waveTimer -= dt;
       while (this.waveTimer <= 0) {
         this.waveTimer += WAVE_INTERVAL;
-        this.emitWave(PLAYER_X - 34, feetY - 58);
+        this.emitWave(PLAYER_X - 24, feetY - 41);
       }
     } else {
       this.waveTimer = 0;
@@ -535,7 +538,7 @@ export class PlayScene extends Phaser.Scene {
       giveJetpack(this.player);
       // pequeno impulso para cima e uma onda de wifi ao redor da personagem
       if (!had && onGround(this.player)) this.player.vy = 380;
-      for (let i = 0; i < 3; i++) this.time.delayedCall(i * 80, () => this.emitWave(this.sprite.x - 20, this.sprite.y - 90));
+      for (let i = 0; i < 3; i++) this.time.delayedCall(i * 80, () => this.emitWave(this.sprite.x - 14, this.sprite.y - 63));
     } else if (kind === 'energy') {
       giveEnergy(this.run);
     } else {
@@ -627,7 +630,7 @@ export class PlayScene extends Phaser.Scene {
 
   /** Pontuação mostrada e enviada ao hub. */
   get score(): number {
-    return Math.floor(this.run.score);
+    return scoreOf(this.run);
   }
 
   private die(): void {
@@ -645,7 +648,7 @@ export class PlayScene extends Phaser.Scene {
       runId: this.runId,
       score: this.score,
       durationMs: Math.round(this.seconds * 1000),
-      meta: { kills: this.run.kills },
+      meta: { kills: this.run.kills, distanceM: distanceM(this.run) },
     });
     this.time.delayedCall(600, () => this.showGameOver());
   }
@@ -663,7 +666,7 @@ export class PlayScene extends Phaser.Scene {
     txt(130, 'FIM DE JOGO', 46, '#FF5A6A');
     txt(190, 'PONTOS', 20, COLORS.textMuted, FONT_TEXT);
     txt(242, String(this.score), 64, '#FFFFFF');
-    txt(300, `${this.run.kills} ${this.run.kills === 1 ? 'vírus abatido' : 'vírus abatidos'}`, 24, '#FFD1D6', FONT_TEXT);
+    txt(300, `${distanceM(this.run)} m  x  ${this.run.kills} ${this.run.kills === 1 ? 'vírus abatido' : 'vírus abatidos'}`, 24, '#FFD1D6', FONT_TEXT);
 
     // Dentro do hub, o botão de recomeçar é do hub (mensagem `restart`); fora dele (desenvolvimento) mostramos o nosso.
     if (!this.bridge.embedded) {
@@ -684,6 +687,7 @@ export class PlayScene extends Phaser.Scene {
     this.hudScore.setText(String(this.score)).setColor(r.energyMs > 0 ? '#5CFF9A' : COLORS.text);
     this.hudMult.setVisible(r.energyMs > 0).setX(this.hudScore.x + this.hudScore.width + 10);
     this.hudKills.setText(String(r.kills));
+    this.hudDist.setText(`${distanceM(r)} m x ${r.kills}`).setColor(r.energyMs > 0 ? '#5CFF9A' : COLORS.textMuted);
     this.fireBtn.setVisible(r.gunAmmo > 0);
 
     const left: Record<BarId, { ms: number; max: number }> = {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ENERGY_MS, GUN_SHOTS, useShot, addKill, circlesOverlap, createRun, giveEnergy, giveGun, multiplier, pickPickupKind, tickRun,
-  VIRUS_GAP_MAX, VIRUS_GAP_MIN, nextVirusGap, nextVirusHeight, virusDensityAt,
+  ENERGY_MS, GUN_SHOTS, useShot, addKill, distanceM, scoreOf, SPEED_BASE, circlesOverlap, createRun, giveEnergy, giveGun, multiplier, pickPickupKind, tickRun,
+  VIRUS_GAP_MAX, VIRUS_GAP_MIN, VIRUS_HIGH, VIRUS_LOW, nextVirusGap, nextVirusHeight, virusDensityAt,
   JETPACK_CEILING, JETPACK_MS, PICKUP_GAP_MAX, PICKUP_GAP_MIN, SPEED_MAX, circleHitsBox, createPlayer, giveJetpack, hitbox,
   mulberry32, nextPickupGap, nextPickupHeight, onGround, speedAt, stepPlayer, type Controls,
 } from './logic';
@@ -119,9 +119,9 @@ describe('colisão e sorteio', () => {
     expect(circleHitsBox(330, 50, 30, b)).toBe(false);
   });
   it('velocidade cresce e tem teto', () => {
-    expect(speedAt(0)).toBe(336.96);
-    expect(speedAt(2)).toBeCloseTo(336.96 * 1.01, 5);
-    expect(speedAt(60)).toBeCloseTo(336.96 * 1.3, 5);
+    expect(speedAt(0)).toBe(235.872);
+    expect(speedAt(45)).toBeCloseTo(235.872 * 1.5, 5);
+    expect(speedAt(90)).toBeCloseTo(235.872 * 2, 5); // 200% aos 1:30
     expect(speedAt(0)).toBeLessThan(speedAt(10));
     expect(speedAt(9999)).toBe(SPEED_MAX);
   });
@@ -138,36 +138,40 @@ describe('colisão e sorteio', () => {
 });
 
 describe('pontuação e bônus', () => {
-  it('cada segundo vale 10 pontos', () => {
+  it('a distância soma a velocidade: 50 px = 1 m', () => {
     const r = createRun();
-    for (let i = 0; i < 60; i++) tickRun(r, 1 / 60);
-    expect(Math.floor(r.score + 1e-6)).toBe(10);
+    for (let i = 0; i < 60; i++) tickRun(r, 1 / 60, 100); // 100 px/s por 1 s = 2 m
+    expect(distanceM(r)).toBe(2);
   });
-  it('energia triplica o tempo e os vírus por 15 s e depois acaba', () => {
+  it('pontuação = distância x vírus abatidos', () => {
+    const r = createRun();
+    tickRun(r, 10, 100); // 20 m
+    expect(scoreOf(r)).toBe(0); // sem vírus abatido
+    expect(addKill(r)).toBe(20);
+    expect(addKill(r)).toBe(20);
+    expect(scoreOf(r)).toBe(40);
+    tickRun(r, 10, 100);
+    expect(scoreOf(r)).toBe(80); // 40 m x 2
+  });
+  it('energia triplica a distância por 15 s e depois acaba', () => {
     const r = createRun();
     giveEnergy(r);
     expect(multiplier(r)).toBe(3);
-    tickRun(r, 1);
-    expect(r.score).toBeCloseTo(30, 5);
-    expect(addKill(r)).toBe(150);
-    for (let i = 0; i < 14; i++) tickRun(r, 1);
+    tickRun(r, 1, 100);
+    expect(r.distance).toBeCloseTo(6, 5);
+    for (let i = 0; i < 14; i++) tickRun(r, 1, 100);
     expect(r.energyMs).toBe(0);
     expect(multiplier(r)).toBe(1);
-    const before = r.score;
-    tickRun(r, 1);
-    expect(r.score - before).toBeCloseTo(10, 5);
+    const before = r.distance;
+    tickRun(r, 1, 100);
+    expect(r.distance - before).toBeCloseTo(2, 5);
     expect(ENERGY_MS).toBe(15000);
-  });
-  it('vírus abatido vale 50 sem energia', () => {
-    const r = createRun();
-    expect(addKill(r)).toBe(50);
-    expect(r.kills).toBe(1);
   });
   it('arma de wifi tem GUN_SHOTS disparos', () => {
     const r = createRun();
     giveGun(r);
     expect(r.gunAmmo).toBe(GUN_SHOTS);
-    tickRun(r, 30);
+    tickRun(r, 30, SPEED_BASE);
     expect(r.gunAmmo).toBe(GUN_SHOTS); // não gasta com o tempo
     for (let i = 0; i < GUN_SHOTS; i++) expect(useShot(r)).toBe(true);
     expect(useShot(r)).toBe(false);
@@ -185,7 +189,7 @@ describe('pontuação e bônus', () => {
       const g = nextVirusGap(rng);
       expect(g).toBeGreaterThanOrEqual(VIRUS_GAP_MIN);
       expect(g).toBeLessThanOrEqual(VIRUS_GAP_MAX);
-      expect([38, 112]).toContain(nextVirusHeight(rng));
+      expect([VIRUS_LOW, VIRUS_HIGH]).toContain(nextVirusHeight(rng));
     }
     expect(seen.size).toBe(3);
   });

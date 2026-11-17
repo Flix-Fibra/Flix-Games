@@ -16,12 +16,14 @@ export const JETPACK_MAX_UP = 420;
 export const JETPACK_MAX_DOWN = 380;
 export const JETPACK_CEILING = 330; // altura máxima dos pés
 
-export const SPEED_BASE = 336.96; // 187,2 (versão anterior) +80%
-export const SPEED_RAMP = SPEED_BASE * 0.005; // +1% da velocidade inicial a cada 2 s
-export const SPEED_MAX = 567;
+export const SPEED_BASE = 235.872; // 336,96 (versão anterior) -30%
+export const SPEED_DOUBLE_AT = 90; // teste: aos 1:30 de partida a velocidade chega a 200% da inicial
+export const SPEED_RAMP = SPEED_BASE / SPEED_DOUBLE_AT; // ~1,11% da inicial por segundo (antes 0,5%/s)
+export const SPEED_MAX = SPEED_BASE * 2; // para de acelerar nos 200%
 
-export const STAND_HIT = { halfW: 18, h: 87 };
-export const DUCK_HIT = { halfW: 28, h: 62 };
+// personagem 30% menor: caixas de colisão também (de pé 36x87 -> 25x61; abaixada 56x62 -> 39x43)
+export const STAND_HIT = { halfW: 12.6, h: 61 };
+export const DUCK_HIT = { halfW: 19.6, h: 43 };
 
 export interface Player {
   y: number;
@@ -139,42 +141,45 @@ export type PickupKind = 'router' | 'energy' | 'gun';
 export const ENERGY_MS = 15000; // pontuação x3 por 15 s
 export const ENERGY_MULT = 3;
 export const GUN_SHOTS = 10; // arma de wifi: 10 disparos, o jogador escolhe quando atirar (espaço)
-export const POINTS_PER_SECOND = 10; // cada segundo de corrida vale 10 pontos
-export const POINTS_PER_VIRUS = 50; // cada vírus abatido vale 50 pontos
+export const PX_PER_METER = 50; // 50 px de cenário = 1 m de distância
 export const FIRE_COOLDOWN = 0.18; // segundos mínimos entre dois disparos
 export const SHOT_SPEED = 720;
 export const SHOT_R = 14;
 export const VIRUS_R = 30; // raio do vírus (tiro acerta por aqui)
 export const VIRUS_HIT_R = 25; // raio que machuca a personagem (um pouco menor que o desenho: mais justo)
 export const VIRUS_LOW = 38; // altura do centro: no chão, exige saltar
-export const VIRUS_HIGH = 112; // no ar, exige abaixar (ou atirar)
-export const VIRUS_GAP_MIN = 800; // distância percorrida entre vírus
-export const VIRUS_GAP_MAX = 1500;
+export const VIRUS_HIGH = 80; // no ar, exige abaixar (ou atirar): a parte de baixo (55) fica entre a altura abaixada (43) e a de pé (61)
+export const VIRUS_GAP_MIN = 800 / 1.3; // distância percorrida entre vírus (1,3x mais vírus que os 800–1500 anteriores)
+export const VIRUS_GAP_MAX = 1500 / 1.3;
 
 export interface Run {
-  /** pontos (fracionário; mostre com Math.floor) */
-  score: number;
+  /** distância atravessada em metros (fracionária; com a energia ligada cada metro conta 3) */
+  distance: number;
   energyMs: number;
   /** disparos restantes da arma de wifi (0 = sem arma) */
   gunAmmo: number;
   kills: number;
 }
 
-export const createRun = (): Run => ({ score: 0, energyMs: 0, gunAmmo: 0, kills: 0 });
+export const createRun = (): Run => ({ distance: 0, energyMs: 0, gunAmmo: 0, kills: 0 });
 export const multiplier = (r: Run): number => (r.energyMs > 0 ? ENERGY_MULT : 1);
 
-/** Avança o relógio da partida: 10 pontos por segundo (x3 com a energia) e os bônus temporizados. */
-export function tickRun(r: Run, dt: number): void {
-  r.score += POINTS_PER_SECOND * multiplier(r) * dt;
+/** Avança a partida: soma a distância percorrida (`speed` em px/s; x3 com a energia) e gasta os bônus temporizados. */
+export function tickRun(r: Run, dt: number, speed: number): void {
+  r.distance += (speed * dt * multiplier(r)) / PX_PER_METER;
   r.energyMs = Math.max(0, r.energyMs - dt * 1000);
 }
 
-/** Vírus abatido: 50 pontos (x3 com a energia). Devolve os pontos ganhos. */
+/** Distância inteira, em metros, que conta para a pontuação. */
+export const distanceM = (r: Run): number => Math.floor(r.distance);
+
+/** Pontuação final: distância atravessada (m) x vírus abatidos. */
+export const scoreOf = (r: Run): number => distanceM(r) * r.kills;
+
+/** Vírus abatido. Devolve quantos pontos ele acrescentou à pontuação (a distância atual). */
 export function addKill(r: Run): number {
-  const pts = POINTS_PER_VIRUS * multiplier(r);
-  r.score += pts;
   r.kills += 1;
-  return pts;
+  return distanceM(r);
 }
 export const giveEnergy = (r: Run): void => void (r.energyMs = ENERGY_MS);
 export const giveGun = (r: Run): void => void (r.gunAmmo = GUN_SHOTS);
