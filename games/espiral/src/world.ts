@@ -1,0 +1,719 @@
+import * as THREE from 'three';
+import { OUTLINE, toon } from './toon';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { BALL_R, BALL_WORLD_ANGLE, FLOOR_GAP, FLOOR_THICK, SEG_ANGLE, SEGMENTS, floorY, type Tower } from './logic';
+import { Backdrop } from './backdrop';
+import { Ground } from './ground';
+import { DANGER, SIGNAL, paletteFor } from './theme';
+
+/** Desenho 3D da torre e da bola. Não tem regra de jogo: só mostra o estado que `logic.ts` calcula. */
+
+const R_IN = 0.95; // raio do poste
+const R_OUT = 3.0; // borda externa das placas
+const BALL_ORBIT = (R_IN + R_OUT) / 2; // distância da bola até o eixo
+const AHEAD = 12; // andares montados abaixo da bola
+const BEHIND = 2; // andares mantidos acima
+const TRAIL = 10;
+
+interface FloorView {
+  group: THREE.Group;
+  /** Arcos contínuos do andar; `mid` é o ângulo do meio (para os destroços voarem para fora). */
+  arcs: { mesh: THREE.Mesh; mid: number }[];
+  icons: Map<number, THREE.Object3D>;
+}
+
+interface Debris {
+  obj: THREE.Mesh;
+  vel: THREE.Vector3;
+  spin: THREE.Vector3;
+  life: number;
+}
+
+/**
+ * Arco de anel (placa) deitado entre os ângulos a0 e a1 da torre, com topo em y = FLOOR_THICK. Fatias vizinhas do
+ * mesmo tipo viram um arco só: o jogador vê um anel contínuo e mira no vão, não em "quadrados".
+ */
+function arcGeometry(a0: number, a1: number): THREE.BufferGeometry {
+  const s = new THREE.Shape();
+  s.moveTo(R_OUT * Math.cos(a0), R_OUT * Math.sin(a0));
+  s.absarc(0, 0, R_OUT, a0, a1, false);
+  s.lineTo(R_IN * Math.cos(a1), R_IN * Math.sin(a1));
+  s.absarc(0, 0, R_IN, a1, a0, true);
+  s.closePath();
+  const g = new THREE.ExtrudeGeometry(s, { depth: FLOOR_THICK, bevelEnabled: false, curveSegments: Math.max(4, Math.round(((a1 - a0) / SEG_ANGLE) * 6)) });
+  // A forma está no plano XY; deitar faz o ângulo t virar o ponto (cos t, -sin t) em XZ e a espessura virar +y.
+  g.rotateX(-Math.PI / 2);
+  return g;
+}
+
+/** Aviso de alta tensão (triângulo amarelo com raio), fundo transparente: um por fatia, inteiro. */
+function warningIcon(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d')!;
+  g.fillStyle = DANGER.yellow;
+  g.strokeStyle = '#111111';
+  g.lineWidth = 7;
+  g.lineJoin = 'round';
+  g.beginPath();
+  g.moveTo(64, 12);
+  g.lineTo(118, 110);
+  g.lineTo(10, 110);
+  g.closePath();
+  g.fill();
+  g.stroke();
+  g.fillStyle = '#111111';
+  g.beginPath(); // raio
+  g.moveTo(72, 38);
+  g.lineTo(48, 78);
+  g.lineTo(62, 78);
+  g.lineTo(54, 102);
+  g.lineTo(82, 62);
+  g.lineTo(67, 62);
+  g.closePath();
+  g.fill();
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
+/** Moldura amarela por dentro da borda da placa (faixa de 0,08), deitada sobre o topo. */
+function borderGeometry(a0: number, a1: number): THREE.BufferGeometry {
+  const w = 0.08;
+  const outer = new THREE.Shape();
+  outer.moveTo(R_OUT * Math.cos(a0), R_OUT * Math.sin(a0));
+  outer.absarc(0, 0, R_OUT, a0, a1, false);
+  outer.lineTo(R_IN * Math.cos(a1), R_IN * Math.sin(a1));
+  outer.absarc(0, 0, R_IN, a1, a0, true);
+  outer.closePath();
+  const ri = R_IN + w;
+  const ro = R_OUT - w;
+  const da = w / R_IN; // recuo angular suficiente até na borda de dentro
+  const hole = new THREE.Path();
+  hole.moveTo(ro * Math.cos(a0 + da), ro * Math.sin(a0 + da));
+  hole.absarc(0, 0, ro, a0 + da, a1 - da, false);
+  hole.lineTo(ri * Math.cos(a1 - da), ri * Math.sin(a1 - da));
+  hole.absarc(0, 0, ri, a1 - da, a0 + da, true);
+  hole.closePath();
+  outer.holes.push(hole);
+  const g = new THREE.ShapeGeometry(outer, 10);
+  g.rotateX(-Math.PI / 2);
+  g.translate(0, FLOOR_THICK + 0.004, 0);
+  return g;
+}
+
+/** Lateral da placa de alta tensão: faixa zebrada preta e amarela. */
+function hazardTexture(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d')!;
+  g.fillStyle = DANGER.yellow;
+  g.fillRect(0, 0, 64, 64);
+  g.fillStyle = '#151515';
+  for (let i = -64; i < 128; i += 32) {
+    g.beginPath();
+    g.moveTo(i, 64);
+    g.lineTo(i + 16, 64);
+    g.lineTo(i + 80, 0);
+    g.lineTo(i + 64, 0);
+    g.closePath();
+    g.fill();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.repeat.set(2, 2.5);
+  return t;
+}
+
+/** Ícone de sinal (três arcos e um ponto), usado no bônus e no escudo. */
+function signalIcon(): THREE.Group {
+  const mat = toon({ color: SIGNAL, emissive: SIGNAL, emissiveIntensity: 0.9 });
+  const g = new THREE.Group();
+  for (let i = 0; i < 3; i++) {
+    const arc = new THREE.Mesh(new THREE.TorusGeometry(0.14 + i * 0.12, 0.035, 6, 16, Math.PI / 2), mat);
+    arc.rotation.z = Math.PI / 4;
+    g.add(arc);
+  }
+  const dot = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), mat);
+  g.add(dot);
+  return g;
+}
+
+const TRUSS_HALF = 0.6; // meia largura da seção quadrada da torre (cabe dentro do furo das placas)
+
+/** Barra reta de `a` até `b` (caixa fina), para montar a treliça. */
+function beam(a: THREE.Vector3, b: THREE.Vector3, thick: number): THREE.BufferGeometry {
+  const dir = new THREE.Vector3().subVectors(b, a);
+  const g = new THREE.BoxGeometry(thick, dir.length(), thick);
+  g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize()));
+  const mid = new THREE.Vector3().addVectors(a, b).multiplyScalar(0.5);
+  g.translate(mid.x, mid.y, mid.z);
+  return g;
+}
+
+/**
+ * Treliça de seção quadrada, como torre de telecom: 4 pernas, X em cada face e travessas. Vai de y = 0 até
+ * `height`, com meia largura `hBot` embaixo e `hTop` em cima (afunila no topo). Tudo vira uma geometria só.
+ */
+function trussGeometry(height: number, hBot: number, hTop: number, sections: number): THREE.BufferGeometry {
+  const corners = [
+    [1, 1],
+    [1, -1],
+    [-1, -1],
+    [-1, 1],
+  ] as const;
+  const at = (c: number, y: number) => {
+    const h = hBot + (hTop - hBot) * (y / height);
+    const k = corners[c % 4]!;
+    return new THREE.Vector3(k[0] * h, y, k[1] * h);
+  };
+  const parts: THREE.BufferGeometry[] = [];
+  for (let c = 0; c < 4; c++) parts.push(beam(at(c, 0), at(c, height), 0.075));
+  for (let s = 0; s < sections; s++) {
+    const y0 = (s / sections) * height;
+    const y1 = ((s + 1) / sections) * height;
+    for (let c = 0; c < 4; c++) {
+      parts.push(beam(at(c, y0), at(c + 1, y1), 0.04));
+      parts.push(beam(at(c + 1, y0), at(c, y1), 0.04));
+      parts.push(beam(at(c, y1), at(c + 1, y1), 0.045));
+    }
+  }
+  const merged = mergeGeometries(parts);
+  parts.forEach((p) => p.dispose());
+  return merged;
+}
+
+/** Posição local (referencial da torre) do ponto no ângulo `a` e raio `r`. */
+function polar(a: number, r: number, y: number): THREE.Vector3 {
+  return new THREE.Vector3(Math.cos(a) * r, y, -Math.sin(a) * r);
+}
+
+export class World {
+  readonly renderer: THREE.WebGLRenderer;
+  private readonly scene = new THREE.Scene();
+  private readonly camera = new THREE.PerspectiveCamera(50, 1, 0.1, 500);
+  private readonly towerGroup = new THREE.Group();
+  private readonly floors = new Map<number, FloorView>();
+  private readonly debris: Debris[] = [];
+
+  /** Trecho de treliça de um andar (do topo da placa até o andar de baixo). */
+  private readonly trussGeo = trussGeometry(FLOOR_GAP, TRUSS_HALF, TRUSS_HALF, 2).translate(0, FLOOR_THICK - FLOOR_GAP, 0);
+  private readonly splatGeo = new THREE.CircleGeometry(0.3, 14).rotateX(-Math.PI / 2);
+
+  private readonly plateMat = toon({ roughness: 0.45, metalness: 0.25 });
+  private readonly poleMat = toon({ roughness: 0.4, metalness: 0.6 });
+  private readonly bandMat = toon({ roughness: 0.5 });
+  private readonly bandWhiteMat = toon({ color: 0xf2f2f2, roughness: 0.5 });
+  private readonly panelGeo = new THREE.BoxGeometry(0.34, 0.95, 0.1);
+  private readonly panelMat = toon({ color: 0xe9edf2, roughness: 0.6 });
+  private readonly bracketGeo = new THREE.BoxGeometry(0.06, 0.06, 0.2);
+  private readonly dishGeo = new THREE.CylinderGeometry(0.34, 0.3, 0.2, 20).rotateX(Math.PI / 2);
+  private readonly dishFaceGeo = new THREE.CircleGeometry(0.3, 20).translate(0, 0, 0.101);
+  private readonly dishMat = toon({ color: 0xdfe3e8, roughness: 0.5 });
+  private readonly dishFaceMat = toon({ color: 0xfafafa, roughness: 0.8 });
+  private readonly sharedGeos = new Set<THREE.BufferGeometry>([
+    this.trussGeo,
+    this.dishGeo,
+    this.dishFaceGeo,
+    this.splatGeo,
+    this.panelGeo,
+    this.bracketGeo,
+  ]);
+  private topLight: THREE.MeshToonMaterial | null = null;
+  /** Alta tensão: topo grafite liso, aviso centralizado por fatia, moldura amarela e lateral zebrada. */
+  private readonly warnMat = toon({ color: DANGER.plate, roughness: 0.6, metalness: 0.2 });
+  private readonly dangerMat = toon({ map: hazardTexture(), roughness: 0.5 });
+  private readonly borderMat = new THREE.MeshBasicMaterial({ color: DANGER.yellow });
+  private readonly iconGeo = new THREE.PlaneGeometry(0.62, 0.62).rotateX(-Math.PI / 2);
+  private readonly iconMat = new THREE.MeshBasicMaterial({ map: warningIcon(), transparent: true, alphaTest: 0.3 });
+  private readonly splatMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.85 });
+
+  private readonly ball: THREE.Mesh;
+  private readonly ballMat = toon({ color: 0xd4142c });
+  private readonly shieldMesh: THREE.Mesh;
+  private readonly trail: THREE.Mesh[] = [];
+  private readonly trailMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.35 });
+  private readonly trailYs: number[] = [];
+
+  private readonly hemi = new THREE.HemisphereLight(0xffffff, 0x222233, 1.3);
+  private readonly fog = new THREE.Fog(0x000000, 14, 34);
+  private camY = 0;
+  private camDist = 12;
+  private squash = 0;
+  private shock = 0; // segundos restantes do efeito de choque
+  private shockLen = 1;
+  private shockHalo!: THREE.Mesh;
+  private readonly shockSparks: { obj: THREE.Mesh; vel: THREE.Vector3 }[] = [];
+  private rocketOn = false;
+  private readonly fire: { obj: THREE.Mesh; vel: THREE.Vector3; life: number }[] = [];
+  private fireNext = 0;
+  private trailOn = false;
+  private time = 0;
+  private bg = new THREE.Color();
+  private readonly backdrop: Backdrop;
+  private readonly ground = new Ground();
+  private bgTarget = new THREE.Color();
+
+  constructor(container: HTMLElement) {
+    this.sharedGeos.add(this.iconGeo);
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    container.appendChild(this.renderer.domElement);
+
+    this.scene.fog = this.fog;
+    this.scene.add(this.hemi);
+    const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+    sun.position.set(5, 9, 7);
+    this.scene.add(sun);
+    this.scene.add(this.towerGroup);
+    // O fundo é filho da câmera; por isso a câmera entra na cena.
+    this.backdrop = new Backdrop(this.camera);
+    this.scene.add(this.camera);
+    this.scene.add(this.ground.group);
+
+    this.ball = new THREE.Mesh(new THREE.SphereGeometry(BALL_R, 24, 16), this.ballMat);
+    this.ball.position.set(0, 0, BALL_ORBIT);
+    this.scene.add(this.ball);
+
+    this.shieldMesh = new THREE.Mesh(
+      new THREE.SphereGeometry(BALL_R * 1.55, 20, 14),
+      new THREE.MeshBasicMaterial({ color: SIGNAL, transparent: true, opacity: 0.28, depthWrite: false }),
+    );
+    this.ball.add(this.shieldMesh);
+
+    // Choque: halo elétrico em volta da bola e faíscas (bolinhas brilhantes, não linhas finas).
+    this.shockHalo = new THREE.Mesh(
+      new THREE.SphereGeometry(BALL_R * 1.9, 20, 14),
+      new THREE.MeshBasicMaterial({ color: 0x8fe9ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }),
+    );
+    this.shockHalo.visible = false;
+    this.ball.add(this.shockHalo);
+    const sparkGeo = new THREE.SphereGeometry(0.085, 8, 6);
+    const sparkMat = new THREE.MeshBasicMaterial({ color: 0x2fb8ff });
+    // Fogo do foguete: bolinhas laranja que sobem atrás da bola, como um meteoro (reaproveitadas).
+    const fireGeo = new THREE.SphereGeometry(0.09, 8, 6);
+    for (let i = 0; i < 40; i++) {
+      const m = new THREE.Mesh(
+        fireGeo,
+        new THREE.MeshBasicMaterial({ color: 0xff8a1f, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }),
+      );
+      m.visible = false;
+      this.scene.add(m);
+      this.fire.push({ obj: m, vel: new THREE.Vector3(), life: 0 });
+    }
+    for (let i = 0; i < 18; i++) {
+      const m = new THREE.Mesh(sparkGeo, sparkMat);
+      m.visible = false;
+      this.scene.add(m);
+      this.shockSparks.push({ obj: m, vel: new THREE.Vector3() });
+    }
+
+    const trailGeo = new THREE.SphereGeometry(BALL_R, 10, 8);
+    for (let i = 0; i < TRAIL; i++) {
+      const m = new THREE.Mesh(trailGeo, this.trailMat);
+      m.position.set(0, 0, BALL_ORBIT);
+      this.trail.push(m);
+      this.scene.add(m);
+    }
+
+    this.setBallColor('#d4142c');
+    this.setPhase(0, true);
+    this.resize();
+  }
+
+  setBallColor(hex: string): void {
+    this.ballMat.color.set(hex);
+    this.trailMat.color.set(hex);
+    this.splatMat.color.set(hex);
+  }
+
+  /** Troca o cenário. `instant` evita a transição suave (no começo da partida). */
+  setPhase(phase: number, instant = false): void {
+    const p = paletteFor(phase);
+    this.plateMat.color.setHex(p.plate);
+    this.poleMat.color.setHex(p.pole);
+    this.bandMat.color.setHex(p.band);
+    this.bgTarget.setHex(p.sky);
+    this.hemi.groundColor.setHex(p.sky);
+    if (instant) this.bg.copy(this.bgTarget);
+    this.backdrop.setPalette(p, instant);
+    this.ground.setPalette(p);
+  }
+
+  /** Começo de partida: apaga a torre antiga e posiciona a câmera. */
+  reset(ballY: number): void {
+    this.setRocket(false);
+    for (const f of this.fire) f.obj.visible = false;
+    this.shock = 0;
+    this.shockHalo.visible = false;
+    for (const sp of this.shockSparks) sp.obj.visible = false;
+    for (const k of [...this.floors.keys()]) this.dropFloor(k);
+    for (const d of this.debris) this.disposeDebris(d);
+    this.debris.length = 0;
+    this.towerGroup.rotation.y = 0;
+    this.camY = ballY + 1.5;
+    this.trailYs.length = 0;
+    this.setPhase(0, true);
+  }
+
+  /** Monta os andares perto da bola e solta os que já ficaram para trás. */
+  sync(tower: Tower, nextFloor: number): void {
+    const from = Math.max(0, nextFloor - BEHIND);
+    const to = nextFloor + AHEAD;
+    for (const k of [...this.floors.keys()]) if (k < from) this.dropFloor(k);
+    for (let i = from; i <= to; i++) if (!this.floors.has(i)) this.buildFloor(tower, i);
+  }
+
+  private buildFloor(tower: Tower, index: number): void {
+    const floor = tower.get(index);
+    const group = new THREE.Group();
+    group.position.y = floorY(index);
+
+    // Treliça: trechos alternados vermelho e branco, como a pintura de sinalização para aviões.
+    group.add(new THREE.Mesh(this.trussGeo, index % 2 === 0 ? this.bandMat : this.bandWhiteMat));
+
+    // Antenas setoriais: 3, a 120° uma da outra, a cada 2 andares.
+    if (index % 2 === 1) {
+      for (let i = 0; i < 3; i++) this.addPanel(group, (i / 3) * Math.PI * 2 + index * 0.7, TRUSS_HALF, -FLOOR_GAP / 2);
+    }
+    // Antena de micro-ondas (parabólica de tambor), a cada 3 andares.
+    if (index % 3 === 2) this.addDish(group, index * 1.3, TRUSS_HALF, -FLOOR_GAP / 2 + 0.3);
+
+    if (index === 0) group.add(this.antennaTop());
+
+    const view: FloorView = { group, arcs: [], icons: new Map() };
+    if (!floor.broken) {
+      // Agrupa fatias vizinhas: placa (sólida ou bônus) com placa, perigo com perigo. Começa num vão para não
+      // cortar um arco que dá a volta pelo índice 0.
+      const kindOf = (k: number) => {
+        const s = floor.segs[((k % SEGMENTS) + SEGMENTS) % SEGMENTS] ?? 'solid';
+        return s === 'bonus' ? 'solid' : s;
+      };
+      const start = Math.max(0, floor.segs.indexOf('gap'));
+      let k = 0;
+      while (k < SEGMENTS) {
+        const kind = kindOf(start + k);
+        let len = 1;
+        while (k + len < SEGMENTS && kindOf(start + k + len) === kind) len++;
+        if (kind !== 'gap') {
+          const a0 = (start + k) * SEG_ANGLE;
+          const a1 = (start + k + len) * SEG_ANGLE;
+          const m = new THREE.Mesh(arcGeometry(a0, a1), kind === 'danger' ? [this.warnMat, this.dangerMat] : this.plateMat);
+          m.add(new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry, 35), OUTLINE)); // contorno de desenho
+          if (kind === 'danger') {
+            m.add(new THREE.Mesh(borderGeometry(a0, a1), this.borderMat));
+            for (let j = 0; j < len; j++) {
+              const mid = (start + k + j + 0.5) * SEG_ANGLE;
+              const icon = new THREE.Mesh(this.iconGeo, this.iconMat);
+              icon.position.copy(polar(mid, BALL_ORBIT, FLOOR_THICK + 0.006));
+              icon.rotation.y = mid + Math.PI / 2; // ponta do triângulo para o poste: fica em pé para a câmera
+              m.add(icon);
+            }
+          }
+          group.add(m);
+          view.arcs.push({ mesh: m, mid: (a0 + a1) / 2 });
+        }
+        k += len;
+      }
+      floor.segs.forEach((kind, seg) => {
+        if (kind !== 'bonus') return;
+        const icon = signalIcon();
+        icon.position.copy(polar((seg + 0.5) * SEG_ANGLE, BALL_ORBIT, FLOOR_THICK + 0.55));
+        group.add(icon);
+        view.icons.set(seg, icon);
+      });
+    }
+    this.towerGroup.add(group);
+    this.floors.set(index, view);
+  }
+
+  /** Antena setorial presa à torre por um suporte, virada para fora no ângulo `a`. */
+  private addPanel(group: THREE.Object3D, a: number, r: number, y: number): void {
+    const panel = new THREE.Mesh(this.panelGeo, this.panelMat);
+    panel.position.copy(polar(a, r + 0.2, y));
+    panel.rotation.y = a + Math.PI / 2;
+    const bracket = new THREE.Mesh(this.bracketGeo, this.poleMat);
+    bracket.position.copy(polar(a, r + 0.08, y));
+    bracket.rotation.y = a + Math.PI / 2;
+    group.add(panel, bracket);
+  }
+
+  /** Antena de micro-ondas: tambor com a face branca voltada para fora. */
+  private addDish(group: THREE.Object3D, a: number, r: number, y: number): void {
+    const dish = new THREE.Group();
+    dish.add(new THREE.Mesh(this.dishGeo, this.dishMat), new THREE.Mesh(this.dishFaceGeo, this.dishFaceMat));
+    dish.position.copy(polar(a, r + 0.22, y));
+    dish.rotation.y = a + Math.PI / 2;
+    group.add(dish);
+  }
+
+  /** Topo da torre: treliça afunilando, plataforma, antenas, para-raios com luz piscando e ondas de sinal. */
+  private antennaTop(): THREE.Group {
+    const g = new THREE.Group();
+    const base = FLOOR_THICK;
+
+    const lower = new THREE.Mesh(trussGeometry(1.6, TRUSS_HALF, 0.43, 2), this.bandWhiteMat);
+    lower.position.y = base;
+    const upper = new THREE.Mesh(trussGeometry(1.6, 0.43, 0.22, 2), this.bandMat);
+    upper.position.y = base + 1.6;
+
+    // Plataforma de serviço no meio do topo.
+    const deck = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.78, 0.06, 4), this.poleMat);
+    deck.rotation.y = Math.PI / 4;
+    deck.position.y = base + 1.6;
+
+    for (let i = 0; i < 3; i++) this.addPanel(g, (i / 3) * Math.PI * 2 + 0.3, 0.3, base + 2.5);
+    this.addDish(g, -Math.PI / 2 + 0.6, 0.45, base + 0.9);
+
+    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.05, 2.2, 6), this.poleMat);
+    rod.position.y = base + 4.3;
+
+    this.topLight = toon({ color: 0xff2238, emissive: 0xff2238, emissiveIntensity: 1.5 });
+    const light = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10), this.topLight);
+    light.position.y = base + 3.3;
+
+    g.add(lower, upper, deck, rod, light);
+    return g;
+  }
+
+  private dropFloor(index: number): void {
+    const v = this.floors.get(index);
+    if (!v) return;
+    this.towerGroup.remove(v.group);
+    // Geometrias e materiais são compartilhados; só os da mancha e do topo são exclusivos e pequenos.
+    v.group.traverse((o) => {
+      if ((o instanceof THREE.Mesh || o instanceof THREE.LineSegments) && !this.sharedGeos.has(o.geometry)) {
+        o.geometry.dispose();
+      }
+    });
+    this.floors.delete(index);
+  }
+
+  setRotation(rotation: number): void {
+    this.towerGroup.rotation.y = rotation;
+  }
+
+  /** `falling`: a bola está atravessando andares; só aí o rastro aparece (no quique ele vira um borrão). */
+  setBall(y: number, fever: boolean, shield: boolean, falling = false): void {
+    this.trailOn = falling || fever;
+    this.ball.position.y = y;
+    this.ballMat.emissive.set(fever ? 0xffffff : 0x000000);
+    this.ballMat.emissiveIntensity = fever ? 0.55 : 0;
+    this.trailMat.opacity = fever ? 0.6 : 0.3;
+    this.shieldMesh.visible = shield;
+  }
+
+  /** Mancha da bola na placa (gira junto com a torre) e achatamento rápido. */
+  onBounce(floorIndex: number, rotation: number): void {
+    this.squash = 1;
+    const v = this.floors.get(floorIndex);
+    if (!v) return;
+    const a = BALL_WORLD_ANGLE - rotation;
+    const s = new THREE.Mesh(this.splatGeo, this.splatMat);
+    s.position.copy(polar(a, BALL_ORBIT, FLOOR_THICK + 0.006));
+    s.rotation.y = Math.random() * Math.PI;
+    s.scale.setScalar(0.8 + Math.random() * 0.4);
+    v.group.add(s);
+  }
+
+  onBonusTaken(floorIndex: number, seg: number): void {
+    const v = this.floors.get(floorIndex);
+    const icon = v?.icons.get(seg);
+    if (!v || !icon) return;
+    v.group.remove(icon);
+    v.icons.delete(seg);
+  }
+
+  /** Quebra o andar: as placas voam para fora e somem. */
+  onBreak(floorIndex: number): void {
+    const v = this.floors.get(floorIndex);
+    if (!v) return;
+    for (const { mesh: m, mid } of v.arcs) {
+      const mats = (Array.isArray(m.material) ? m.material : [m.material]).map((x) => {
+        const c = x.clone();
+        c.transparent = true;
+        return c;
+      });
+      m.material = mats.length === 1 ? mats[0]! : mats;
+      for (const c of m.children) c.visible = false;
+      this.scene.attach(m); // mantém a posição no mundo ao sair do grupo da torre
+      const a = mid + this.towerGroup.rotation.y;
+      const out = new THREE.Vector3(Math.cos(a), 0, -Math.sin(a)).multiplyScalar(5 + Math.random() * 3);
+      out.y = 3 + Math.random() * 3;
+      const spin = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(8);
+      this.debris.push({ obj: m, vel: out, spin, life: 0.8 });
+    }
+    for (const icon of v.icons.values()) v.group.remove(icon);
+    v.icons.clear();
+    v.arcs = [];
+    // Manchas da bola sobre o andar quebrado: sem as placas, ficariam flutuando no ar.
+    for (const o of [...v.group.children]) if (o instanceof THREE.Mesh && o.geometry === this.splatGeo) v.group.remove(o);
+  }
+
+  private disposeDebris(d: Debris): void {
+    this.scene.remove(d.obj);
+    d.obj.geometry.dispose();
+    for (const c of d.obj.children) if (c instanceof THREE.LineSegments) c.geometry.dispose(); // contorno
+    for (const x of Array.isArray(d.obj.material) ? d.obj.material : [d.obj.material]) x.dispose();
+  }
+
+  /** Animações e câmera. `ballY` é a posição atual da bola. */
+  update(dt: number, ballY: number): void {
+    this.time += dt;
+
+    // A câmera só desce: acompanha a bola quando ela cai, e não sobe no quique.
+    const target = ballY + 1.5;
+    if (target < this.camY) this.camY += (target - this.camY) * Math.min(1, dt * 9);
+    this.camera.position.set(0, this.camY + 4.2, this.camDist);
+    this.camera.lookAt(0, this.camY - 2.2, 0);
+    this.updateShock(dt);
+    this.updateFire(dt);
+    this.backdrop.update(dt);
+    this.ground.update(dt, this.camY, this.towerGroup.rotation.y);
+
+    // Céu: transição suave entre cenários.
+    this.bg.lerp(this.bgTarget, Math.min(1, dt * 2));
+    this.scene.background = this.bg;
+    this.fog.color.copy(this.bg);
+
+    // Bola achatada no quique.
+    this.squash = Math.max(0, this.squash - dt * 6);
+    const sq = this.squash * 0.35;
+    this.ball.scale.set(1 + sq * 0.6, 1 - sq, 1 + sq * 0.6);
+
+    // Rastro: posições anteriores da bola.
+    this.trailYs.unshift(ballY);
+    if (this.trailYs.length > TRAIL * 2) this.trailYs.length = TRAIL * 2;
+    this.trail.forEach((m, i) => {
+      const y = this.trailYs[(i + 1) * 2];
+      m.visible = this.trailOn && y !== undefined && ballY - y < -BALL_R; // só os que ficaram acima da bola
+      if (y !== undefined) m.position.y = y;
+      m.scale.setScalar(1 - (i + 1) / (TRAIL + 2));
+    });
+
+    // Ícones de sinal girando.
+    // Moldura da alta tensão piscando de leve.
+    this.borderMat.color.set(Math.sin(this.time * 7) > 0 ? DANGER.yellow : DANGER.yellowDim);
+    // Luz do topo piscando e ondas de sinal.
+    if (this.topLight) this.topLight.emissiveIntensity = Math.sin(this.time * 4) > 0.2 ? 2 : 0.2;
+    for (const v of this.floors.values()) for (const icon of v.icons.values()) icon.rotation.y = this.time * 2;
+
+    for (let i = this.debris.length - 1; i >= 0; i--) {
+      const d = this.debris[i]!;
+      d.life -= dt;
+      d.vel.y -= 25 * dt;
+      d.obj.position.addScaledVector(d.vel, dt);
+      d.obj.rotation.x += d.spin.x * dt;
+      d.obj.rotation.z += d.spin.z * dt;
+      for (const x of Array.isArray(d.obj.material) ? d.obj.material : [d.obj.material]) x.opacity = Math.max(0, d.life / 0.8);
+      if (d.life <= 0) {
+        this.disposeDebris(d);
+        this.debris.splice(i, 1);
+      }
+    }
+  }
+
+  /** Foguete ligado/desligado: mergulho, rastro de fogo e tela tremendo. */
+  setRocket(on: boolean): void {
+    this.rocketOn = on;
+  }
+
+  private updateFire(dt: number): void {
+    if (this.rocketOn) {
+      this.fireNext -= dt;
+      while (this.fireNext <= 0) {
+        this.fireNext += 1 / 60;
+        const f = this.fire.find((x) => !x.obj.visible);
+        if (!f) break;
+        f.obj.visible = true;
+        f.life = 0.45;
+        f.obj.position.set(
+          this.ball.position.x + (Math.random() - 0.5) * 0.2,
+          this.ball.position.y + 0.5,
+          this.ball.position.z - 0.2,
+        );
+        f.vel.set((Math.random() - 0.5) * 1.2, 3 + Math.random() * 2, (Math.random() - 0.5) * 1.2);
+      }
+      const amp = 0.06;
+      this.camera.position.x += (Math.random() - 0.5) * amp;
+      this.camera.position.y += (Math.random() - 0.5) * amp;
+    }
+    for (const f of this.fire) {
+      if (!f.obj.visible) continue;
+      f.life -= dt;
+      f.obj.position.addScaledVector(f.vel, dt);
+      const k = Math.max(0, f.life / 0.45);
+      f.obj.scale.setScalar(0.4 + (1 - k) * 1.4);
+      const mat = f.obj.material as THREE.MeshBasicMaterial;
+      mat.opacity = k * 0.9;
+      mat.color.setHex(k > 0.5 ? 0xffb02e : 0xff4a1f); // amarelo → vermelho
+      if (f.life <= 0) f.obj.visible = false;
+    }
+  }
+
+  /** Choque na alta tensão. `strong` (morte) solta faíscas e treme a tela; o fraco (escudo) só pisca. */
+  onShock(strong: boolean): void {
+    this.shockLen = this.shock = strong ? 0.9 : 0.35;
+    this.shockHalo.visible = true;
+    if (!strong) return;
+    for (const sp of this.shockSparks) {
+      sp.obj.position.copy(this.ball.position);
+      sp.obj.visible = true;
+      const a = Math.random() * Math.PI * 2;
+      const up = 1.5 + Math.random() * 4;
+      const out = 2 + Math.random() * 3;
+      sp.vel.set(Math.cos(a) * out, up, Math.sin(a) * out);
+    }
+  }
+
+  private updateShock(dt: number): void {
+    if (this.shock <= 0) return;
+    this.shock = Math.max(0, this.shock - dt);
+    const k = this.shock / this.shockLen; // 1 → 0
+    const on = Math.floor(this.time * 30) % 2 === 0; // pisca rápido
+    this.ballMat.emissive.set(on ? 0xbff4ff : 0x2a6cff);
+    this.ballMat.emissiveIntensity = 0.4 + 0.8 * k;
+    const halo = this.shockHalo.material as THREE.MeshBasicMaterial;
+    halo.opacity = (on ? 0.55 : 0.25) * k;
+    this.shockHalo.scale.setScalar(1 + Math.random() * 0.25);
+    this.shockHalo.visible = this.shock > 0;
+    if (this.shockLen > 0.5) {
+      // Tremor de tela, diminuindo.
+      const amp = 0.14 * k;
+      this.camera.position.x += (Math.random() - 0.5) * amp;
+      this.camera.position.y += (Math.random() - 0.5) * amp;
+    }
+    for (const sp of this.shockSparks) {
+      if (!sp.obj.visible) continue;
+      sp.vel.y -= 14 * dt;
+      sp.obj.position.addScaledVector(sp.vel, dt);
+      sp.obj.scale.setScalar(Math.max(0.01, k));
+      if (this.shock <= 0) sp.obj.visible = false;
+    }
+  }
+
+  render(): void {
+    this.renderer.render(this.scene, this.camera);
+  }
+
+  /** Ajusta tela e distância da câmera para a torre inteira caber na largura (celular em pé ou deitado). */
+  resize(): void {
+    const parent = this.renderer.domElement.parentElement;
+    const w = parent?.clientWidth || window.innerWidth;
+    const h = parent?.clientHeight || window.innerHeight;
+    this.renderer.setSize(w, h);
+    const aspect = w / h;
+    this.camera.aspect = aspect;
+    this.camera.updateProjectionMatrix();
+    const halfV = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
+    const needW = R_OUT * 1.3; // meia largura visível desejada
+    this.camDist = Math.max(10, needW / (halfV * Math.min(aspect, 1)));
+    // A neblina começa logo atrás da torre: só os andares lá embaixo somem nela.
+    this.fog.near = this.camDist + 4;
+    this.fog.far = this.camDist + 26;
+    this.backdrop.resize();
+  }
+}

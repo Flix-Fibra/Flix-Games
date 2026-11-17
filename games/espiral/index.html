@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0b0b0d" />
+    <title>Torre de Sinal</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #0b0b0d; overflow: hidden; }
+      body { overscroll-behavior: none; touch-action: none; -webkit-user-select: none; user-select: none;
+             -webkit-touch-callout: none; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); box-sizing: border-box; }
+      #game { width: 100%; height: 100%; }
+      canvas { display: block; }
+      #hud { position: fixed; inset: 0; pointer-events: none; color: #fff; font-family: "Trebuchet MS", Verdana, sans-serif;
+             padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+      #hud .top { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 0; }
+      #hud .portrait { width: 48px; height: 48px; border-radius: 50%; overflow: hidden; background: rgba(0,0,0,.35);
+                       border: 2px solid rgba(255,255,255,.7); }
+      #hud .portrait canvas { width: 100%; height: 100%; }
+      #hud .score { text-align: center; text-shadow: 0 2px 6px rgba(0,0,0,.5); }
+      #hud .score b { display: block; font-size: 44px; line-height: 1; }
+      #hud .score small { font-size: 12px; opacity: .8; }
+      #hud .best { font-size: 11px; text-align: right; opacity: .85; min-width: 48px; text-shadow: 0 1px 4px rgba(0,0,0,.5); }
+      #hud .best b { font-size: 18px; }
+      #hud .phase { display: flex; align-items: center; gap: 8px; padding: 8px 16px; font-size: 11px;
+                    text-shadow: 0 1px 4px rgba(0,0,0,.5); }
+      #hud .bar { flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,.25); overflow: hidden; }
+      #hud .bar i { display: block; height: 100%; width: 0; background: #d4142c; transition: width .2s; }
+      #hud .shield { padding: 2px 8px; border-radius: 10px; background: #37e2ff; color: #062a33; font-weight: bold;
+                     visibility: hidden; }
+      #hud .shield.on { visibility: visible; }
+      #hud .rocket { display: flex; align-items: center; gap: 8px; padding: 0 16px; font-size: 11px; font-weight: bold;
+                     text-shadow: 0 1px 4px rgba(0,0,0,.5); }
+      #hud .rocket .bar i { background: linear-gradient(90deg, #ff8a1f, #ffd02e); }
+      #hud .rocket.on span { color: #ffd02e; }
+      #hud .rocket.on .bar { box-shadow: 0 0 10px #ff8a1f; }
+      #hud .toast { position: absolute; left: 50%; top: 22%; transform: translate(-50%, 10px); opacity: 0;
+                    transition: opacity .25s, transform .25s; background: rgba(0,0,0,.6); padding: 8px 16px;
+                    border-radius: 18px; font-weight: bold; white-space: nowrap; }
+      #hud .toast.on { opacity: 1; transform: translate(-50%, 0); }
+      #hud .overlay { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center;
+                      justify-content: center; gap: 6px; text-align: center; padding: 24px; background: rgba(8,8,12,.62);
+                      pointer-events: auto; }
+      #hud .overlay.on { display: flex; }
+      #hud h1 { margin: 0 0 8px; font-size: 30px; } #hud h2 { margin: 0; font-size: 26px; }
+      #hud p { margin: 4px 0; line-height: 1.4; } #hud .muted { opacity: .75; font-size: 13px; }
+      #hud .big { font-size: 20px; } #hud .big b { font-size: 40px; }
+      #hud .hot { color: #f5c518; font-weight: bold; } #hud .sig { color: #37e2ff; font-weight: bold; }
+      #hud button { margin-top: 14px; font: bold 16px "Trebuchet MS", Verdana, sans-serif; color: #fff; background: #d4142c;
+                    border: 0; border-radius: 24px; padding: 13px 26px; min-height: 48px; cursor: pointer; }
+      #hud button[hidden] { display: none; }
+    </style>
+  </head>
+  <body>
+    <div id="game"></div>
+    <div id="hud"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

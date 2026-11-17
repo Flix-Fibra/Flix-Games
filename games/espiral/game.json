@@ -1,0 +1,9 @@
+{
+  "id": "espiral",
+  "name": "Torre de Sinal",
+  "_nome_de_trabalho": "G14 (Descida em espiral). Validar o nome com o marketing antes de publicar.",
+  "avatarTier": "B",
+  "avatarViews": ["portrait"],
+  "rankingMetric": "floors_descended",
+  "sdkVersion": "0.1.0"
+}
