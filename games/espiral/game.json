@@ -1,6 +1,10 @@
 {
   "id": "espiral",
-  "name": "Torre de Sinal",
+  "catalogo": "g14",
+  "capa": "img/logo.png",
+  "previa": "img/previa.webp",
+  "cores": ["#5B12D6", "#1C037C"],
+  "name": "Signal Drop",
   "_nome_de_trabalho": "G14 (Descida em espiral). Validar o nome com o marketing antes de publicar.",
   "avatarTier": "B",
   "avatarViews": ["portrait"],

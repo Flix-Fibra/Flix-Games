@@ -1,8 +1,11 @@
-import { DEFAULT_AVATAR, composePortrait, primaryColor, type AvatarConfig, type Expression } from '@flix/avatar';
+import { DEFAULT_AVATAR, composePortrait, type AvatarConfig, type Expression } from '@flix/avatar';
 import { createHubBridge, type HubToGame } from '@flix/game-sdk';
 import game_json from '../game.json';
 import { setMuted, sfx, unlockAudio } from './audio';
-import { CHARGE_MAX, FEVER_STREAK, FLOORS_PER_PHASE, ROCKET_FLOORS, Tower, newBall, phaseOf, speedOf, step, type BallState } from './logic';
+import {
+  CHARGE_MAX, FEVER_STREAK, FLOOR_THICK, FLOORS_PER_PHASE, ROCKET_FLOORS, Tower, floorY, newBall, phaseOf, segmentUnderBall, speedOf, step,
+  type BallState,
+} from './logic';
 import { loadBest, saveBest } from './storage';
 import { paletteFor } from './theme';
 import { World } from './world';
@@ -23,14 +26,16 @@ const hud = document.getElementById('hud')!;
 hud.innerHTML = `
   <div class="top">
     <div class="portrait"></div>
-    <div class="score"><b data-score>0</b><small>andares</small></div>
-    <div class="best">Recorde<br /><b data-best>0</b></div>
+    <div class="score chip"><b data-score>0</b><small>andares</small></div>
+    <div class="best chip">Recorde<b data-best>0</b></div>
   </div>
-  <div class="phase"><span data-phase-name></span><div class="bar"><i data-bar></i></div><span class="shield" data-shield>Escudo</span></div>
-  <div class="rocket" data-rocket-box><span>Foguete</span><div class="bar"><i data-rocket></i></div></div>
+  <div class="stats chip">
+    <div class="phase"><span data-phase-name></span><span class="shield" data-shield>Escudo</span><div class="bar"><i data-bar></i></div></div>
+    <div class="rocket" data-rocket-box><span>Foguete</span><div class="bar"><i data-rocket></i></div></div>
+  </div>
   <div class="toast" data-toast></div>
   <div class="overlay on" data-menu>
-    <h1>Torre de Sinal</h1>
+    <h1 class="logo"><img src="./img/logo.png" alt="Signal Drop" width="512" height="512" /></h1>
     <p>Arraste para girar a torre.<br />Passe pelos vãos e fuja da <span class="hot">alta tensão</span>.</p>
     <p class="muted">3 andares seguidos sem quicar quebram o próximo.<br />O <span class="sig">sinal</span> dá um escudo.</p>
     <button data-start>Toque para começar</button>
@@ -93,7 +98,7 @@ function applyAvatar(a: AvatarConfig): void {
   portraits.clear();
   for (const e of ['neutral', 'happy', 'sad'] as Expression[]) portraits.set(e, composePortrait(avatar, e));
   setPortrait('neutral');
-  world.setBallColor(primaryColor(avatar));
+  // A bola tem cor fixa (vermelho vivo): precisa ser reconhecida num olhar, seja qual for o avatar.
 }
 
 function showToast(text: string): void {
@@ -148,8 +153,8 @@ function gameOver(cause: string): void {
   });
   el.final.textContent = String(score);
   el.finalBest.textContent = score >= best && score > 0 ? 'Novo recorde!' : `Recorde: ${best}`;
-  // Dentro do hub, o botão de recomeçar é do hub (mensagem `restart`).
-  el.again.hidden = bridge.embedded;
+  // O botão de recomeçar é sempre o do jogo (o hub não mostra outro).
+  el.again.hidden = false;
   window.setTimeout(() => {
     if (mode === 'over') el.over.classList.add('on');
   }, 700);
@@ -222,6 +227,10 @@ function frame(now: number): void {
     if (mode === 'play') simulate(dt);
     world.setRotation(rotation);
     world.setBall(ball.y, mode === 'play' && ball.streak >= FEVER_STREAK, ball.shield, mode === 'play' && ball.streak > 0);
+    // Sombra da bola na placa logo abaixo (só se ali houver placa: no vão, não há onde projetar)
+    const abaixo = tower.get(nextFloor);
+    const temPlaca = !abaixo.broken && abaixo.segs[segmentUnderBall(rotation)] !== 'gap' && ball.rocket <= 0;
+    world.setShadow(temPlaca ? floorY(nextFloor) + FLOOR_THICK : null, ball.y);
     world.update(dt, ball.y);
     if (mode === 'play') updateHud();
     if (toastTimer > 0 && (toastTimer -= dt) <= 0) el.toast.classList.remove('on');

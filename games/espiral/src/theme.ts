@@ -1,6 +1,7 @@
 /**
- * Identidade visual do G14. Torre de telecom treliçada com andares de placas; o perigo é "alta tensão" (placa
- * grafite com aviso amarelo, moldura piscando e lateral zebrada). Cada marco de 10 andares troca o cenário (céu, neblina e cor das placas).
+ * Identidade visual do G14: arcade 3D fosco. Torre de telecom vermelha e branca (aço pintado), placas de metal
+ * grafite, alta tensão em listras vermelhas e a bola vermelha viva. Cada marco de 10 andares troca só o cenário
+ * (céu e cidade); o que é jogável (placas, perigo, bola, torre) não muda de cor.
  */
 export const FLIX_RED = '#d4142c';
 export const FONT = '"Trebuchet MS", Verdana, sans-serif';
@@ -24,8 +25,8 @@ export interface Palette {
 export const PALETTES: Palette[] = [
   {
     name: 'Fim de tarde', sky: 0x7a4a6e, plate: 0xe9e4f2, plateEdge: 0xffffff, pole: 0x8a8f9c, band: 0xd4142c,
-    top: '#2b1d4a', horizon: '#f08a5d', grass: 0x7d8f55, light: 0.8,
-    cloud: { color: 0xffc2a8, opacity: 0.55 },
+    top: '#292441', horizon: '#D39172', grass: 0x7d8f55, light: 0.75,
+    cloud: { color: 0xffc2a8, opacity: 0.3 },
   },
   {
     name: 'Noite na cidade', sky: 0x1a2550, plate: 0x7fa6ff, plateEdge: 0xc7d7ff, pole: 0x5b6274, band: 0xd4142c,
@@ -49,7 +50,10 @@ export const PALETTES: Palette[] = [
   },
 ];
 
-export const DANGER = { plate: '#2a2d34', yellow: '#f5c518', yellowDim: '#a8860f' }; // placa de alta tensão
+export const DANGER = { red: '#F04450', stripe: '#9F1829' }; // alta tensão: listras diagonais
+export const PLATE = { top: 0x414a56, side: 0x252c35 }; // placa: topo grafite médio, laterais grafite escuro
+export const STEEL = { red: 0xb91f35, white: 0xe4e7eb, antenna: 0xd7dce2 }; // torre (aço pintado) e antenas
+export const BALL_HEX = '#FF3349'; // bola: vermelho vivo, acetinada
 export const SIGNAL = 0x37e2ff; // bônus de sinal e escudo
 
 export function paletteFor(phase: number): Palette {

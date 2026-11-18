@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { HubToGame } from '@flix/game-sdk';
 import { makeItemTextures } from '../art';
-import { COLORS, FONT_TEXT, GAME_H, GAME_W, IMAGES } from '../theme';
+import { COLORS, ENEMIES, ENEMY_FRAME, FONT_TEXT, GAME_H, GAME_W, IMAGES } from '../theme';
 
 const INIT_TIMEOUT_MS = 1500;
 
@@ -19,10 +19,17 @@ export class BootScene extends Phaser.Scene {
     const bar = this.add.rectangle(GAME_W / 2 - barW / 2, GAME_H / 2, 0, 16, COLORS.flixRed).setOrigin(0, 0.5);
     this.load.on('progress', (v: number) => (bar.width = barW * v));
     for (const [key, file] of IMAGES) this.load.image(key, `img/${file}`);
+    for (const e of ENEMIES) this.load.spritesheet(e.key, `img/${e.file}`, { frameWidth: ENEMY_FRAME, frameHeight: ENEMY_FRAME });
   }
 
   create(): void {
     makeItemTextures(this);
+    // Animação de cada inimigo (4 quadros em loop, no ritmo do GIF original)
+    for (const e of ENEMIES) {
+      if (!this.anims.exists(e.key)) {
+        this.anims.create({ key: e.key, frames: this.anims.generateFrameNumbers(e.key, { start: 0, end: 3 }), frameRate: e.fps, repeat: -1 });
+      }
+    }
 
     const existing = this.registry.get('hubInit') as Extract<HubToGame, { type: 'init' }> | undefined;
     if (existing) {

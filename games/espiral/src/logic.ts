@@ -20,6 +20,10 @@ export const FLOORS_PER_PHASE = 10; // marco: muda o cenário e acelera um pouco
 export const CHARGE_MAX = 12; // andares atravessados para encher a barra do foguete
 export const ROCKET_FLOORS = 8; // andares que o foguete quebra em sequência
 export const ROCKET_SPEED = 20; // descida do foguete (constante, sem gravidade)
+// Retas: trechos de andares com o vão alinhado (a bola despenca direto por vários andares). É a graça do jogo.
+export const RETA_CHANCE = 0.6; // chance de começar uma reta depois de um andar comum
+export const RETA_MIN = 3; // andares alinhados numa reta
+export const RETA_MAX = 6;
 
 export type Seg = 'solid' | 'gap' | 'danger' | 'bonus';
 export type DeathCause = 'danger';
@@ -94,7 +98,7 @@ export function segmentUnderBall(rotation: number): number {
  * Gera o andar `index`. `prevGapSegs` são as fatias vazadas do andar de cima: a fatia logo abaixo delas
  * nunca é perigosa, porque é onde a bola cai se o jogador não girar (queda justa).
  */
-export function generateFloor(index: number, rand: () => number, prevGapSegs: number[]): Floor {
+export function generateFloor(index: number, rand: () => number, prevGapSegs: number[], alinhar?: number): Floor {
   const segs: Seg[] = new Array<Seg>(SEGMENTS).fill('solid');
   if (index === 0) {
     // Primeiro andar: só um vão, sem perigo, para aprender.
@@ -104,7 +108,8 @@ export function generateFloor(index: number, rand: () => number, prevGapSegs: nu
 
   // Vão: 2 fatias no começo, 1 fatia a partir do andar 25.
   const gapWidth = index < 25 ? 2 : 1;
-  const gapStart = Math.floor(rand() * SEGMENTS);
+  // Numa reta, o vão começa na mesma fatia do andar de cima (alinhado); fora dela, em qualquer fatia.
+  const gapStart = alinhar ?? Math.floor(rand() * SEGMENTS);
   for (let k = 0; k < gapWidth; k++) segs[wrap(gapStart + k)] = 'gap';
 
   // Perigo: nenhum nos 3 primeiros andares, depois cresce até 5 fatias.
@@ -127,11 +132,19 @@ export function generateFloor(index: number, rand: () => number, prevGapSegs: nu
   return { index, segs, broken: false };
 }
 
+/** Primeira fatia do vão de um andar (o vão é contínuo; pode dar a volta no 0). */
+export function gapStartOf(f: Floor): number | undefined {
+  for (let k = 0; k < SEGMENTS; k++) if (f.segs[k] === 'gap' && f.segs[wrap(k - 1)] !== 'gap') return k;
+  return undefined;
+}
+
 /** Torre infinita: gera andares sob demanda, sempre na mesma ordem para a mesma semente. */
 export class Tower {
   private readonly rand: () => number;
   private readonly floors = new Map<number, Floor>();
   private lastGenerated = -1;
+  private retaRestante = 0; // andares que ainda faltam na reta atual
+  private fimDeReta = false; // a reta acabou neste andar: o próximo não pode emendar outra
 
   constructor(seed: number) {
     this.rand = rng(seed);
@@ -142,7 +155,24 @@ export class Tower {
       const i = this.lastGenerated + 1;
       const prev = this.floors.get(i - 1);
       const prevGaps = prev ? prev.segs.map((s, k) => (s === 'gap' ? k : -1)).filter((k) => k >= 0) : [];
-      this.floors.set(i, generateFloor(i, this.rand, prevGaps));
+      // Reta: continua alinhando enquanto houver andares nela; senão, sorteia se começa uma nova
+      let alinhar: number | undefined;
+      const inicio = prev ? gapStartOf(prev) : undefined;
+      if (i >= 2 && inicio !== undefined) {
+        if (this.retaRestante > 0) {
+          alinhar = inicio;
+          this.retaRestante--;
+        } else if (!this.fimDeReta && this.rand() < RETA_CHANCE) {
+          alinhar = inicio;
+          // o andar de cima já conta como o primeiro da reta
+          this.retaRestante = RETA_MIN - 2 + Math.floor(this.rand() * (RETA_MAX - RETA_MIN + 1));
+        } else {
+          // Andar comum: o vão vai para outro lugar (a pelo menos 2 fatias), para o jogador girar entre as retas
+          alinhar = (inicio + 2 + Math.floor(this.rand() * (SEGMENTS - 3))) % SEGMENTS;
+        }
+        this.fimDeReta = alinhar === inicio && this.retaRestante === 0;
+      }
+      this.floors.set(i, generateFloor(i, this.rand, prevGaps, alinhar));
       this.lastGenerated = i;
     }
     const f = this.floors.get(index);

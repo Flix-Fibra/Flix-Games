@@ -1,13 +1,13 @@
 import Phaser from 'phaser';
 import type { HubBridge } from '@flix/game-sdk';
 import {
-  ENERGY_MS, FIRE_COOLDOWN, GUN_SHOTS, JETPACK_MS, JETPACK_WARN_MS, SHOT_R, SHOT_SPEED, VIRUS_HIT_R, VIRUS_R,
+  ENERGY_MS, FIRE_COOLDOWN, GUN_SHOTS, JETPACK_MS, JETPACK_WARN_MS, SHOT_R, SHOT_SPEED, VIRUS_HIT_R, VIRUS_LOW, VIRUS_R, WAVE_HIT_R,
   addKill, distanceM, scoreOf, circleHitsBox, circlesOverlap, createPlayer, createRun, giveEnergy, giveGun, giveJetpack, hitbox, multiplier, mulberry32, useShot,
   nextPickupGap, nextPickupHeight, nextVirusGap, nextVirusHeight, virusDensityAt, onGround, pickPickupKind, speedAt, stepPlayer, tickRun,
   type Controls, type PickupKind,
 } from '../logic';
 import {
-  BRIDGE, COLORS, FONT, FONT_TEXT, GAME_H, GAME_W, GROUND_Y, PLAYER_X, SCENES, SCENE_REPEAT, SCENE_W, SPRITE_ANCHOR, START_OFFSET, SPRITE_SCALE,
+  BRIDGE, COLORS, ENEMIES, ENEMY_SCALE, FONT, FONT_TEXT, GAME_H, GAME_W, GROUND_Y, PLAYER_X, SCENES, SCENE_REPEAT, SCENE_W, SPRITE_ANCHOR, START_OFFSET, SPRITE_SCALE,
 } from '../theme';
 
 const STRIDE_PX = 24.5; // distância percorrida a cada troca de quadro da corrida (4 quadros)
@@ -37,7 +37,8 @@ interface Wave {
   s1: number;
 }
 interface Pickup { kind: PickupKind; x: number; h: number; img: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image }
-interface Virus { x: number; h: number; phase: number; img: Phaser.GameObjects.Image }
+/** Inimigo (o nome interno continua "vírus": a regra é a mesma; só o desenho mudou). `chao`: anda no chão, sem flutuar. */
+interface Virus { x: number; h: number; phase: number; img: Phaser.GameObjects.Sprite; chao: boolean }
 interface Shot { x: number; y: number; img: Phaser.GameObjects.Image }
 
 const PICKUP_LOOK: Record<PickupKind, { tex: string; scale: number; glow: number; toast: string }> = {
@@ -187,7 +188,7 @@ export class PlayScene extends Phaser.Scene {
     this.hudDist = this.add.text(26, 88, '0 m x 0', { fontFamily: FONT_TEXT, fontSize: '20px', color: COLORS.textMuted, ...stroke }).setDepth(DEPTH.hud);
     this.hudMult = this.add.text(0, 44, 'x3', { fontFamily: FONT, fontSize: '30px', color: '#5CFF9A', ...stroke }).setDepth(DEPTH.hud).setVisible(false);
     this.add
-      .text(GAME_W - 24, 14, 'VÍRUS ABATIDOS', { fontFamily: FONT_TEXT, fontSize: '18px', color: COLORS.textMuted, ...stroke })
+      .text(GAME_W - 24, 14, 'INIMIGOS ABATIDOS', { fontFamily: FONT_TEXT, fontSize: '18px', color: COLORS.textMuted, ...stroke })
       .setOrigin(1, 0)
       .setDepth(DEPTH.hud);
     this.hudKills = this.add
@@ -238,10 +239,10 @@ export class PlayScene extends Phaser.Scene {
       ['ABAIXAR', '↓ ou S, ou toque no lado esquerdo (segurar)'],
       ['ATIRAR', 'ESPAÇO, ou botão ATIRAR no toque (só com a arma de wifi)'],
       ['ROTEADOR', 'vira jetpack: segure PULAR para subir. Só gasta no ar'],
-      ['ARMA WI-FI', '10 disparos: mire na altura do vírus e atire'],
+      ['ARMA WI-FI', '10 disparos: mire na altura do inimigo e atire'],
       ['ENERGIA', 'a distância vale x3 por 15 segundos'],
-      ['VÍRUS', 'encostar = fim de jogo. Pule, abaixe ou atire neles'],
-      ['PONTOS', 'distância percorrida (m) x vírus abatidos'],
+      ['INIMIGOS', 'encostar = fim de jogo. Pule, abaixe ou atire neles'],
+      ['PONTOS', 'distância percorrida (m) x inimigos abatidos'],
     ];
     const objs: Phaser.GameObjects.GameObject[] = [
       this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x03122e, 0.62),
@@ -462,7 +463,13 @@ export class PlayScene extends Phaser.Scene {
       }
       w.img.x += w.vx * dt;
       w.img.y += w.vy * dt;
-      w.img.setScale(w.s0 + (w.s1 - w.s0) * t).setAlpha(0.95 * (1 - t * t));
+      const esc = w.s0 + (w.s1 - w.s0) * t;
+      w.img.setScale(esc).setAlpha(0.95 * (1 - t * t));
+      // o "vapor" do jetpack mata os vírus que encosta (conta como abate, igual ao tiro)
+      if (this.state !== 'dead') {
+        const hit = this.viruses.findIndex((v) => circlesOverlap(w.img.x, w.img.y, WAVE_HIT_R * esc, v.x, GROUND_Y - v.h, VIRUS_R));
+        if (hit >= 0) this.killVirus(hit);
+      }
     }
   }
 
@@ -593,8 +600,13 @@ export class PlayScene extends Phaser.Scene {
   private spawnVirus(): void {
     const h = nextVirusHeight(this.rng);
     const x = GAME_W + 60;
-    const img = this.add.image(x, GROUND_Y - h, 'virus').setScale(0.5).setDepth(DEPTH.virus);
-    this.viruses.push({ x, h, phase: this.rng() * 6.28, img });
+    // Na altura de pular vem um inimigo de chão; na de abaixar, um que flutua
+    const chao = h === VIRUS_LOW;
+    const opcoes = ENEMIES.filter((e) => e.chao === chao);
+    const e = opcoes[Math.floor(this.rng() * opcoes.length)]!;
+    const img = this.add.sprite(x, GROUND_Y - h, e.key).setScale(ENEMY_SCALE).setDepth(DEPTH.virus).setFlipX(e.virar);
+    img.play({ key: e.key, startFrame: Math.floor(this.rng() * 4) });
+    this.viruses.push({ x, h, phase: this.rng() * 6.28, img, chao });
   }
 
   private updateViruses(speed: number, dt: number): void {
@@ -602,7 +614,8 @@ export class PlayScene extends Phaser.Scene {
     for (let i = this.viruses.length - 1; i >= 0; i--) {
       const v = this.viruses[i]!;
       v.x -= (speed + VIRUS_EXTRA_SPEED) * dt;
-      v.img.setPosition(v.x, GROUND_Y - v.h + Math.sin(this.seconds * 5 + v.phase) * 3).setAngle(Math.sin(this.seconds * 3 + v.phase) * 8);
+      if (v.chao) v.img.setPosition(v.x, GROUND_Y - v.h); // no chão: só anda (a animação do GIF já mexe as patas)
+      else v.img.setPosition(v.x, GROUND_Y - v.h + Math.sin(this.seconds * 5 + v.phase) * 3).setAngle(Math.sin(this.seconds * 3 + v.phase) * 6);
       if (circleHitsBox(v.x, v.h, VIRUS_HIT_R, box)) {
         this.die();
         return;
@@ -618,7 +631,8 @@ export class PlayScene extends Phaser.Scene {
     const v = this.viruses[i]!;
     const pts = addKill(this.run);
     this.viruses.splice(i, 1);
-    this.tweens.add({ targets: v.img, scale: 0.85, alpha: 0, duration: 180, onComplete: () => v.img.destroy() });
+    v.img.stop();
+    this.tweens.add({ targets: v.img, scale: ENEMY_SCALE * 1.6, alpha: 0, duration: 180, onComplete: () => v.img.destroy() });
     const t = this.add
       .text(v.x, GROUND_Y - v.h - 30, `+${pts}`, { fontFamily: FONT, fontSize: '30px', color: multiplier(this.run) > 1 ? '#5CFF9A' : '#FFD43B', stroke: '#06214d', strokeThickness: 6 })
       .setOrigin(0.5)
@@ -666,17 +680,15 @@ export class PlayScene extends Phaser.Scene {
     txt(130, 'FIM DE JOGO', 46, '#FF5A6A');
     txt(190, 'PONTOS', 20, COLORS.textMuted, FONT_TEXT);
     txt(242, String(this.score), 64, '#FFFFFF');
-    txt(300, `${distanceM(this.run)} m  x  ${this.run.kills} ${this.run.kills === 1 ? 'vírus abatido' : 'vírus abatidos'}`, 24, '#FFD1D6', FONT_TEXT);
+    txt(300, `${distanceM(this.run)} m  x  ${this.run.kills} ${this.run.kills === 1 ? 'inimigo abatido' : 'inimigos abatidos'}`, 24, '#FFD1D6', FONT_TEXT);
 
-    // Dentro do hub, o botão de recomeçar é do hub (mensagem `restart`); fora dele (desenvolvimento) mostramos o nosso.
-    if (!this.bridge.embedded) {
+    // O botão de recomeçar é sempre o do jogo (o hub não mostra outro; a mensagem `restart` do hub continua valendo).
+    {
       const btn = this.add.rectangle(cx, 372, 260, 64, COLORS.flixRed).setStrokeStyle(4, 0xffffff).setDepth(DEPTH.over + 2).setInteractive({ useHandCursor: true });
       txt(372, 'REINICIAR', 30, '#FFFFFF');
       btn.on('pointerover', () => btn.setFillStyle(0xf0304a));
       btn.on('pointerout', () => btn.setFillStyle(COLORS.flixRed));
       btn.once('pointerdown', () => this.goMenu());
-    } else {
-      txt(372, 'Toque em “Jogar de novo”', 22, COLORS.textMuted, FONT_TEXT);
     }
   }
 

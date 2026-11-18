@@ -63,6 +63,20 @@ export const COLORS = {
 export const FONT = "'Arial Black', 'Segoe UI Black', 'Trebuchet MS', Arial, sans-serif";
 export const FONT_TEXT = "'Segoe UI', 'Trebuchet MS', Arial, sans-serif";
 
+/**
+ * Inimigos (GIFs do gestor viraram folhas de 4 quadros de 192x192, em `public/img/inimigos/`). `chao` = aparecem na
+ * altura de pular (VIRUS_LOW); os outros flutuam na altura de abaixar (VIRUS_HIGH). A colisão é a mesma de antes.
+ * `virar` = espelhar na horizontal (todos vêm da direita e devem olhar para a esquerda, para a personagem).
+ */
+export const ENEMIES = [
+  { key: 'en_rompe_fibra', file: 'inimigos/rompe_fibra.png', fps: 6.7, chao: true, virar: false }, // Rompe Fibra: corta o cabo
+  { key: 'en_pacote_corrompido', file: 'inimigos/pacote_corrompido.png', fps: 6.7, chao: true, virar: false }, // Pacote Corrompido
+  { key: 'en_curto_circuito', file: 'inimigos/curto_circuito.png', fps: 8.3, chao: false, virar: false }, // Curto Circuito
+  { key: 'en_lagao', file: 'inimigos/lagao.png', fps: 5.5, chao: false, virar: true }, // Lagão (o lag): espelhado para olhar para a personagem
+] as const;
+export const ENEMY_FRAME = 192;
+export const ENEMY_SCALE = 0.46; // ~88 px na tela, perto do tamanho do vírus antigo (78 px)
+
 /** Imagens carregadas na abertura: [chave, arquivo em `public/img/`]. */
 export const IMAGES: ReadonlyArray<readonly [string, string]> = [
   ['menu_logo', 'menu/logo.png'], // logo Flix Runner sem fundo (517x269)
@@ -72,7 +86,6 @@ export const IMAGES: ReadonlyArray<readonly [string, string]> = [
   ['ponte', 'ponte.png'],
   ['arma', 'itens/arma.png'], // arma de wifi (bônus), 100x104
   ['bateria', 'itens/bateria.png'], // sinal de energia (bônus x3), 78x143
-  ['virus', 'itens/virus.png'], // vírus (inimigo), 156x161 // tabuleiro da ponte vermelha, sem fundo e sem a treliça de cima (1360x382)
   // personagem de lado (recortado da folha do gestor): corrida (run_2 e run_3 têm as pernas trocadas), agachada, salto, queda e jetpack
   ...(['run_0', 'run_1', 'run_2', 'run_3', 'jump', 'fall', 'fly_0', 'fly_1'] as const).map((n) => [`pl_${n}`, `personagem/${n}.png`] as const),
   // salto com arma (4 quadros do gestor): agachar, subir, topo e descer

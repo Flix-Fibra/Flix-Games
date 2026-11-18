@@ -9,8 +9,11 @@ import {
   FLOOR_THICK,
   SEG_ANGLE,
   SEGMENTS,
+  RETA_MAX,
+  RETA_MIN,
   Tower,
   floorY,
+  gapStartOf,
   generateFloor,
   newBall,
   rng,
@@ -182,6 +185,28 @@ describe('física', () => {
     expect(ball.safeLanding).toBe(false);
     // Depois do pouso seguro, a alta tensão volta a matar.
     expect(dropOn(t, CHARGE_MAX + ROCKET_FLOORS, rotationFor(0)).events.at(-1)).toMatchObject({ type: 'dead' });
+  });
+
+  it('gera retas: trechos de andares com o vão alinhado, de RETA_MIN a RETA_MAX andares', () => {
+    const t = new Tower(2024);
+    const inicios = Array.from({ length: 300 }, (_, i) => gapStartOf(t.get(i)));
+    expect(inicios.every((g) => g !== undefined)).toBe(true);
+    // tamanho de cada trecho com o mesmo vão seguido
+    const trechos: number[] = [];
+    let n = 1;
+    for (let i = 1; i < inicios.length; i++) {
+      if (inicios[i] === inicios[i - 1]) n++;
+      else { trechos.push(n); n = 1; }
+    }
+    const retas = trechos.filter((x) => x >= RETA_MIN);
+    expect(retas.length).toBeGreaterThan(20); // muitas retas em 300 andares
+    // depois de uma reta vem um andar com o vão em outro lugar: retas não emendam
+    expect(Math.max(...trechos)).toBeLessThanOrEqual(RETA_MAX);
+    // a fatia logo abaixo de um vão nunca é perigosa, então a reta é segura de despencar
+    for (let i = 1; i < 300; i++) {
+      const g = inicios[i - 1]!;
+      expect(t.get(i).segs[g]).not.toBe('danger');
+    }
   });
 
   it('a velocidade sobe por marco e tem teto', () => {

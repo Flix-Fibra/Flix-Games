@@ -1,10 +1,12 @@
 import * as THREE from 'three';
-import { OUTLINE, toon } from './toon';
+import { liso } from './liso';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BALL_R, BALL_WORLD_ANGLE, FLOOR_GAP, FLOOR_THICK, SEG_ANGLE, SEGMENTS, floorY, type Tower } from './logic';
 import { Backdrop } from './backdrop';
 import { Ground } from './ground';
-import { DANGER, SIGNAL, paletteFor } from './theme';
+import { BALL_HEX, DANGER, PLATE, SIGNAL, STEEL, paletteFor } from './theme';
+
+const BALL_COLOR = new THREE.Color(BALL_HEX);
 
 /** Desenho 3D da torre e da bola. Não tem regra de jogo: só mostra o estado que `logic.ts` calcula. */
 
@@ -29,9 +31,15 @@ interface Debris {
   life: number;
 }
 
+// Espessura visual da placa: ~25% mais fina que a da física (FLOOR_THICK). O TOPO continua em y = FLOOR_THICK, que é
+// onde a bola bate; só a parte de baixo sobe. Chanfro pequeno nas bordas para pegar uma linha fina de luz.
+const PLATE_VISUAL = FLOOR_THICK * 0.75;
+const BEVEL = 0.035;
+
 /**
  * Arco de anel (placa) deitado entre os ângulos a0 e a1 da torre, com topo em y = FLOOR_THICK. Fatias vizinhas do
  * mesmo tipo viram um arco só: o jogador vê um anel contínuo e mira no vão, não em "quadrados".
+ * Grupos de material: 0 = topo e fundo, 1 = laterais e chanfro (cores diferentes para ler a forma do anel).
  */
 function arcGeometry(a0: number, a1: number): THREE.BufferGeometry {
   const s = new THREE.Shape();
@@ -40,77 +48,34 @@ function arcGeometry(a0: number, a1: number): THREE.BufferGeometry {
   s.lineTo(R_IN * Math.cos(a1), R_IN * Math.sin(a1));
   s.absarc(0, 0, R_IN, a1, a0, true);
   s.closePath();
-  const g = new THREE.ExtrudeGeometry(s, { depth: FLOOR_THICK, bevelEnabled: false, curveSegments: Math.max(4, Math.round(((a1 - a0) / SEG_ANGLE) * 6)) });
+  const depth = PLATE_VISUAL - 2 * BEVEL;
+  const g = new THREE.ExtrudeGeometry(s, {
+    depth,
+    bevelEnabled: true,
+    bevelThickness: BEVEL,
+    bevelSize: BEVEL,
+    bevelOffset: -BEVEL, // o chanfro entra na placa: o contorno (e o vão) fica exatamente onde era
+    bevelSegments: 1,
+    curveSegments: Math.max(4, Math.round(((a1 - a0) / SEG_ANGLE) * 6)),
+  });
   // A forma está no plano XY; deitar faz o ângulo t virar o ponto (cos t, -sin t) em XZ e a espessura virar +y.
   g.rotateX(-Math.PI / 2);
+  // Extrusão vai de -BEVEL a depth + BEVEL; sobe para o topo ficar em FLOOR_THICK.
+  g.translate(0, FLOOR_THICK - depth - BEVEL, 0);
   return g;
 }
 
-/** Aviso de alta tensão (triângulo amarelo com raio), fundo transparente: um por fatia, inteiro. */
-function warningIcon(): THREE.CanvasTexture {
-  const c = document.createElement('canvas');
-  c.width = c.height = 128;
-  const g = c.getContext('2d')!;
-  g.fillStyle = DANGER.yellow;
-  g.strokeStyle = '#111111';
-  g.lineWidth = 7;
-  g.lineJoin = 'round';
-  g.beginPath();
-  g.moveTo(64, 12);
-  g.lineTo(118, 110);
-  g.lineTo(10, 110);
-  g.closePath();
-  g.fill();
-  g.stroke();
-  g.fillStyle = '#111111';
-  g.beginPath(); // raio
-  g.moveTo(72, 38);
-  g.lineTo(48, 78);
-  g.lineTo(62, 78);
-  g.lineTo(54, 102);
-  g.lineTo(82, 62);
-  g.lineTo(67, 62);
-  g.closePath();
-  g.fill();
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = 4;
-  return t;
-}
-
-/** Moldura amarela por dentro da borda da placa (faixa de 0,08), deitada sobre o topo. */
-function borderGeometry(a0: number, a1: number): THREE.BufferGeometry {
-  const w = 0.08;
-  const outer = new THREE.Shape();
-  outer.moveTo(R_OUT * Math.cos(a0), R_OUT * Math.sin(a0));
-  outer.absarc(0, 0, R_OUT, a0, a1, false);
-  outer.lineTo(R_IN * Math.cos(a1), R_IN * Math.sin(a1));
-  outer.absarc(0, 0, R_IN, a1, a0, true);
-  outer.closePath();
-  const ri = R_IN + w;
-  const ro = R_OUT - w;
-  const da = w / R_IN; // recuo angular suficiente até na borda de dentro
-  const hole = new THREE.Path();
-  hole.moveTo(ro * Math.cos(a0 + da), ro * Math.sin(a0 + da));
-  hole.absarc(0, 0, ro, a0 + da, a1 - da, false);
-  hole.lineTo(ri * Math.cos(a1 - da), ri * Math.sin(a1 - da));
-  hole.absarc(0, 0, ri, a1 - da, a0 + da, true);
-  hole.closePath();
-  outer.holes.push(hole);
-  const g = new THREE.ShapeGeometry(outer, 10);
-  g.rotateX(-Math.PI / 2);
-  g.translate(0, FLOOR_THICK + 0.004, 0);
-  return g;
-}
-
-/** Lateral da placa de alta tensão: faixa zebrada preta e amarela. */
-function hazardTexture(): THREE.CanvasTexture {
+/**
+ * Alta tensão: listras diagonais grandes em vermelho (#F04450) e vermelho escuro (#9F1829). Aplicada no topo da placa,
+ * cuja UV é a própria posição em unidades do mundo: listras largas, visíveis mesmo girando.
+ */
+function stripeTexture(): THREE.CanvasTexture {
   const c = document.createElement('canvas');
   c.width = c.height = 64;
   const g = c.getContext('2d')!;
-  g.fillStyle = DANGER.yellow;
+  g.fillStyle = DANGER.red;
   g.fillRect(0, 0, 64, 64);
-  g.fillStyle = '#151515';
+  g.fillStyle = DANGER.stripe;
   for (let i = -64; i < 128; i += 32) {
     g.beginPath();
     g.moveTo(i, 64);
@@ -123,13 +88,28 @@ function hazardTexture(): THREE.CanvasTexture {
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.colorSpace = THREE.SRGBColorSpace;
-  t.repeat.set(2, 2.5);
+  t.anisotropy = 4;
+  t.repeat.set(1 / 0.9, 1 / 0.9); // um par de listras a cada 0,9 unidade (cada listra ~0,45: lê girando)
   return t;
+}
+
+/** Sombra suave da bola (mancha redonda que some na borda). */
+function shadowTexture(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d')!;
+  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, 'rgba(0,0,0,0.85)');
+  grad.addColorStop(0.55, 'rgba(0,0,0,0.45)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
 }
 
 /** Ícone de sinal (três arcos e um ponto), usado no bônus e no escudo. */
 function signalIcon(): THREE.Group {
-  const mat = toon({ color: SIGNAL, emissive: SIGNAL, emissiveIntensity: 0.9 });
+  const mat = liso({ color: SIGNAL, emissive: SIGNAL, emissiveIntensity: 0.9 });
   const g = new THREE.Group();
   for (let i = 0; i < 3; i++) {
     const arc = new THREE.Mesh(new THREE.TorusGeometry(0.14 + i * 0.12, 0.035, 6, 16, Math.PI / 2), mat);
@@ -202,17 +182,21 @@ export class World {
   private readonly trussGeo = trussGeometry(FLOOR_GAP, TRUSS_HALF, TRUSS_HALF, 2).translate(0, FLOOR_THICK - FLOOR_GAP, 0);
   private readonly splatGeo = new THREE.CircleGeometry(0.3, 14).rotateX(-Math.PI / 2);
 
-  private readonly plateMat = toon({ roughness: 0.45, metalness: 0.25 });
-  private readonly poleMat = toon({ roughness: 0.4, metalness: 0.6 });
-  private readonly bandMat = toon({ roughness: 0.5 });
-  private readonly bandWhiteMat = toon({ color: 0xf2f2f2, roughness: 0.5 });
+  // Placas: metal fosco, topo grafite médio e laterais grafite escuro (o topo mais claro mostra a forma do anel)
+  private readonly plateTopMat = liso({ color: PLATE.top, roughness: 0.85, metalness: 0 });
+  private readonly plateSideMat = liso({ color: PLATE.side, roughness: 0.6, metalness: 0 });
+  private readonly plateMats = [this.plateTopMat, this.plateSideMat];
+  // Torre: aço pintado (faces retas, brilho discreto); vermelho mais escuro que a bola para não confundir
+  private readonly poleMat = liso({ color: 0x9aa1ab, roughness: 0.5, metalness: 0.45 });
+  private readonly bandMat = liso({ color: STEEL.red, roughness: 0.55, metalness: 0.25 });
+  private readonly bandWhiteMat = liso({ color: STEEL.white, roughness: 0.55, metalness: 0.2 });
   private readonly panelGeo = new THREE.BoxGeometry(0.34, 0.95, 0.1);
-  private readonly panelMat = toon({ color: 0xe9edf2, roughness: 0.6 });
+  private readonly panelMat = liso({ color: STEEL.antenna, roughness: 0.6, metalness: 0.1 });
   private readonly bracketGeo = new THREE.BoxGeometry(0.06, 0.06, 0.2);
   private readonly dishGeo = new THREE.CylinderGeometry(0.34, 0.3, 0.2, 20).rotateX(Math.PI / 2);
   private readonly dishFaceGeo = new THREE.CircleGeometry(0.3, 20).translate(0, 0, 0.101);
-  private readonly dishMat = toon({ color: 0xdfe3e8, roughness: 0.5 });
-  private readonly dishFaceMat = toon({ color: 0xfafafa, roughness: 0.8 });
+  private readonly dishMat = liso({ color: STEEL.antenna, roughness: 0.55, metalness: 0.1 });
+  private readonly dishFaceMat = liso({ color: STEEL.antenna, roughness: 0.85 });
   private readonly sharedGeos = new Set<THREE.BufferGeometry>([
     this.trussGeo,
     this.dishGeo,
@@ -221,24 +205,29 @@ export class World {
     this.panelGeo,
     this.bracketGeo,
   ]);
-  private topLight: THREE.MeshToonMaterial | null = null;
-  /** Alta tensão: topo grafite liso, aviso centralizado por fatia, moldura amarela e lateral zebrada. */
-  private readonly warnMat = toon({ color: DANGER.plate, roughness: 0.6, metalness: 0.2 });
-  private readonly dangerMat = toon({ map: hazardTexture(), roughness: 0.5 });
-  private readonly borderMat = new THREE.MeshBasicMaterial({ color: DANGER.yellow });
-  private readonly iconGeo = new THREE.PlaneGeometry(0.62, 0.62).rotateX(-Math.PI / 2);
-  private readonly iconMat = new THREE.MeshBasicMaterial({ map: warningIcon(), transparent: true, alphaTest: 0.3 });
+  private topLight: THREE.MeshStandardMaterial | null = null;
+  /** Alta tensão: topo com listras diagonais vermelhas, laterais vermelho escuro (mesma regra e extensão de antes). */
+  private readonly dangerTopMat = liso({ map: stripeTexture(), roughness: 0.85, metalness: 0 });
+  private readonly dangerSideMat = liso({ color: DANGER.stripe, roughness: 0.6, metalness: 0 });
+  private readonly dangerMats = [this.dangerTopMat, this.dangerSideMat];
   private readonly splatMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.85 });
+  /** Sombra da bola sobre a placa de baixo (só onde há placa). */
+  private readonly shadow = new THREE.Mesh(
+    new THREE.PlaneGeometry(BALL_R * 2.6, BALL_R * 2.6).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ map: shadowTexture(), transparent: true, depthWrite: false, opacity: 0, fog: false }),
+  );
 
   private readonly ball: THREE.Mesh;
-  private readonly ballMat = toon({ color: 0xd4142c });
+  // Bola acetinada: reflexo pequeno e suave, lado claro e lado escuro (sem ponto branco estourado)
+  private readonly ballMat = liso({ color: BALL_COLOR, roughness: 0.42, metalness: 0 });
   private readonly shieldMesh: THREE.Mesh;
   private readonly trail: THREE.Mesh[] = [];
   private readonly trailMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.35 });
   private readonly trailYs: number[] = [];
 
-  private readonly hemi = new THREE.HemisphereLight(0xffffff, 0x222233, 1.3);
-  private readonly fog = new THREE.Fog(0x000000, 14, 34);
+  // Luz: ambiente fria e fraca (volume no lado da sombra) + sol quente no alto à esquerda (pôr do sol)
+  private readonly hemi = new THREE.HemisphereLight(0xa9bbdd, 0x2a2f3a, 1.15);
+  private readonly fog = new THREE.Fog(0x000000, 30, 90);
   private camY = 0;
   private camDist = 12;
   private squash = 0;
@@ -257,7 +246,6 @@ export class World {
   private bgTarget = new THREE.Color();
 
   constructor(container: HTMLElement) {
-    this.sharedGeos.add(this.iconGeo);
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -265,16 +253,24 @@ export class World {
 
     this.scene.fog = this.fog;
     this.scene.add(this.hemi);
-    const sun = new THREE.DirectionalLight(0xffffff, 1.6);
-    sun.position.set(5, 9, 7);
+    const sun = new THREE.DirectionalLight(0xffc89a, 2.3);
+    sun.position.set(-7, 10, 6);
     this.scene.add(sun);
+    const fill = new THREE.DirectionalLight(0x8fa6d8, 0.35); // contraluz fria e fraca, só para não chapar o lado escuro
+    fill.position.set(6, 3, -4);
+    this.scene.add(fill);
     this.scene.add(this.towerGroup);
     // O fundo é filho da câmera; por isso a câmera entra na cena.
     this.backdrop = new Backdrop(this.camera);
     this.scene.add(this.camera);
     this.scene.add(this.ground.group);
 
-    this.ball = new THREE.Mesh(new THREE.SphereGeometry(BALL_R, 24, 16), this.ballMat);
+    this.shadow.renderOrder = 1;
+    this.shadow.position.set(0, 0, BALL_ORBIT);
+    this.shadow.visible = false;
+    this.scene.add(this.shadow);
+
+    this.ball = new THREE.Mesh(new THREE.SphereGeometry(BALL_R, 32, 24), this.ballMat);
     this.ball.position.set(0, 0, BALL_ORBIT);
     this.scene.add(this.ball);
 
@@ -319,7 +315,7 @@ export class World {
       this.scene.add(m);
     }
 
-    this.setBallColor('#d4142c');
+    this.setBallColor(BALL_HEX);
     this.setPhase(0, true);
     this.resize();
   }
@@ -333,11 +329,8 @@ export class World {
   /** Troca o cenário. `instant` evita a transição suave (no começo da partida). */
   setPhase(phase: number, instant = false): void {
     const p = paletteFor(phase);
-    this.plateMat.color.setHex(p.plate);
-    this.poleMat.color.setHex(p.pole);
-    this.bandMat.color.setHex(p.band);
-    this.bgTarget.setHex(p.sky);
-    this.hemi.groundColor.setHex(p.sky);
+    // Placas, torre e luz ficam iguais em todos os cenários (o que é jogável não muda de cor); muda o céu e a cidade.
+    this.bgTarget.set(p.horizon);
     if (instant) this.bg.copy(this.bgTarget);
     this.backdrop.setPalette(p, instant);
     this.ground.setPalette(p);
@@ -401,18 +394,7 @@ export class World {
         if (kind !== 'gap') {
           const a0 = (start + k) * SEG_ANGLE;
           const a1 = (start + k + len) * SEG_ANGLE;
-          const m = new THREE.Mesh(arcGeometry(a0, a1), kind === 'danger' ? [this.warnMat, this.dangerMat] : this.plateMat);
-          m.add(new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry, 35), OUTLINE)); // contorno de desenho
-          if (kind === 'danger') {
-            m.add(new THREE.Mesh(borderGeometry(a0, a1), this.borderMat));
-            for (let j = 0; j < len; j++) {
-              const mid = (start + k + j + 0.5) * SEG_ANGLE;
-              const icon = new THREE.Mesh(this.iconGeo, this.iconMat);
-              icon.position.copy(polar(mid, BALL_ORBIT, FLOOR_THICK + 0.006));
-              icon.rotation.y = mid + Math.PI / 2; // ponta do triângulo para o poste: fica em pé para a câmera
-              m.add(icon);
-            }
-          }
+          const m = new THREE.Mesh(arcGeometry(a0, a1), kind === 'danger' ? this.dangerMats : this.plateMats);
           group.add(m);
           view.arcs.push({ mesh: m, mid: (a0 + a1) / 2 });
         }
@@ -471,7 +453,7 @@ export class World {
     const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.05, 2.2, 6), this.poleMat);
     rod.position.y = base + 4.3;
 
-    this.topLight = toon({ color: 0xff2238, emissive: 0xff2238, emissiveIntensity: 1.5 });
+    this.topLight = liso({ color: 0xff2238, emissive: 0xff2238, emissiveIntensity: 1.5 });
     const light = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10), this.topLight);
     light.position.y = base + 3.3;
 
@@ -500,10 +482,28 @@ export class World {
   setBall(y: number, fever: boolean, shield: boolean, falling = false): void {
     this.trailOn = falling || fever;
     this.ball.position.y = y;
-    this.ballMat.emissive.set(fever ? 0xffffff : 0x000000);
-    this.ballMat.emissiveIntensity = fever ? 0.55 : 0;
+    this.ballMat.emissive.set(fever ? 0xff8a96 : 0x000000);
+    this.ballMat.emissiveIntensity = fever ? 0.3 : 0;
     this.trailMat.opacity = fever ? 0.6 : 0.3;
     this.shieldMesh.visible = shield;
+  }
+
+  /**
+   * Sombra curta da bola sobre a placa logo abaixo. `topY` = topo da placa debaixo da bola, ou null se ali for vão
+   * (sem placa, sem sombra). Fica mais fraca e um pouco maior conforme a bola se afasta.
+   */
+  setShadow(topY: number | null, ballY: number): void {
+    const mat = this.shadow.material as THREE.MeshBasicMaterial;
+    if (topY === null) {
+      this.shadow.visible = false;
+      return;
+    }
+    const d = Math.max(0, ballY - BALL_R - topY);
+    const k = Math.max(0, 1 - d / 2.2); // some em ~2,2 de altura
+    this.shadow.visible = k > 0.02;
+    this.shadow.position.y = topY + 0.012;
+    this.shadow.scale.setScalar(0.75 + 0.35 * (1 - k));
+    mat.opacity = 0.5 * k;
   }
 
   /** Mancha da bola na placa (gira junto com a torre) e achatamento rápido. */
@@ -595,8 +595,6 @@ export class World {
     });
 
     // Ícones de sinal girando.
-    // Moldura da alta tensão piscando de leve.
-    this.borderMat.color.set(Math.sin(this.time * 7) > 0 ? DANGER.yellow : DANGER.yellowDim);
     // Luz do topo piscando e ondas de sinal.
     if (this.topLight) this.topLight.emissiveIntensity = Math.sin(this.time * 4) > 0.2 ? 2 : 0.2;
     for (const v of this.floors.values()) for (const icon of v.icons.values()) icon.rotation.y = this.time * 2;
@@ -711,9 +709,9 @@ export class World {
     const halfV = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
     const needW = R_OUT * 1.3; // meia largura visível desejada
     this.camDist = Math.max(10, needW / (halfV * Math.min(aspect, 1)));
-    // A neblina começa logo atrás da torre: só os andares lá embaixo somem nela.
-    this.fog.near = this.camDist + 4;
-    this.fog.far = this.camDist + 26;
+    // Neblina só longe: some nos andares muito abaixo e suaviza a cidade lá embaixo; perto da torre, nada de névoa.
+    this.fog.near = this.camDist + 30;
+    this.fog.far = this.camDist + 230;
     this.backdrop.resize();
   }
 }

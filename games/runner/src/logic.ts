@@ -145,6 +145,8 @@ export const PX_PER_METER = 50; // 50 px de cenário = 1 m de distância
 export const FIRE_COOLDOWN = 0.18; // segundos mínimos entre dois disparos
 export const SHOT_SPEED = 720;
 export const SHOT_R = 14;
+/** Raio que mata das ondas de wifi do jetpack, por unidade de escala da onda (a onda cresce enquanto desce). */
+export const WAVE_HIT_R = 30;
 export const VIRUS_R = 30; // raio do vírus (tiro acerta por aqui)
 export const VIRUS_HIT_R = 25; // raio que machuca a personagem (um pouco menor que o desenho: mais justo)
 export const VIRUS_LOW = 38; // altura do centro: no chão, exige saltar

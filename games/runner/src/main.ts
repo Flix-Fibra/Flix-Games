@@ -13,12 +13,21 @@ const bridge = createHubBridge({
   avatarViews: game_json.avatarViews as Array<'side'>,
 });
 
+// Nitidez: o jogo é pensado em 960x540 (todas as posições e tamanhos), mas desenha numa tela RENDER vezes maior e a
+// câmera aproxima na mesma proporção. Sem isso o navegador estica 960x540 até a tela (4x em Retina) e tudo borra.
+const RENDER = 2;
+// Texto também é desenhado em resolução maior (senão a câmera amplia um texto pequeno e ele borra do mesmo jeito)
+const criarTexto = Phaser.GameObjects.GameObjectFactory.prototype.text;
+Phaser.GameObjects.GameObjectFactory.prototype.text = function (this: Phaser.GameObjects.GameObjectFactory, ...args: Parameters<typeof criarTexto>) {
+  return criarTexto.apply(this, args).setResolution(RENDER);
+};
+
 // Paisagem 960x540; escala "fit" para a tela. Cenário suave (não pixelado); o personagem usa filtro NEAREST por textura.
 const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
-  width: GAME_W,
-  height: GAME_H,
+  width: GAME_W * RENDER,
+  height: GAME_H * RENDER,
   backgroundColor: COLORS.background,
   pixelArt: false,
   antialias: true,
@@ -29,6 +38,15 @@ const game = new Phaser.Game({
 } as Phaser.Types.Core.GameConfig);
 
 game.registry.set('bridge', bridge);
+
+// Cada cena enxerga o mundo de 960x540: câmera com zoom RENDER, centrada (vale também quando a cena reinicia)
+game.events.once(Phaser.Core.Events.READY, () => {
+  for (const cena of game.scene.scenes) {
+    const ajustar = () => cena.cameras.main.setZoom(RENDER).centerOn(GAME_W / 2, GAME_H / 2);
+    cena.events.on(Phaser.Scenes.Events.START, ajustar); // antes do preload (barra de carregamento)
+    cena.events.on(Phaser.Scenes.Events.CREATE, ajustar);
+  }
+});
 
 bridge.onHubMessage((msg: HubToGame) => {
   switch (msg.type) {

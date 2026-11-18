@@ -24,7 +24,7 @@ const CAUSE_TEXT: Record<Cause, string> = {
 
 /**
  * Tela de fim de partida, sem anúncio. O `gameover` já foi enviado pela PlayScene.
- * Dentro do hub, o botão de recomeçar é do hub (mensagem `restart`). Fora dele (desenvolvimento), mostramos o nosso.
+ * O botão de recomeçar é sempre o do jogo, dentro e fora do hub (o hub também pode mandar `restart`).
  */
 export class GameOverScene extends Phaser.Scene {
   constructor() {
@@ -74,13 +74,14 @@ export class GameOverScene extends Phaser.Scene {
       this.scene.start('Play');
     };
 
+    // O botão de recomeçar é sempre o do jogo (o hub não mostra outro); a mensagem `restart` do hub continua valendo.
+    makeButton(this, GAME_W / 2, 850, 'JOGAR', { width: 230, height: 70, fontSize: 32, onClick: restart });
     if (bridge.embedded) {
       const off = bridge.onHubMessage((msg) => {
         if (msg.type === 'restart') restart();
       });
       this.events.once('shutdown', off);
     } else {
-      makeButton(this, GAME_W / 2, 850, 'JOGAR', { width: 230, height: 70, fontSize: 32, onClick: restart });
       this.add
         .text(GAME_W / 2, GAME_H - 28, 'modo de desenvolvimento (sem hub)', { fontFamily: FONT_TEXT, fontSize: '20px', color: '#6f8ab0' })
         .setOrigin(0.5)

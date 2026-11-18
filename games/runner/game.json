@@ -1,6 +1,9 @@
 {
   "id": "runner",
+  "catalogo": "g01",
   "name": "Flix Runner",
+  "capa": "img/menu/personagem.png",
+  "previa": "img/previa.webp",
   "_nome_de_trabalho": "Validar o nome com o marketing antes de publicar. G01 em teste: sem inimigos nem fim de partida por enquanto.",
   "avatarTier": "A",
   "avatarViews": ["side"],

@@ -1,10 +1,10 @@
 import * as THREE from 'three';
-import { toon } from './toon';
+import { liso } from './liso';
 import { rng } from './logic';
 import type { Palette } from './theme';
 
 /**
- * Bairro lá embaixo, visto do alto da torre: chão, ruas, casinhas com telhado colorido e árvores, em 3D liso (mesmo
+ * Bairro lá embaixo, visto do alto da torre (com a neblina da cena: cores suaves, a torre e a bola se destacam): chão, ruas, casinhas com telhado colorido e árvores, em 3D liso (mesmo
  * estilo das placas). Um "mar" de nuvens fica entre a torre e o chão.
  *
  * O bairro acompanha a câmera na altura (sempre lá embaixo, porque a torre não tem fim) e gira só um pouco com a torre.
@@ -63,16 +63,15 @@ function radialFade(): THREE.CanvasTexture {
 
 export class Ground {
   readonly group = new THREE.Group();
-  private readonly grassMat = toon({
+  private readonly grassMat = liso({
     roughness: 1,
-    fog: false,
     transparent: true,
     alphaMap: radialFade(),
   });
-  private readonly roadMat = toon({ color: 0x55585e, roughness: 1, fog: false });
-  private readonly wallMat = toon({ roughness: 0.9, fog: false });
-  private readonly roofMat = toon({ roughness: 0.8, fog: false });
-  private readonly treeMat = toon({ color: 0x3f7a3a, roughness: 1, fog: false });
+  private readonly roadMat = liso({ color: 0x55585e, roughness: 1 });
+  private readonly wallMat = liso({ roughness: 0.9 });
+  private readonly roofMat = liso({ roughness: 0.8 });
+  private readonly treeMat = liso({ color: 0x3f7a3a, roughness: 1 });
   private readonly cloudMat = new THREE.SpriteMaterial({ map: softCloud(), transparent: true, depthWrite: false, fog: false });
   private readonly clouds: THREE.Sprite[] = [];
 

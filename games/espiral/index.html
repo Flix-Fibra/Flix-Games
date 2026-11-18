@@ -7,7 +7,7 @@
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
     <meta name="theme-color" content="#0b0b0d" />
-    <title>Torre de Sinal</title>
+    <title>Signal Drop</title>
     <style>
       html, body { margin: 0; height: 100%; background: #0b0b0d; overflow: hidden; }
       body { overscroll-behavior: none; touch-action: none; -webkit-user-select: none; user-select: none;
@@ -16,27 +16,34 @@
       canvas { display: block; }
       #hud { position: fixed; inset: 0; pointer-events: none; color: #fff; font-family: "Trebuchet MS", Verdana, sans-serif;
              padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
-      #hud .top { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 0; }
-      #hud .portrait { width: 48px; height: 48px; border-radius: 50%; overflow: hidden; background: rgba(0,0,0,.35);
-                       border: 2px solid rgba(255,255,255,.7); }
-      #hud .portrait canvas { width: 100%; height: 100%; }
-      #hud .score { text-align: center; text-shadow: 0 2px 6px rgba(0,0,0,.5); }
-      #hud .score b { display: block; font-size: 44px; line-height: 1; }
-      #hud .score small { font-size: 12px; opacity: .8; }
-      #hud .best { font-size: 11px; text-align: right; opacity: .85; min-width: 48px; text-shadow: 0 1px 4px rgba(0,0,0,.5); }
-      #hud .best b { font-size: 18px; }
-      #hud .phase { display: flex; align-items: center; gap: 8px; padding: 8px 16px; font-size: 11px;
-                    text-shadow: 0 1px 4px rgba(0,0,0,.5); }
-      #hud .bar { flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,.25); overflow: hidden; }
-      #hud .bar i { display: block; height: 100%; width: 0; background: #d4142c; transition: width .2s; }
-      #hud .shield { padding: 2px 8px; border-radius: 10px; background: #37e2ff; color: #062a33; font-weight: bold;
+      /* Topo: avatar à esquerda, andares (informação principal) no centro, recorde menor à direita.
+         Texto branco sobre uma superfície escura discreta, para ler sobre a antena e o céu. */
+      #hud .top { display: grid; grid-template-columns: 1fr auto 1fr; align-items: start; gap: 8px; padding: 10px 12px 0; }
+      #hud .chip { background: rgba(12, 14, 20, .45); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+                   border: 1px solid rgba(255,255,255,.08); }
+      #hud .portrait { justify-self: start; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; background: rgba(12,14,20,.45);
+                       border: 2px solid rgba(255,255,255,.75); }
+      #hud .portrait canvas { width: 100%; height: 100%; image-rendering: pixelated; }
+      #hud .score { justify-self: center; text-align: center; padding: 4px 16px 6px; border-radius: 16px; }
+      #hud .score b { display: block; font-size: 40px; line-height: 1.05; font-variant-numeric: tabular-nums; }
+      #hud .score small { font-size: 11px; opacity: .85; letter-spacing: .02em; }
+      #hud .best { justify-self: end; font-size: 10px; text-align: right; padding: 5px 9px; border-radius: 10px; opacity: .95;
+                   text-transform: uppercase; letter-spacing: .04em; }
+      #hud .best b { display: block; font-size: 16px; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+      /* Barras curtas no canto esquerdo (o centro fica livre para a torre) */
+      #hud .stats { position: absolute; left: calc(12px + env(safe-area-inset-left)); top: calc(66px + env(safe-area-inset-top));
+                    display: grid; gap: 7px; width: 112px; padding: 8px 10px; border-radius: 12px; font-size: 10px; }
+      #hud .phase, #hud .rocket { display: grid; grid-template-columns: 1fr auto; align-items: center; row-gap: 4px; }
+      #hud .phase .bar, #hud .rocket .bar { grid-column: 1 / -1; }
+      #hud .bar { height: 5px; border-radius: 3px; background: rgba(255,255,255,.22); overflow: hidden; }
+      #hud .bar i { display: block; height: 100%; width: 0; background: #ff3349; transition: width .2s; }
+      #hud .shield { padding: 1px 6px; border-radius: 8px; background: #37e2ff; color: #062a33; font-weight: bold; font-size: 9px;
                      visibility: hidden; }
       #hud .shield.on { visibility: visible; }
-      #hud .rocket { display: flex; align-items: center; gap: 8px; padding: 0 16px; font-size: 11px; font-weight: bold;
-                     text-shadow: 0 1px 4px rgba(0,0,0,.5); }
+      #hud .rocket span { font-weight: bold; }
       #hud .rocket .bar i { background: linear-gradient(90deg, #ff8a1f, #ffd02e); }
       #hud .rocket.on span { color: #ffd02e; }
-      #hud .rocket.on .bar { box-shadow: 0 0 10px #ff8a1f; }
+      #hud .rocket.on .bar { box-shadow: 0 0 8px #ff8a1f; }
       #hud .toast { position: absolute; left: 50%; top: 22%; transform: translate(-50%, 10px); opacity: 0;
                     transition: opacity .25s, transform .25s; background: rgba(0,0,0,.6); padding: 8px 16px;
                     border-radius: 18px; font-weight: bold; white-space: nowrap; }
@@ -45,7 +52,9 @@
                       justify-content: center; gap: 6px; text-align: center; padding: 24px; background: rgba(8,8,12,.62);
                       pointer-events: auto; }
       #hud .overlay.on { display: flex; }
-      #hud h1 { margin: 0 0 8px; font-size: 30px; } #hud h2 { margin: 0; font-size: 26px; }
+      #hud h1 { margin: 0 0 8px; font-size: 30px; }
+      #hud h1.logo { margin: 0 0 4px; line-height: 0; }
+      #hud h1.logo img { width: min(66vw, 36vh, 280px); height: auto; filter: drop-shadow(0 10px 24px rgba(0,0,0,.5)); } #hud h2 { margin: 0; font-size: 26px; }
       #hud p { margin: 4px 0; line-height: 1.4; } #hud .muted { opacity: .75; font-size: 13px; }
       #hud .big { font-size: 20px; } #hud .big b { font-size: 40px; }
       #hud .hot { color: #f5c518; font-weight: bold; } #hud .sig { color: #37e2ff; font-weight: bold; }

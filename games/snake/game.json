@@ -3,6 +3,7 @@
   "catalogo": "g03",
   "name": "Network Snake",
   "capa": "img/logo.png",
+  "previa": "img/previa.webp",
   "_nome": "Network Snake confirmado pelo solicitante em 17/11/2026. Nome e capa vão para a plataforma por scripts/sincronizar-catalogo.mjs.",
   "avatarTier": "B",
   "avatarViews": ["portrait"],
