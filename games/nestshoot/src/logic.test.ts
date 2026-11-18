@@ -25,6 +25,8 @@ import {
   newScore,
   nextSlot,
   nextWaveGap,
+  newStuckWatch,
+  watchStuck,
   pickBatPatterns,
   batSwing,
   BAT_PATTERNS,
@@ -211,6 +213,26 @@ describe('física', () => {
     expect(launchVelocity({ x: MIN_PULL - 1, y: 0 })).toBeNull();
     const v = launchVelocity({ x: 0, y: MAX_PULL * 3 })!;
     expect(Math.hypot(v.x, v.y)).toBeCloseTo(V_MAX);
+  });
+});
+
+describe('pedra presa', () => {
+  it('parada num canto por mais de 1,2 s: presa', () => {
+    const w = newStuckWatch(700, 100);
+    let stuck = false;
+    for (let i = 0; i < 240 * 1.3 && !stuck; i++) stuck = watchStuck(w, 700 + Math.sin(i) * 10, 100 + Math.cos(i) * 10, 1 / 240);
+    expect(stuck).toBe(true);
+  });
+
+  it('um tiro normal (inclusive reto para cima, passando pelo alto do arco) não é considerado preso', () => {
+    for (const v of [{ x: 0, y: -1500 }, { x: 600, y: -1800 }, { x: -1200, y: -900 }]) {
+      const st: Stone = { x: 360, y: 0, vx: v.x, vy: v.y };
+      const w = newStuckWatch(st.x, st.y);
+      for (let i = 0; i < 240 * 3; i++) {
+        stepStone(st, 1 / 240, null);
+        expect(watchStuck(w, st.x, st.y, 1 / 240)).toBe(false);
+      }
+    }
   });
 });
 

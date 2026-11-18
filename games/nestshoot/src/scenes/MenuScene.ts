@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { firstSlot, shelfSlot } from '../logic';
+import { firstSlot, NEST_SINK, shelfSlot } from '../logic';
 import { addSupport, TrunkColumns } from '../tree';
 import { DEPTH, FONT, FONT_TEXT, GAME_H, GAME_W, MONKEY_SCREEN_Y } from '../theme';
 
@@ -26,7 +26,7 @@ export class MenuScene extends Phaser.Scene {
     const up = shelfSlot(1, 'left', start.y - 340);
     addSupport(this, start, false);
     addSupport(this, up, false);
-    this.add.image(up.x, up.y, 'ninho').setOrigin(0.5, 1).setDepth(DEPTH.nest);
+    this.add.image(up.x, up.y + NEST_SINK, 'ninho').setOrigin(0.5, 1).setDepth(DEPTH.nest);
 
     const monkey = this.add.image(start.x, start.y, 'macaco_0').setOrigin(0.5, 1).setDepth(DEPTH.monkey);
     let f = 0;

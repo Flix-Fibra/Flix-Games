@@ -70,7 +70,7 @@ export const NEST_SEGMENTS: ReadonlyArray<readonly [number, number, number, numb
 /** Onde a pedra fica depois de cair no ninho (no meio dos ovos), relativo à base. */
 export const NEST_STONE_Y = -86;
 /** O ninho fica alguns px abaixo da superfície do apoio (encaixado, sem parecer flutuar). */
-export const NEST_SINK = 10;
+export const NEST_SINK = 24;
 
 /** Área do macaco que "pega" a pedra de volta (segunda chance), relativa aos pés. */
 export const MONKEY_CATCH = { dx: 0, dy: -58, r: 52 };
@@ -459,6 +459,31 @@ export function predictPath(from: Vec, v: Vec, duration = 0.5, every = 0.04, dt 
     }
   }
   return out;
+}
+
+/**
+ * Pedra presa: se ela fica `STUCK_S` segundos sem sair de um círculo de `STUCK_RADIUS` px (por exemplo, encalhada entre a
+ * borda da tela e a palha do ninho, ou equilibrada na ponta da palha), o jogador ganha uma segunda chance.
+ * A pedra no alto de um arco fica bem menos que isso parada (cerca de 0,4 s em 40 px), então tiros normais não disparam.
+ */
+export const STUCK_RADIUS = 40;
+export const STUCK_S = 1.2;
+export interface StuckWatch {
+  ax: number;
+  ay: number;
+  t: number;
+}
+export const newStuckWatch = (x: number, y: number): StuckWatch => ({ ax: x, ay: y, t: 0 });
+/** Atualiza a vigia com a posição da pedra; devolve true quando ela está presa. */
+export function watchStuck(w: StuckWatch, x: number, y: number, dt: number): boolean {
+  if (Math.hypot(x - w.ax, y - w.ay) > STUCK_RADIUS) {
+    w.ax = x;
+    w.ay = y;
+    w.t = 0;
+    return false;
+  }
+  w.t += dt;
+  return w.t >= STUCK_S;
 }
 
 /** A pedra caindo pegou no macaco (segunda chance)? */

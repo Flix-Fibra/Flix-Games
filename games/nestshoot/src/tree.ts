@@ -22,9 +22,11 @@ export class TrunkColumns {
     private scene: Phaser.Scene,
     startBottom: number,
   ) {
+    // os dois lados começam desencontrados (meia imagem, mais ou menos), para os nós e galhinhos não ficarem espelhados
+    const offset = Math.round(TRUNK.h * (0.35 + Math.random() * 0.3));
     this.sides = [
       { top: startBottom, segs: [] },
-      { top: startBottom, segs: [] },
+      { top: startBottom + offset, segs: [] },
     ];
   }
 

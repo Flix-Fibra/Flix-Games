@@ -33,6 +33,8 @@ import {
   STONE_R,
   stepStone,
   stoneHits,
+  newStuckWatch,
+  watchStuck,
   BAT_DEATH_FRAMES,
   batSwing,
   pickBatPatterns,
@@ -162,6 +164,7 @@ export class PlayScene extends Phaser.Scene {
   private touched = false;
   private flightT = 0;
   private leftMonkey = false;
+  private stuck = newStuckWatch(0, 0);
 
   private bats: Bat[] = [];
   private waveStones: WaveStone[] = [];
@@ -352,7 +355,8 @@ export class PlayScene extends Phaser.Scene {
 
   private updateBird(dt: number, delta: number): void {
     const b = this.target?.bird;
-    if (!b) return;
+    // o pássaro que foi embora é apagado no fim do voo de saída; não mexer mais nele (antes: erro que travava o jogo)
+    if (!b || !b.img.active) return;
     b.clock += delta;
     if (b.clock >= BIRD_FRAME_MS) {
       b.clock = 0;
@@ -373,7 +377,7 @@ export class PlayScene extends Phaser.Scene {
   /** Corpo do pássaro que rebate a pedra. */
   private birdBodies(): Circle[] {
     const b = this.target?.bird;
-    if (!b || b.leaving) return [];
+    if (!b || b.leaving || !b.img.active) return [];
     return [{ x: b.img.x, y: b.img.y + BIRD_BODY_DY, r: BIRD_R }];
   }
 
@@ -383,13 +387,23 @@ export class PlayScene extends Phaser.Scene {
     b.leaving = true;
     const dir = b.img.x < GAME_W / 2 ? -1 : 1;
     b.img.setFlipX(dir > 0);
-    this.tweens.add({ targets: b.img, x: b.img.x + dir * 500, y: b.img.y - 260, duration: 900, ease: 'Sine.easeIn', onComplete: () => b.img.destroy() });
+    this.tweens.add({
+      targets: b.img,
+      x: b.img.x + dir * 500,
+      y: b.img.y - 260,
+      duration: 900,
+      ease: 'Sine.easeIn',
+      onComplete: () => {
+        if (this.target?.bird === b) this.target.bird = undefined;
+        b.img.destroy();
+      },
+    });
   }
 
   /** A pedra bateu no pássaro: ele pisca (só um aviso por batida). */
   private birdHit(): void {
     const b = this.target?.bird;
-    if (!b || b.img.getData('hitAt') > this.time.now - 300) return;
+    if (!b || !b.img.active || b.img.getData('hitAt') > this.time.now - 300) return;
     b.img.setData('hitAt', this.time.now);
     b.img.setTintFill(0xffffff);
     this.time.delayedCall(90, () => b.img.clearTint());
@@ -455,6 +469,7 @@ export class PlayScene extends Phaser.Scene {
     this.touched = false;
     this.flightT = 0;
     this.leftMonkey = false;
+    this.stuck = newStuckWatch(tip.x, tip.y);
     this.shootPose();
   }
 
@@ -574,19 +589,24 @@ export class PlayScene extends Phaser.Scene {
         this.secondChance();
         return;
       }
+      // pedra presa num canto (ou girando no mesmo lugar): segunda chance
+      if (watchStuck(this.stuck, st.x, st.y, h) || this.flightT > MAX_FLIGHT_S) {
+        this.secondChance('PEDRA PRESA! DE NOVO');
+        return;
+      }
     }
     this.stoneImg.setPosition(st.x, st.y).setRotation(this.stoneImg.rotation + st.vx * dt * 0.02);
     const camBottom = this.cameras.main.scrollY + GAME_H;
-    if (st.y > camBottom + STONE_R * 2 + 20 || this.flightT > MAX_FLIGHT_S) this.die();
+    if (st.y > camBottom + STONE_R * 2 + 20) this.die();
   }
 
   /** A pedra voltou e caiu no macaco: ele pega e pode atirar de novo. */
-  private secondChance(): void {
+  private secondChance(msg = 'PEGOU!'): void {
     this.stone = null;
     this.stoneImg.setVisible(false);
     this.state = 'aim';
     this.monkey.setTexture('macaco_0').setRotation(0);
-    this.popup(this.feet.x, this.feet.y - 150, 'PEGOU!', '#E6F2D8', 34);
+    this.popup(this.feet.x, this.feet.y - 150, msg, '#E6F2D8', 34);
   }
 
   private onCatch(): void {
