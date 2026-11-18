@@ -62,15 +62,18 @@ export const NEST_RIMS: ReadonlyArray<{ x: number; y: number; r: number }> = [
   { x: -68, y: -62, r: 9 },
   { x: 68, y: -62, r: 9 },
 ];
+/**
+ * Laterais da palha que rebatem a pedra: só a parte acima da superfície do apoio (o ninho fica `NEST_SINK` afundado). Abaixo
+ * disso não há física (nem o fundo do ninho, nem o apoio): a pedra que vem por baixo passa direto.
+ */
 export const NEST_SEGMENTS: ReadonlyArray<readonly [number, number, number, number]> = [
-  [-74, -58, -54, -10],
-  [-54, -10, 54, -10],
-  [54, -10, 74, -58],
+  [-74, -58, -64, -34],
+  [64, -34, 74, -58],
 ];
 /** Onde a pedra fica depois de cair no ninho (no meio dos ovos), relativo à base. */
 export const NEST_STONE_Y = -86;
 /** O ninho fica alguns px abaixo da superfície do apoio (encaixado, sem parecer flutuar). */
-export const NEST_SINK = 24;
+export const NEST_SINK = 34;
 
 /** Área do macaco que "pega" a pedra de volta (segunda chance), relativa aos pés. */
 export const MONKEY_CATCH = { dx: 0, dy: -58, r: 52 };
@@ -90,6 +93,8 @@ export interface Stone {
   y: number;
   vx: number;
   vy: number;
+  /** Passou por dentro do ninho vindo de baixo (subindo): não vale cair de volta nele até sair da coluna do ninho. */
+  fromBelow?: boolean;
 }
 
 // ---- apoios ------------------------------------------------------------------------------------------------------------
@@ -107,6 +112,8 @@ export interface SlotInfo {
   y: number;
   /** y do topo da imagem do apoio (orelha ou galho). */
   pieceY: number;
+  /** O ninho deste apoio é levitado pelo sapo mago. */
+  frog?: boolean;
 }
 
 export const otherSide = (s: Side): Side => (s === 'left' ? 'right' : 'left');
@@ -158,7 +165,7 @@ export const firstSlot = (): SlotInfo => shelfSlot(0, 'right', 0);
 // ---- dificuldade -------------------------------------------------------------------------------------------------------
 
 /** Cestas (ninhos acertados) antes de qualquer ninho se mexer. */
-export const STATIC_UNTIL = 8;
+export const STATIC_UNTIL = 10;
 
 /** Chance de o ninho alvo se mexer, pelo número de acertos até ali. */
 export function moveChance(hits: number): number {
@@ -194,7 +201,9 @@ export const sameSideChance = (hits: number): number => (hits < 2 ? 0 : 0.3);
  * Chance de o próximo apoio ser um galho. No galho o ninho sempre desliza de um lado para o outro, então ele só aparece
  * depois que os ninhos começam a se mexer (`STATIC_UNTIL`).
  */
-export const branchChance = (hits: number): number => (hits < STATIC_UNTIL ? 0 : Math.min(0.5, 0.25 + (hits - STATIC_UNTIL) * 0.015));
+export const branchChance = (hits: number): number => (hits < STATIC_UNTIL ? 0 : Math.min(0.5, 0.4 + (hits - STATIC_UNTIL) * 0.01));
+/** Chance de o próximo ninho ser levitado pelo sapo (sobe e desce), a partir do nível 10. */
+export const frogChance = (hits: number): number => (hits < STATIC_UNTIL ? 0 : Math.min(0.4, 0.3 + (hits - STATIC_UNTIL) * 0.01));
 
 /**
  * Sorteia o próximo apoio a partir do atual. `hits` = acertos quando o ninho estiver nele (o slot seguinte é mirado com
@@ -203,13 +212,18 @@ export const branchChance = (hits: number): number => (hits < STATIC_UNTIL ? 0 :
 export function nextSlot(prev: SlotInfo, rnd: () => number): SlotInfo {
   const hits = prev.index;
   const index = prev.index + 1;
-  const same = rnd() < sameSideChance(hits);
+  let same = rnd() < sameSideChance(hits);
+  const r = rnd();
+  const frog = r < frogChance(hits);
+  const branch = !frog && r < frogChance(hits) + branchChance(hits);
+  if (frog) same = false; // o ninho do sapo sobe bem alto: fica do outro lado, para ter espaço para o arco
   const side = same ? prev.side : otherSide(prev.side);
-  const branch = rnd() < branchChance(hits);
   const [gmin, gmax] = gapRange(hits);
   let gap = gmin + rnd() * (gmax - gmin);
   if (same) gap = Math.min(SAME_SIDE_MAX_GAP, Math.max(gap, SAME_SIDE_MIN_GAP));
+  if (frog) gap = Math.min(gap, FROG_MAX_GAP);
   const y = prev.y - gap;
+  if (frog) return { ...shelfSlot(index, side, y), frog: true };
   if (!branch) return shelfSlot(index, side, y);
   const [a, b] = BRANCH_NEST_RANGE;
   return branchSlot(index, side, y, a + rnd() * (b - a));
@@ -226,17 +240,16 @@ export const FROG_MIN_DX = 200;
 export const FROG_MAX_GAP = 330;
 
 /**
- * Ninho levitado pelo sapo (sobe e desce)? Só nas orelhas de pau, e só quando o ninho não fica nem logo acima do macaco nem
- * longe demais na altura, porque ele sobe bem acima do sapo e precisa continuar alcançável.
+ * O ninho do sapo sobe bem acima do apoio; por isso o sorteio (`nextSlot`) põe o apoio dele numa orelha de pau do outro lado
+ * (longe na horizontal) e no máximo `FROG_MAX_GAP` acima do macaco, para continuar alcançável.
  */
-export function rollFrog(slot: SlotInfo, rnd: () => number, from?: SlotInfo): boolean {
-  if (slot.kind !== 'shelf') return false;
-  if (from && (Math.abs(slot.x - from.x) < FROG_MIN_DX || from.y - slot.y > FROG_MAX_GAP)) return false;
-  const hits = slot.index - 1;
-  return rnd() < moveChance(hits) * 0.6;
-}
 
 // ---- morcegos ---------------------------------------------------------------------------------------------------------
+
+/** Pedras por onda de morcegos. Cada pedra que não acerta um morcego tira `MISS_PENALTY` dos pontos (arredondado). */
+export const WAVE_STONES = 3;
+export const MISS_PENALTY = 0.2;
+export const afterMiss = (score: number): number => Math.round(score * (1 - MISS_PENALTY));
 
 /** Pontos por morcego abatido. */
 export const BAT_POINTS = 10;
@@ -315,6 +328,19 @@ export function birdChance(hits: number): number {
 export function rollBird(hits: number, rnd: () => number): BirdMode | null {
   if (rnd() >= birdChance(hits)) return null;
   return rnd() < 0.5 ? 'h' : 'v';
+}
+
+/** A partir deste nível, ninhos que se mexem também podem vir com pássaro (combinação). */
+export const COMBO_FROM = 15;
+export const comboChance = (hits: number): number => (hits < COMBO_FROM ? 0 : Math.min(0.5, 0.3 + (hits - COMBO_FROM) * 0.02));
+
+/**
+ * Pássaro junto de um ninho que se mexe: o movimento do pássaro é o contrário do ninho. Ninho que desliza no galho (`h`)
+ * ganha pássaro que sobe e desce (`v`); ninho do sapo, que sobe e desce (`v`), ganha pássaro que passa de lado (`h`).
+ */
+export function rollComboBird(nestMove: 'h' | 'v', hits: number, rnd: () => number): BirdMode | null {
+  if (rnd() >= comboChance(hits)) return null;
+  return nestMove === 'h' ? 'v' : 'h';
 }
 
 export interface Circle {
@@ -411,7 +437,14 @@ function collidePoint(st: Stone, px: number, py: number, pr: number, e: number):
  * Avança a pedra `dt` segundos: gravidade, paredes (bordas da tela) e o ninho alvo (posição da base `nest`, ou null).
  * `entered`: a pedra atravessou a boca do ninho descendo, entre as bordas.
  */
-export function stepStone(st: Stone, dt: number, nest: Vec | null, obstacles: ReadonlyArray<Circle> = []): StepEvents {
+export function stepStone(
+  st: Stone,
+  dt: number,
+  nest: Vec | null,
+  obstacles: ReadonlyArray<Circle> = [],
+  /** Laterais da palha rebatem a pedra? Não no ninho do galho longo (a pedra cai direto pelo galho). */
+  nestSides = true,
+): StepEvents {
   const ev: StepEvents = { wall: false, nestTouch: false, entered: false, obstacle: false };
   const prevY = st.y;
   st.vy += GRAVITY * dt;
@@ -432,12 +465,15 @@ export function stepStone(st: Stone, dt: number, nest: Vec | null, obstacles: Re
 
   if (nest) {
     const mouthY = nest.y + NEST_MOUTH_Y;
-    if (st.vy > 0 && prevY < mouthY && st.y >= mouthY && Math.abs(st.x - nest.x) < NEST_MOUTH_HALF) {
+    const inColumn = Math.abs(st.x - nest.x) < NEST_W / 2 + STONE_R;
+    if (!inColumn) st.fromBelow = false;
+    else if (st.vy < 0 && st.y > mouthY && st.y < nest.y + 20) st.fromBelow = true;
+    if (!st.fromBelow && st.vy > 0 && prevY < mouthY && st.y >= mouthY && Math.abs(st.x - nest.x) < NEST_MOUTH_HALF) {
       ev.entered = true;
       return ev;
     }
     for (const r of NEST_RIMS) if (collidePoint(st, nest.x + r.x, nest.y + r.y, r.r, NEST_RESTITUTION)) ev.nestTouch = true;
-    for (const [ax, ay, bx, by] of NEST_SEGMENTS) {
+    for (const [ax, ay, bx, by] of nestSides ? NEST_SEGMENTS : []) {
       if (collideSegment(st, nest.x + ax, nest.y + ay, nest.x + bx, nest.y + by, NEST_RESTITUTION)) ev.nestTouch = true;
     }
   }
@@ -463,7 +499,7 @@ export function predictPath(from: Vec, v: Vec, duration = 0.5, every = 0.04, dt 
 
 /**
  * Pedra presa: se ela fica `STUCK_S` segundos sem sair de um círculo de `STUCK_RADIUS` px (por exemplo, encalhada entre a
- * borda da tela e a palha do ninho, ou equilibrada na ponta da palha), o jogador ganha uma segunda chance.
+ * borda da tela e a palha do ninho, ou equilibrada na ponta da palha), a partida acaba na hora (como se tivesse caído).
  * A pedra no alto de um arco fica bem menos que isso parada (cerca de 0,4 s em 40 px), então tiros normais não disparam.
  */
 export const STUCK_RADIUS = 40;

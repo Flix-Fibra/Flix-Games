@@ -28,6 +28,7 @@ export const IMAGES: Array<[string, string]> = [
   ['galho', 'galho.png'],
   ['musgo', 'musgo.png'],
   ['ninho', 'ninho.png'],
+  ['pedra', 'pedra.png'],
   ...frames('macaco', 4),
   ...frames('sapo', 4),
   ...frames('passaro', 7),

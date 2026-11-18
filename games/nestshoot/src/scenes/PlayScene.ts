@@ -27,7 +27,9 @@ import {
   predictPath,
   pullPower,
   rollBird,
-  rollFrog,
+  rollComboBird,
+  afterMiss,
+  WAVE_STONES,
   scoreCatch,
   slingTip,
   STONE_R,
@@ -104,6 +106,8 @@ interface WaveStone {
   st: Stone;
   img: Phaser.GameObjects.Image;
   t: number;
+  /** Acertou um morcego (senão, ao sair da tela, conta como erro). */
+  hit: boolean;
 }
 
 const PHYS_DT = 1 / 240;
@@ -134,6 +138,11 @@ const BAT_FRAME_MS = 80; // como no GIF
 const BAT_STAGGER_S = 1.1;
 const WAVE_FIRE_COOLDOWN_MS = 220;
 const MAX_FLIGHT_S = 10;
+const FROG_SINK = 12; // o sapo fica um pouco afundado no apoio, como o ninho
+const NEST_BOB_PX = 2.5; // o ninho flutua de leve, só visual
+const NEST_BOB_MS = 2200;
+const NEST_WOBBLE_DEG = 7; // balanço ao bater na beirada
+const NEST_WOBBLE_PX = 3;
 const NEST_SHRINK = 0.93; // ninho acertado encolhe ~10 px
 const NEST_BLINK_MS = 300; // e pisca em vermelho antes de cair
 const SUPPORT_SLIDE_MS = 380; // o apoio sai de trás do tronco
@@ -164,12 +173,20 @@ export class PlayScene extends Phaser.Scene {
   private touched = false;
   private flightT = 0;
   private leftMonkey = false;
+  /** Balanço visual do ninho depois de a pedra bater na beirada. */
+  private wobbleT = 99;
+  private wobbleSide = 0;
+  private wobbleAt = 0;
   private stuck = newStuckWatch(0, 0);
 
   private bats: Bat[] = [];
   private waveStones: WaveStone[] = [];
   private nextWaveAt = 0;
   private lastWaveShot = 0;
+  /** Pedras que ainda restam na onda de morcegos, e o contador na tela (“3x [pedra] restantes!”). */
+  private waveLeft = 0;
+  private waveHud!: Phaser.GameObjects.Container;
+  private waveHudCount!: Phaser.GameObjects.Text;
 
   private score: ScoreState = newScore();
   private hudScore!: Phaser.GameObjects.Text;
@@ -228,6 +245,8 @@ export class PlayScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(DEPTH.hud);
 
+    this.makeWaveHud();
+
     this.input.on('pointerdown', this.onDown, this);
     this.input.on('pointermove', this.onMove, this);
     this.input.on('pointerup', this.onUp, this);
@@ -277,7 +296,7 @@ export class PlayScene extends Phaser.Scene {
     const factor = moveSpeedFactor(hits);
     let kind: MoveKind = 'static';
     if (slot.kind === 'branch') kind = 'h'; // no galho grande o ninho sempre desliza
-    else if (rollFrog(slot, Math.random, this.cur)) kind = 'v';
+    else if (slot.frog) kind = 'v';
 
     const t: Target = {
       slot,
@@ -296,7 +315,7 @@ export class PlayScene extends Phaser.Scene {
       t.amp = frogAmp(hits);
       const right = slot.side === 'right';
       t.frog = this.add
-        .image(slot.x + (right ? 19 : -19), slot.y + 2, 'sapo_0')
+        .image(slot.x + (right ? 19 : -19), slot.y + FROG_SINK, 'sapo_0')
         .setOrigin(0.5, 1)
         .setScale(FROG_SCALE)
         .setFlipX(right)
@@ -305,8 +324,13 @@ export class PlayScene extends Phaser.Scene {
     if (kind === 'static') {
       const mode = rollBird(hits, Math.random);
       if (mode) t.bird = this.makeBird(mode, slot);
+    } else {
+      // a partir do nível 15: ninho que se mexe com pássaro no movimento contrário
+      const mode = rollComboBird(kind, hits, Math.random);
+      if (mode) t.bird = this.makeComboBird(mode, t);
     }
     this.target = t;
+    this.wobbleT = 99; // ninho novo, parado
     this.moveTarget(0);
     t.nest.setScale(0);
     this.tweens.add({ targets: t.nest, scale: 1, duration: 260, delay: appear, ease: 'Back.easeOut' });
@@ -327,7 +351,6 @@ export class PlayScene extends Phaser.Scene {
     } else {
       t.pos.y = t.slot.y - FROG_LIFT - t.amp * (0.5 - 0.5 * Math.cos(t.t));
     }
-    t.nest.setPosition(t.pos.x, t.pos.y);
   }
 
   // ---- pássaro --------------------------------------------------------------------------------------------------------
@@ -347,6 +370,27 @@ export class PlayScene extends Phaser.Scene {
       cx = slot.x + toward * 125;
       if (cx < 70 || cx > GAME_W - 70) cx = slot.x - toward * 125;
       cy = slot.y - 130;
+    }
+    const img = this.add.image(cx, cy, 'passaro_0').setDepth(DEPTH.bird).setAlpha(0);
+    this.tweens.add({ targets: img, alpha: 1, duration: 300 });
+    return { img, mode, cx, cy, half: 150, t: Math.random() * Math.PI * 2, w: (Math.PI * 2) / BIRD_PERIOD_S, frame: 0, clock: 0, leaving: false };
+  }
+
+  /**
+   * Pássaro de combinação, no caminho entre o macaco e o ninho que se mexe: sobe e desce entre o macaco e a faixa do galho
+   * (ninho deslizando) ou passa de lado na altura média da levitação (ninho do sapo).
+   */
+  private makeComboBird(mode: BirdMode, t: Target): Bird {
+    let cx: number;
+    let cy: number;
+    if (mode === 'v') {
+      const [a, b] = branchRange(t.slot.side);
+      const near = Math.abs(this.feet.x - a) < Math.abs(this.feet.x - b) ? a : b; // ponta do galho do lado do macaco
+      cx = Phaser.Math.Clamp(near + (this.feet.x > near ? 1 : -1) * 110, 70, GAME_W - 70);
+      cy = t.slot.y - 130;
+    } else {
+      cx = Phaser.Math.Clamp((this.feet.x + t.slot.x) / 2, 200, GAME_W - 200);
+      cy = t.slot.y - FROG_LIFT - t.amp / 2 + NEST_MOUTH_Y;
     }
     const img = this.add.image(cx, cy, 'passaro_0').setDepth(DEPTH.bird).setAlpha(0);
     this.tweens.add({ targets: img, alpha: 1, duration: 300 });
@@ -475,12 +519,46 @@ export class PlayScene extends Phaser.Scene {
 
   /** Na onda de morcegos as pedras são infinitas: cada tiro é uma pedra nova, mesmo com outras no ar. */
   private fireWave(v: Vec): void {
-    if (this.time.now - this.lastWaveShot < WAVE_FIRE_COOLDOWN_MS) return;
+    if (this.waveLeft <= 0 || this.time.now - this.lastWaveShot < WAVE_FIRE_COOLDOWN_MS) return;
     this.lastWaveShot = this.time.now;
+    this.waveLeft--;
+    this.updateWaveHud();
     const tip = this.tip();
     const img = this.add.image(tip.x, tip.y, 'pedra').setDepth(DEPTH.stone);
-    this.waveStones.push({ st: { x: tip.x, y: tip.y, vx: v.x, vy: v.y }, img, t: 0 });
+    this.waveStones.push({ st: { x: tip.x, y: tip.y, vx: v.x, vy: v.y }, img, t: 0, hit: false });
     this.shootPose();
+  }
+
+  /** Contador da onda: “3x [pedra] restantes!”. */
+  private makeWaveHud(): void {
+    const label = (x: number, s: string, size: number) =>
+      this.add.text(x, 0, s, { fontFamily: FONT, fontSize: `${size}px`, color: '#FFFFFF', stroke: COLORS.stroke, strokeThickness: 8 }).setOrigin(0, 0.5);
+    this.waveHudCount = label(0, '3x', 44);
+    const icon = this.add.image(0, 0, 'pedra').setScale(1.1).setOrigin(0, 0.5);
+    const rest = label(0, 'restantes!', 34);
+    icon.x = this.waveHudCount.width + 8;
+    rest.x = icon.x + icon.displayWidth + 10;
+    const w = rest.x + rest.width;
+    this.waveHud = this.add
+      .container(GAME_W / 2 - w / 2, 250, [this.waveHudCount, icon, rest])
+      .setScrollFactor(0)
+      .setDepth(DEPTH.hud)
+      .setVisible(false);
+  }
+
+  private updateWaveHud(): void {
+    this.waveHudCount.setText(`${this.waveLeft}x`).setColor(this.waveLeft === 0 ? '#FF8A7A' : '#FFFFFF');
+    this.tweens.add({ targets: this.waveHud, scale: 1.12, duration: 90, yoyo: true });
+  }
+
+  /** Pedra da onda que não acertou nenhum morcego: perde 20% dos pontos (arredondado). */
+  private waveMiss(): void {
+    const before = this.score.score;
+    this.score.score = afterMiss(before);
+    this.updateScore();
+    const lost = before - this.score.score;
+    this.popup(this.feet.x, this.feet.y - 170, lost > 0 ? `ERROU! -${lost}` : 'ERROU!', '#FF8A7A', 36);
+    this.cameras.main.shake(120, 0.004);
   }
 
   private shootPose(): void {
@@ -524,6 +602,7 @@ export class PlayScene extends Phaser.Scene {
     this.updateBird(dt, delta);
     if (this.state !== 'dead' && this.state !== 'climbing') this.moveTarget(dt);
     if (this.state === 'flying') this.updateStone(dt);
+    if (this.state === 'aim' || this.state === 'flying') this.renderNest(dt);
     if (this.state === 'wave') this.updateWave(dt);
     this.ensureWorld();
     this.drawEdges(delta);
@@ -571,14 +650,17 @@ export class PlayScene extends Phaser.Scene {
     const steps = Math.max(1, Math.round(dt / PHYS_DT));
     const h = dt / steps;
     for (let i = 0; i < steps; i++) {
-      const ev = stepStone(st, h, target.pos, this.birdBodies());
+      const ev = stepStone(st, h, target.pos, this.birdBodies(), target.slot.kind !== 'branch');
       if (ev.obstacle) this.birdHit();
       this.flightT += h;
       if (ev.wall) {
         this.wallBounces++;
         this.flashEdge(st.x);
       }
-      if (ev.nestTouch) this.touched = true;
+      if (ev.nestTouch) {
+        this.touched = true;
+        this.startWobble(st.x > target.pos.x ? 1 : -1);
+      }
       if (ev.entered) {
         this.onCatch();
         return;
@@ -589,9 +671,9 @@ export class PlayScene extends Phaser.Scene {
         this.secondChance();
         return;
       }
-      // pedra presa num canto (ou girando no mesmo lugar): segunda chance
+      // pedra presa num canto (ou girando no mesmo lugar): perde na hora
       if (watchStuck(this.stuck, st.x, st.y, h) || this.flightT > MAX_FLIGHT_S) {
-        this.secondChance('PEDRA PRESA! DE NOVO');
+        this.die();
         return;
       }
     }
@@ -607,6 +689,29 @@ export class PlayScene extends Phaser.Scene {
     this.state = 'aim';
     this.monkey.setTexture('macaco_0').setRotation(0);
     this.popup(this.feet.x, this.feet.y - 150, msg, '#E6F2D8', 34);
+  }
+
+  /** A pedra bateu na beirada sem entrar: o ninho balança para aquele lado e volta, como um aro de basquete. */
+  private startWobble(side: number): void {
+    if (this.time.now - this.wobbleAt < 150) return; // um balanço por batida (a colisão dura vários passos)
+    this.wobbleAt = this.time.now;
+    this.wobbleSide = side;
+    this.wobbleT = 0;
+  }
+
+  /**
+   * Desenha o ninho alvo na posição da física mais dois efeitos só visuais (não mudam a mira nem o acerto): flutua 2,5 px
+   * para cima e para baixo o tempo todo e, depois de uma batida na beirada, inclina e escorrega uns px para aquele lado,
+   * oscilando até parar.
+   */
+  private renderNest(dt: number): void {
+    const t = this.target;
+    if (!t || !t.nest.active) return;
+    this.wobbleT += dt;
+    const bob = NEST_BOB_PX * Math.sin((this.time.now / NEST_BOB_MS) * Math.PI * 2 + t.slot.index);
+    const decay = this.wobbleT < 1.6 ? Math.exp(-3.2 * this.wobbleT) : 0;
+    const swing = Math.cos(15 * this.wobbleT) * decay * this.wobbleSide;
+    t.nest.setPosition(t.pos.x + NEST_WOBBLE_PX * swing, t.pos.y + bob).setAngle(NEST_WOBBLE_DEG * swing);
   }
 
   private onCatch(): void {
@@ -721,6 +826,9 @@ export class PlayScene extends Phaser.Scene {
   private startWave(): void {
     this.state = 'wave';
     this.setRedForest(true);
+    this.waveLeft = WAVE_STONES;
+    this.waveHud.setVisible(true);
+    this.updateWaveHud();
     const n = batCount(this.score.hits);
     this.banner(n === 1 ? 'MORCEGO!' : `${n} MORCEGOS!`, '#FF8A7A');
     const top = this.cameras.main.scrollY;
@@ -772,6 +880,7 @@ export class PlayScene extends Phaser.Scene {
         for (const m of this.bats) {
           if (m.alive && m.delay <= 0 && stoneHits(ws.st, { x: m.img.x, y: m.img.y, r: BAT_R })) {
             this.killBat(m);
+            ws.hit = true;
             ws.img.destroy();
             break;
           }
@@ -780,7 +889,10 @@ export class PlayScene extends Phaser.Scene {
       if (!ws.img.active) continue;
       ws.t += dt;
       ws.img.setPosition(ws.st.x, ws.st.y).setRotation(ws.img.rotation + ws.st.vx * dt * 0.02);
-      if (ws.st.y > camBottom + 60 || ws.t > MAX_FLIGHT_S) ws.img.destroy();
+      if (ws.st.y > camBottom + 60 || ws.t > MAX_FLIGHT_S) {
+        ws.img.destroy();
+        if (!ws.hit) this.waveMiss();
+      }
     }
     this.waveStones = this.waveStones.filter((ws) => ws.img.active);
 
@@ -807,6 +919,7 @@ export class PlayScene extends Phaser.Scene {
   }
 
   private endWave(): void {
+    this.waveHud.setVisible(false);
     for (const ws of this.waveStones) ws.img.destroy();
     this.waveStones = [];
     this.bats = [];

@@ -78,7 +78,7 @@ def clean_fringe(im, passes=3, light=170, sat=40):
     return Image.fromarray(arr, 'RGBA')
 
 
-CLEAN = {'tronco.png', 'orelha.png', 'galho.png', 'ninho.png'}
+CLEAN = {'tronco.png', 'orelha.png', 'galho.png', 'ninho.png', 'pedra.png'}
 
 
 def save_scaled(rgba, name, w=None, h=None, scale=None):
@@ -304,3 +304,18 @@ for i, x in enumerate(frs):
     sc = BTW / c.width
     c.resize((BTW, round(c.height * sc)), Image.NEAREST).save(os.path.join(OUT, f'morcego_{i}.png'), optimize=True)
 print('morcego bbox', bb, 'size', BTW, round((bb[3] - bb[1]) * BTW / (bb[2] - bb[0])))
+
+# ---- pedra (sobre xadrez cinza falso: usa o contorno escuro e preenche o interior) ----
+pd = load('Gemini_Generated_Image_dfp46jdfp46jdfp4.jpg').astype(int)
+dark = pd.max(axis=2) < 120
+labp, np_ = ndimage.label(dark)
+sizes_p = ndimage.sum(dark, labp, range(1, np_ + 1))
+# o contorno vem em pedaços: junta todos os pedaços escuros grandes (o xadrez é mais claro) e fecha a forma
+outline = np.isin(labp, [i + 1 for i, v in enumerate(sizes_p) if v >= 60])
+outline = ndimage.binary_closing(outline, structure=np.ones((31, 31)), iterations=2)
+stone = ndimage.binary_fill_holes(outline)
+stone = ndimage.binary_opening(stone, structure=np.ones((5, 5)))
+ys, xs_ = np.nonzero(stone)
+im = to_rgba(pd.astype(np.uint8), ~stone).crop((xs_.min(), ys.min(), xs_.max() + 1, ys.max() + 1))
+_, imp = save_scaled(im, 'pedra.png', w=40)
+print('pedra', im.size, '->', imp.size)

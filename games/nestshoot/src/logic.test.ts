@@ -32,7 +32,10 @@ import {
   BAT_PATTERNS,
   NEST_SINK,
   FIRST_WAVE_AT,
-  rollFrog,
+  frogChance,
+  rollComboBird,
+  afterMiss,
+  WAVE_STONES,
   SAME_SIDE_MIN_GAP,
   SAME_SIDE_MAX_GAP,
   scoreCatch,
@@ -150,19 +153,42 @@ describe('todo ninho é alcançável', () => {
     }
   }, 120_000);
 
-  it('ninho do sapo no ponto mais alto, sempre que o sapo pode aparecer', () => {
+  it('ninho do sapo no ponto mais alto (orelha do outro lado, até FROG_MAX_GAP acima)', () => {
     const top = FROG_LIFT + FROG_AMP_MAX;
     for (const from of variants(0, 0)) {
       for (const gap of [GAP_END[0], FROG_MAX_GAP]) {
-        for (const to of variants(1, -gap).filter((t) => t.kind === 'shelf')) {
-          const allowed = rollFrog({ ...to, index: 41 }, () => 0, from);
-          const close = Math.abs(to.x - from.x) < FROG_MIN_DX;
-          expect(allowed).toBe(!close);
-          if (allowed) expect(findShot(from, { x: to.x, y: to.y - top })).not.toBeNull();
+        for (const to of variants(1, -gap).filter((t) => t.kind === 'shelf' && t.side !== from.side)) {
+          expect(Math.abs(to.x - from.x)).toBeGreaterThanOrEqual(FROG_MIN_DX);
+          expect(findShot(from, { x: to.x, y: to.y - top })).not.toBeNull();
         }
       }
     }
   }, 120_000);
+
+  it('o sorteio põe o sapo numa orelha do outro lado, perto o bastante', () => {
+    let seed = 5;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    let s = firstSlot();
+    let frogs = 0;
+    let branches = 0;
+    for (let i = 0; i < 400; i++) {
+      const n = nextSlot(s, rnd);
+      if (n.frog) {
+        frogs++;
+        expect(n.kind).toBe('shelf');
+        expect(n.side).not.toBe(s.side);
+        expect(s.y - n.y).toBeLessThanOrEqual(FROG_MAX_GAP + 1e-9);
+        expect(n.index).toBeGreaterThan(10);
+      }
+      if (n.kind === 'branch') {
+        branches++;
+        expect(n.index).toBeGreaterThan(10);
+      }
+      s = n;
+    }
+    expect(frogs).toBeGreaterThan(100);
+    expect(branches).toBeGreaterThan(100);
+  });
 });
 
 describe('física', () => {
@@ -179,19 +205,19 @@ describe('física', () => {
     expect(stepStone(st, 1 / 60, nest).entered).toBe(true);
   });
 
-  it('a pedra que sobe por baixo bate no fundo do ninho e não entra', () => {
+  it('a pedra que vem por baixo passa direto pelo apoio e pelo ninho, e não vale cair de volta nele', () => {
     const nest = { x: 300, y: 500 };
-    const st: Stone = { x: 300, y: 520, vx: 0, vy: -900 };
+    const st: Stone = { x: 300, y: 560, vx: 0, vy: -900 };
     let entered = false;
     let touched = false;
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 240; i++) {
       const ev = stepStone(st, 1 / 240, nest);
       entered ||= ev.entered;
       touched ||= ev.nestTouch;
     }
-    expect(touched).toBe(true);
-    expect(entered).toBe(false);
-    expect(st.vy).toBeGreaterThan(0);
+    expect(touched).toBe(false); // sem física no fundo do ninho nem no apoio
+    expect(st.y).toBeGreaterThan(nest.y); // subiu, parou e caiu de volta, atravessando
+    expect(entered).toBe(false); // entrou por baixo: não conta
   });
 
   it('a pedra rebate no pássaro', () => {
@@ -237,6 +263,13 @@ describe('pedra presa', () => {
 });
 
 describe('morcegos', () => {
+  it('3 pedras por onda; cada erro tira 20% dos pontos, arredondado', () => {
+    expect(WAVE_STONES).toBe(3);
+    expect(afterMiss(100)).toBe(80);
+    expect(afterMiss(7)).toBe(6); // 5,6 -> 6
+    expect(afterMiss(0)).toBe(0);
+  });
+
   it('onda a cada 8 a 10 ninhos; 1, depois 2 (30) e 3 (60) morcegos', () => {
     expect(FIRST_WAVE_AT).toBe(3);
     expect(nextWaveGap(() => 0)).toBe(5);
@@ -306,10 +339,20 @@ describe('pontuação', () => {
     expect(scoreCatch(s, true, 1).points).toBe(3);
   });
 
+  it('a partir do nível 15, ninho que se mexe pode vir com pássaro no movimento contrário', () => {
+    expect(rollComboBird('h', 14, () => 0)).toBeNull();
+    expect(rollComboBird('h', 15, () => 0)).toBe('v');
+    expect(rollComboBird('v', 15, () => 0)).toBe('h');
+    expect(rollComboBird('h', 15, () => 0.99)).toBeNull();
+    expect(branchChance(10)).toBeGreaterThanOrEqual(0.4);
+  });
+
   it('o ninho se mexe só depois de 8 acertos, e o galho (onde o ninho sempre desliza) também só aparece a partir daí', () => {
-    expect(moveChance(7)).toBe(0);
-    expect(moveChance(8)).toBeGreaterThan(0);
-    expect(branchChance(7)).toBe(0);
-    expect(branchChance(8)).toBeGreaterThan(0);
+    expect(moveChance(9)).toBe(0);
+    expect(moveChance(10)).toBeGreaterThan(0);
+    expect(branchChance(9)).toBe(0);
+    expect(branchChance(10)).toBeGreaterThan(0);
+    expect(frogChance(9)).toBe(0);
+    expect(frogChance(10)).toBeGreaterThanOrEqual(0.3);
   });
 });
