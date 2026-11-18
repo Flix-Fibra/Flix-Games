@@ -13,6 +13,8 @@
     "build:estoque": "npm run build -w games/estoque",
     "catalogo": "node scripts/sincronizar-catalogo.mjs | docker exec -i flixgames-db-1 psql -v ON_ERROR_STOP=1 -q -U flixgames -d flixgames",
     "catalogo:conferir": "node scripts/sincronizar-catalogo.mjs --conferir",
+    "dev:nestshoot": "npm run dev -w games/nestshoot",
+    "build:nestshoot": "npm run build -w games/nestshoot",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
