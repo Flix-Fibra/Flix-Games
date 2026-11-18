@@ -5,9 +5,14 @@ import { useEffect, useRef } from 'react';
  * mistura de cor: ondas grandes e lentas misturam a cor principal (--c1) e a secundária (--c2) do card selecionado,
  * com intensidade baixa, forte no alto e sumindo para o meio da tela. Sem textura nem faixas de brilho.
  *
- * Cuidados de desempenho: desenha em meia resolução; pausa com a aba em segundo plano, com o topo fora da tela,
- * com um jogo aberto (`pausado`) e no tema claro; respeita "reduzir movimento" (um quadro parado). Sem WebGL,
- * o CSS mantém as manchas animadas (classe "plasma" só entra quando o WebGL funciona).
+ * Cuidados de desempenho: desenha em 1/4 da resolução CSS e a 30 quadros/s; pausa com a aba em segundo plano, com o
+ * topo fora da tela, com um jogo aberto (`pausado`) e no tema claro; respeita "reduzir movimento" (um quadro parado).
+ * Sem WebGL, o CSS mantém as manchas animadas (classe "plasma" só entra quando o WebGL funciona).
+ *
+ * Sem `filter: blur()` no canvas (medido em 18/11/2026 num Mac Intel HD 630, tela Retina): o desfoque CSS de 36 px
+ * era refeito pelo compositor a cada quadro sobre ~3500x1200 pixels físicos, inclusive com o jogo aberto por cima
+ * (hub com o Snake: 22 fps com o plasma, 38 fps sem). A suavidade vem agora da resolução baixa (o navegador amplia
+ * com interpolação) e de 3 oitavas de ruído em vez de 4 (a 4ª era justamente o detalhe que o desfoque apagava).
  */
 
 const VERT = `attribute vec2 p; void main(){ gl_Position = vec4(p, 0.0, 1.0); }`;
@@ -23,7 +28,7 @@ float n(vec2 p){
 float fbm(vec2 p){
   float v = 0.0, a = 0.5;
   mat2 r = mat2(0.8, -0.6, 0.6, 0.8);
-  for (int k = 0; k < 4; k++){ v += a * n(p); p = r * p * 1.9 + 7.3; a *= 0.48; } // menos detalhe fino: ondas sedosas
+  for (int k = 0; k < 3; k++){ v += a * n(p); p = r * p * 1.9 + 7.3; a *= 0.48; } // 3 oitavas: ondas sedosas, sem detalhe fino
   return v;
 }
 void main(){
@@ -100,20 +105,32 @@ export function FundoPlasma({ pausado }: { pausado: boolean }) {
     div.appendChild(canvas);
     div.classList.add('plasma');
 
-    const ESCALA = 0.5; // meia resolução: o desfoque natural do plasma esconde, e pesa 4× menos
+    const ESCALA = 0.25; // 1/4 da resolução CSS (1/8 da física em tela Retina): só luz difusa, a ampliação suaviza
+    const INTERVALO_MS = 1000 / 30; // as ondas mudam em dezenas de segundos: 30 quadros/s bastam e custam metade
+    // Tamanho em CSS informado pelo navegador (ResizeObserver): o laço nunca lê layout (clientWidth/clientHeight
+    // no laço forçavam o layout a cada quadro desenhado logo após uma troca de card; medido em 18/11/2026: 26–80 ms).
+    const tam = { w: 0, h: 0 };
+    const ro = new ResizeObserver(([e]) => { if (e) { tam.w = e.contentRect.width; tam.h = e.contentRect.height; } });
+    ro.observe(canvas);
     const ajustar = () => {
-      const w = Math.max(1, Math.round(canvas.clientWidth * ESCALA));
-      const hgt = Math.max(1, Math.round(canvas.clientHeight * ESCALA));
+      const w = Math.max(1, Math.round(tam.w * ESCALA));
+      const hgt = Math.max(1, Math.round(tam.h * ESCALA));
       if (canvas.width !== w || canvas.height !== hgt) { canvas.width = w; canvas.height = hgt; gl.viewport(0, 0, w, hgt); }
     };
 
     // Cores: lê --c1/--c2 do CSS de tempos em tempos e se aproxima delas a cada quadro (fusão suave ao trocar de card)
     const atual = { c1: [0.82, 0.14, 0.16], c2: [0.48, 0.18, 0.97] };
     const alvo = { c1: atual.c1.slice(), c2: atual.c2.slice() };
+    // Lê do estilo INLINE da raiz (onde o Início e o detalhe do jogo gravam com setProperty): é uma consulta simples.
+    // getComputedStyle logo depois de --c1 mudar forçava o recálculo do estilo da página inteira no meio do quadro
+    // (medido em 18/11/2026: 39–48 ms ao trocar de card). O estilo calculado só entra como reserva, uma vez,
+    // para a cor padrão do CSS (:root) enquanto ninguém gravou cor.
+    const raiz = document.documentElement;
+    const padrao = getComputedStyle(raiz);
+    const reserva = { c1: padrao.getPropertyValue('--c1'), c2: padrao.getPropertyValue('--c2') };
     const lerCores = () => {
-      const cs = getComputedStyle(document.documentElement);
-      const a = corDe(cs.getPropertyValue('--c1'));
-      const b = corDe(cs.getPropertyValue('--c2'));
+      const a = corDe(raiz.style.getPropertyValue('--c1') || reserva.c1);
+      const b = corDe(raiz.style.getPropertyValue('--c2') || reserva.c2);
       if (a) alvo.c1 = a;
       if (b) alvo.c2 = b;
     };
@@ -122,17 +139,22 @@ export function FundoPlasma({ pausado }: { pausado: boolean }) {
     atual.c2 = alvo.c2.slice();
 
     const reduzir = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // Topo visível? O navegador avisa (IntersectionObserver), sem perguntar a cada quadro. getBoundingClientRect
+    // no laço forçava o layout da página no meio do script sempre que outra animação o deixava pendente
+    // (medido em 18/11/2026: 40–90 ms por quadro ao trocar de card na fileira do Início).
+    let visivel = true;
+    const io = new IntersectionObserver(([e]) => { visivel = !!e?.isIntersecting; });
+    io.observe(div);
     let quadro = 0;
-    let ultimo = performance.now();
+    let ultimo = performance.now(); // último quadro DESENHADO (o tempo da animação só anda quando desenha)
     let tempo = 7; // começa já "misturado"
     let proximaLeitura = 0;
     const desenhar = (agora: number) => {
       quadro = requestAnimationFrame(desenhar);
-      const dt = Math.min(0.05, (agora - ultimo) / 1000);
+      if (pausa.current || document.hidden || !visivel || document.documentElement.getAttribute('data-theme') !== 'dark') { ultimo = agora; return; }
+      if (agora - ultimo < INTERVALO_MS - 2) return; // limite de 30 quadros/s (folga de 2 ms para a variação do vsync)
+      const dt = Math.min(0.1, (agora - ultimo) / 1000);
       ultimo = agora;
-      const escuro = document.documentElement.getAttribute('data-theme') === 'dark';
-      const visivel = div.getBoundingClientRect().bottom > 0;
-      if (pausa.current || document.hidden || !escuro || !visivel) return;
       if (agora > proximaLeitura) { lerCores(); proximaLeitura = agora + 150; }
       const k = Math.min(1, dt * 2.5);
       for (const c of ['c1', 'c2'] as const) for (let i = 0; i < 3; i++) atual[c][i]! += (alvo[c][i]! - atual[c][i]!) * k;
@@ -147,6 +169,8 @@ export function FundoPlasma({ pausado }: { pausado: boolean }) {
     quadro = requestAnimationFrame(desenhar);
     return () => {
       cancelAnimationFrame(quadro);
+      io.disconnect();
+      ro.disconnect();
       div.classList.remove('plasma');
       gl.getExtension('WEBGL_lose_context')?.loseContext(); // libera a placa de vídeo
       canvas.remove();

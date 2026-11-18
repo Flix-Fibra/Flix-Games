@@ -105,7 +105,7 @@ export function Inicio({ jogos, perfil, onFavoritar, onVerRanking, onJogar, onCr
             return (
               <button key="personagem" {...comum} className={'gx-tile gx-tile-personagem' + (ativo ? ' ativo' : '')}
                 aria-label={nome} style={{ '--t1': CARD_PERSONAGEM.t1, '--t2': CARD_PERSONAGEM.t2 } as CSSProperties}>
-                <Pessoa />
+                <span className="gx-tile-arte" aria-hidden="true"><Pessoa /></span>
                 <span className="gx-tile-mais" aria-hidden="true">+</span>
                 <span className="gx-tile-nome">{nome}</span>
               </button>
@@ -115,7 +115,7 @@ export function Inicio({ jogos, perfil, onFavoritar, onVerRanking, onJogar, onCr
           return (
             <button key={j.id} {...comum} data-capa={j.id} className={'gx-tile' + (ativo ? ' ativo' : '')} aria-label={j.nome}
               style={{ '--t1': j.cor1, '--t2': j.cor2 } as CSSProperties}>
-              <CapaJogo jogo={j} />
+              <span className="gx-tile-arte" aria-hidden="true"><CapaJogo jogo={j} /></span>
               {perfil.favoritos.includes(j.id) && <span className="gx-tile-fav"><Coracao /></span>}
               <span className="gx-tile-nome">{j.nome}</span>
             </button>

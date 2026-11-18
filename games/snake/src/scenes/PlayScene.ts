@@ -44,6 +44,7 @@ export class PlayScene extends Phaser.Scene {
   /** Tempo extra acumulado (5 s por item conectado). */
   private bonusMs = 0;
   private acc = 0;
+  private timeColor = '';
   private readyLeft = READY_MS;
   private over = false;
   private steps = 0;
@@ -91,6 +92,7 @@ export class PlayScene extends Phaser.Scene {
     this.elapsed = 0;
     this.bonusMs = 0;
     this.acc = 0;
+    this.timeColor = '';
     this.readyLeft = READY_MS;
     this.over = false;
     this.steps = 0;
@@ -379,19 +381,37 @@ export class PlayScene extends Phaser.Scene {
 
   /** Muros: uma cerca de madeira com flores (asset do gestor) por trecho reto; nos trechos horizontais ela é girada. */
   private buildObstacles(): void {
+    // Todas as sombras num desenho só, transformado em imagem (ver bakeStatic). Coordenadas relativas ao topo do campo.
+    const shadows = this.make.graphics({}, false);
+    shadows.fillStyle(0x000000, 0.3);
     for (const w of this.state.walls) {
       const along = w.len * CELL - 4; // comprimento do trecho (com uma folga nas pontas)
       const across = CELL * 0.86; // espessura da cerca
       const cx = cellX(w.x) + (w.vertical ? CELL / 2 : (w.len * CELL) / 2);
       const cy = cellY(w.y) + (w.vertical ? (w.len * CELL) / 2 : CELL / 2);
-      const shadow = this.add.graphics().setDepth(DEPTH_ITEMS);
-      shadow.fillStyle(0x000000, 0.3);
-      if (w.vertical) shadow.fillRoundedRect(cx - across / 2 + 4, cy - along / 2 + 5, across, along, 8);
-      else shadow.fillRoundedRect(cx - along / 2 + 5, cy - across / 2 + 4, along, across, 8);
+      const sy = cy - FIELD_Y;
+      if (w.vertical) shadows.fillRoundedRect(cx - across / 2 + 4, sy - along / 2 + 5, across, along, 8);
+      else shadows.fillRoundedRect(cx - along / 2 + 5, sy - across / 2 + 4, along, across, 8);
       const img = this.add.image(cx, cy, 'muro').setDepth(DEPTH_ITEMS + 0.1);
       img.setDisplaySize(across, along);
       if (!w.vertical) img.setAngle(90);
     }
+    this.bakeStatic(shadows, 'muro_sombras', 0, FIELD_Y, GAME_W, ROWS * CELL + 12, DEPTH_ITEMS);
+  }
+
+  /**
+   * Transforma um desenho que não muda durante a partida em imagem (textura), feita uma vez por rodada.
+   * Motivo: no WebGL o Phaser refaz a geometria de todo Graphics a cada quadro, mesmo parado. Medido em 18/11/2026
+   * (Mac Intel HD 630): placa do HUD 5,5 ms e sombras das cercas 1,4 ms por quadro, ~80% do JavaScript da partida.
+   * Como imagem, custa o mesmo que um sprite. A textura tem o tamanho do jogo (1:1 com o canvas), sem perda de nitidez.
+   * Os comandos de `g` usam coordenadas relativas a (x, y); `g` não pode estar na cena (criar com make.graphics(..., false)).
+   */
+  private bakeStatic(g: Phaser.GameObjects.Graphics, key: string, x: number, y: number, w: number, h: number, depth: number): Phaser.GameObjects.Image {
+    // generateTexture desenha POR CIMA de uma textura existente, sem limpar: a da rodada anterior sai antes
+    if (this.textures.exists(key)) this.textures.remove(key);
+    g.generateTexture(key, Math.ceil(w), Math.ceil(h));
+    g.destroy();
+    return this.add.image(x, y, key).setOrigin(0, 0).setDepth(depth);
   }
 
   private buildFood(): void {
@@ -436,7 +456,7 @@ export class PlayScene extends Phaser.Scene {
    */
   private buildHud(): void {
     const pl = HUD.plate;
-    const g = this.add.graphics().setDepth(DEPTH_HUD);
+    const g = this.make.graphics({}, false); // vira imagem no fim (bakeStatic): a placa não muda durante a partida
     g.fillStyle(0x10131b, 0.5); // translúcido: dá para ver o céu atrás do menu
     g.fillRoundedRect(pl.x, pl.y, pl.w, pl.h, pl.radius);
     g.lineStyle(10, 0xd4142c, 0.3);
@@ -497,6 +517,7 @@ export class PlayScene extends Phaser.Scene {
       g.fillStyle(i === 2 ? 0x3ce05a : 0x2fc24a, 1);
       g.fillRoundedRect(bx, cy + 11 - h, 6, h, 2);
     });
+    this.bakeStatic(g, 'hud_placa', 0, 0, GAME_W, pl.y + pl.h + 8, DEPTH_HUD);
 
     const value = (cx: number) =>
       this.add
@@ -526,7 +547,11 @@ export class PlayScene extends Phaser.Scene {
     this.levelText.setText(String(levelFor(s.eaten)));
     const sec = Math.ceil(Math.max(0, ROUND_MS + this.bonusMs - this.elapsed) / 1000);
     this.timeText.setText(`${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`);
-    this.timeText.setColor(sec <= 10 ? COLORS.flixRedText : '#FFFFFF');
+    const timeColor = sec <= 10 ? COLORS.flixRedText : '#FFFFFF';
+    if (timeColor !== this.timeColor) {
+      this.timeColor = timeColor; // setColor redesenha o texto e reenvia a textura: só quando a cor muda de fato
+      this.timeText.setColor(timeColor);
+    }
     this.boostText.setText(s.boostLeft > 0 ? 'PONTO EXTRA x2' : '');
   }
 
