@@ -3,7 +3,7 @@ import type { Expression } from '@flix/avatar';
 import type { HubBridge } from '@flix/game-sdk';
 import { sfx } from '../audio';
 import {
-  COLS, ITEM_BONUS_MS, ROUND_MS, ROWS, createState, enqueueDir, levelFor, mulberry32, step, tickMs, type Cause, type Dir, type GameState, type Pt,
+  COLS, ITEM_BONUS_MS, ROUND_MS, ROWS, createState, enqueueDir, levelFor, mulberry32, step, tickMs, turnRush, type Cause, type Dir, type GameState, type Pt,
 } from '../logic';
 import { buildTrack, endDirection, lerp, roundedPath, sampleTrack, type V } from '../cablePath';
 import { loadBest } from '../storage';
@@ -44,6 +44,7 @@ export class PlayScene extends Phaser.Scene {
   /** Tempo extra acumulado (5 s por item conectado). */
   private bonusMs = 0;
   private acc = 0;
+  private rush = 1; // > 1 enquanto uma curva pendente acelera o passo em curso (ver turnRush)
   private timeColor = '';
   private readyLeft = READY_MS;
   private over = false;
@@ -92,6 +93,7 @@ export class PlayScene extends Phaser.Scene {
     this.elapsed = 0;
     this.bonusMs = 0;
     this.acc = 0;
+    this.rush = 1;
     this.timeColor = '';
     this.readyLeft = READY_MS;
     this.over = false;
@@ -150,7 +152,15 @@ export class PlayScene extends Phaser.Scene {
 
   private turn(dir: Dir): void {
     if (this.over) return;
-    if (enqueueDir(this.state, dir)) sfx('turn');
+    if (!enqueueDir(this.state, dir)) return;
+    sfx('turn');
+    this.armRush();
+  }
+
+  /** Curva pendente: o resto do passo em curso anda mais rápido, para a curva aparecer em até TURN_WAIT_MS. */
+  private armRush(): void {
+    if (this.state.queue.length === 0 || this.readyLeft > 0) { this.rush = 1; return; }
+    this.rush = turnRush(tickMs(levelFor(this.state.eaten)) - this.acc);
   }
 
   update(_time: number, rawDelta: number): void {
@@ -176,18 +186,23 @@ export class PlayScene extends Phaser.Scene {
       return;
     }
 
-    this.acc += delta;
+    this.acc += delta * this.rush;
     let guard = 0;
+    let stepped = false;
     while (!this.over && this.acc >= tickMs(levelFor(this.state.eaten)) && guard++ < 4) {
+      // a aceleração vale só até o centro da casa: o que sobrou do quadro volta ao ritmo normal
+      if (!stepped && this.rush > 1) this.acc = tickMs(levelFor(this.state.eaten)) + (this.acc - tickMs(levelFor(this.state.eaten))) / this.rush;
       this.acc -= tickMs(levelFor(this.state.eaten));
       step(this.state, Math.random);
       this.steps++;
+      stepped = true;
       this.handleEvent();
       if (!this.state.alive) {
         this.finish(this.state.cause ?? 'self');
         break;
       }
     }
+    if (stepped) this.armRush(); // segunda curva na fila (ex.: meia-volta rápida) também chega logo
     this.render();
   }
 
@@ -648,7 +663,7 @@ export class PlayScene extends Phaser.Scene {
     if (this.headAngle === null || this.readyLeft > 0) this.headAngle = targetA;
     else {
       const diff = Math.atan2(Math.sin(targetA - this.headAngle), Math.cos(targetA - this.headAngle));
-      this.headAngle += diff * (1 - Math.exp(-this.frameMs / 50));
+      this.headAngle += diff * (1 - Math.exp(-this.frameMs / 30)); // 30 ms: a cabeça acompanha a curva sem atraso visível
     }
     const shownHead: V = { x: Math.cos(this.headAngle), y: Math.sin(this.headAngle) };
     const tailDir = endDirection(path, true) ?? { x: -headDir.x, y: -headDir.y };

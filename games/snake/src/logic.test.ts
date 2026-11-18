@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  BOOST_MS, COLS, FOOD_KINDS, MAPS, MAP_BARS, ROWS, START_LENGTH, createState, enqueueDir, freeCell, levelFor, mulberry32, nextFoodKind, step, tickMs, type GameState,
+  BOOST_MS, COLS, FOOD_KINDS, MAPS, MAP_BARS, ROWS, START_LENGTH, createState, enqueueDir, freeCell, levelFor, mulberry32, nextFoodKind, step, tickMs, turnRush, TURN_WAIT_MS, type GameState,
 } from './logic';
 
 const rng = () => mulberry32(42);
@@ -210,6 +210,13 @@ describe('dificuldade', () => {
     expect(tickMs(1)).toBe(200);
     expect(tickMs(2)).toBeLessThan(tickMs(1));
     expect(tickMs(10)).toBeGreaterThanOrEqual(85);
+  });
+
+  it('com curva pendente, o resto do passo termina em até TURN_WAIT_MS', () => {
+    expect(turnRush(200)).toBe(200 / TURN_WAIT_MS);
+    expect(turnRush(120) * TURN_WAIT_MS).toBe(120);
+    expect(turnRush(TURN_WAIT_MS)).toBe(1); // já perto do centro da casa: segue no ritmo normal
+    expect(turnRush(10)).toBe(1);
   });
 });
 

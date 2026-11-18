@@ -111,6 +111,20 @@ export function tickMs(level: number): number {
   return Math.max(85, 200 - (level - 1) * 12);
 }
 
+/**
+ * Espera máxima entre o toque numa direção e a curva na tela, em milissegundos. A cobra só vira no centro de uma
+ * casa; sem isto, a curva esperava o resto do passo (até 200 ms no nível 1), o que se sente como "resposta demorada".
+ */
+export const TURN_WAIT_MS = 50;
+
+/**
+ * Multiplicador de velocidade do passo em curso quando há curva pendente: o resto do passo é percorrido em
+ * TURN_WAIT_MS, com deslizamento contínuo (sem salto). A curva acontece na mesma casa de antes; só chega mais cedo.
+ */
+export function turnRush(remainingMs: number): number {
+  return remainingMs > TURN_WAIT_MS ? remainingMs / TURN_WAIT_MS : 1;
+}
+
 export function freeCell(state: Pick<GameState, 'snake' | 'obstacles' | 'food' | 'signal'>, rng: Rng, minDistFrom?: Pt, minDist = 0): Pt | null {
   const taken = new Set<string>();
   const key = (p: Pt) => `${p.x},${p.y}`;
