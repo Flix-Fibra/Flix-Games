@@ -1,0 +1,9 @@
+{
+  "id": "nestshoot",
+  "name": "Nest Shot",
+  "_nome_de_trabalho": "G15. Nome provisório; validar com o marketing antes de publicar. Revisão do jurídico obrigatória (seção 2.2).",
+  "avatarTier": "A",
+  "avatarViews": ["side"],
+  "rankingMetric": "score",
+  "sdkVersion": "0.1.0"
+}
