@@ -157,6 +157,8 @@ Registro das decisões de engenharia dos jogos. Decisões de produto ficam em `a
 
 [C] 15º ajuste (pedidos do solicitante, G15): (1) **mais ninhos deslizando no galho**: chance de 40% a partir do nível 10, subindo até 50% (antes 30% a 45%). (2) **Combinações a partir do nível 15**: ninho que desliza no galho pode vir com **pássaro subindo e descendo** entre o macaco e o galho; ninho do sapo (sobe e desce) pode vir com **pássaro passando de lado** na altura média da levitação. Chance de 30% no nível 15, subindo até 50%. Os ninhos parados continuam com o pássaro de antes.
 
+[C] 16º ajuste (G15): **fundo da floresta 15% mais escuro** (tom 0xd9d9d9 multiplicado na imagem, `BG_TINT`, também na tela de início); o filtro vermelho da onda de morcegos foi escurecido na mesma proporção.
+
 [D] Pendentes: som, teste em celular, nome final, revisão do jurídico (mecânica de jogo comercial, seção 2.2), ligação da pasta `nestshoot` ao G15 na API (hoje o G15 abre o jogo de teste do hub) e licença das imagens (geradas por IA).
 
 ### Pendências e riscos

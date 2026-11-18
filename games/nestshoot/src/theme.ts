@@ -58,4 +58,7 @@ export const DEPTH = {
 export const MONKEY_SCREEN_Y = 1080; // mais embaixo, para sobrar espaço para o ninho de cima
 
 /** Tom vermelho aplicado à floresta do fundo durante a onda de morcegos. */
-export const WAVE_TINT = 0xff8a78;
+export const WAVE_TINT = 0xd97566; // 0xff8a78 escurecido como o fundo (85%)
+
+/** Fundo da floresta 15% mais escuro (tom multiplicado na imagem). */
+export const BG_TINT = 0xd9d9d9;

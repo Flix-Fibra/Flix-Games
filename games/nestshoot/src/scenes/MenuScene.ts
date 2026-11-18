@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { firstSlot, NEST_SINK, shelfSlot } from '../logic';
 import { addSupport, TrunkColumns } from '../tree';
-import { DEPTH, FONT, FONT_TEXT, GAME_H, GAME_W, MONKEY_SCREEN_Y } from '../theme';
+import { BG_TINT, DEPTH, FONT, FONT_TEXT, GAME_H, GAME_W, MONKEY_SCREEN_Y } from '../theme';
 
 const ACCEPT_AFTER_MS = 350; // ignora o toque logo que a tela abre (evita começar sem querer depois de perder)
 
@@ -19,7 +19,7 @@ export class MenuScene extends Phaser.Scene {
     this.openedAt = this.time.now;
 
     // a mesma árvore do começo da partida (câmera na mesma posição), escurecida
-    this.add.image(0, 0, 'fundo').setOrigin(0).setScrollFactor(0).setDepth(DEPTH.bg);
+    this.add.image(0, 0, 'fundo').setOrigin(0).setScrollFactor(0).setDepth(DEPTH.bg).setTint(BG_TINT);
     const start = firstSlot();
     this.cameras.main.setScroll(0, start.y - MONKEY_SCREEN_Y);
     new TrunkColumns(this, start.y + GAME_H).update(start.y - MONKEY_SCREEN_Y, start.y - MONKEY_SCREEN_Y + GAME_H);

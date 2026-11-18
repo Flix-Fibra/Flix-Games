@@ -52,7 +52,7 @@ import {
   type Stone,
   type Vec,
 } from '../logic';
-import { COLORS, DEPTH, FONT, FONT_TEXT, GAME_H, GAME_W, MONKEY_SCREEN_Y, WAVE_TINT } from '../theme';
+import { BG_TINT, COLORS, DEPTH, FONT, FONT_TEXT, GAME_H, GAME_W, MONKEY_SCREEN_Y, WAVE_TINT } from '../theme';
 import { addSupport, TrunkColumns } from '../tree';
 
 type State = 'aim' | 'flying' | 'climbing' | 'wave' | 'dead';
@@ -215,7 +215,7 @@ export class PlayScene extends Phaser.Scene {
     this.frogClock = 0;
     this.nextWaveAt = FIRST_WAVE_AT;
 
-    this.bg = this.add.image(0, 0, 'fundo').setOrigin(0).setScrollFactor(0).setDepth(DEPTH.bg);
+    this.bg = this.add.image(0, 0, 'fundo').setOrigin(0).setScrollFactor(0).setDepth(DEPTH.bg).setTint(BG_TINT);
 
     this.cur = this.slot(0);
     this.feet = { x: this.cur.x, y: this.cur.y };
@@ -933,8 +933,8 @@ export class PlayScene extends Phaser.Scene {
 
   /** Filtro vermelho na imagem de fundo da floresta (entra e sai suavemente). */
   private setRedForest(on: boolean): void {
-    const from = Phaser.Display.Color.ValueToColor(on ? 0xffffff : WAVE_TINT);
-    const to = Phaser.Display.Color.ValueToColor(on ? WAVE_TINT : 0xffffff);
+    const from = Phaser.Display.Color.ValueToColor(on ? BG_TINT : WAVE_TINT);
+    const to = Phaser.Display.Color.ValueToColor(on ? WAVE_TINT : BG_TINT);
     this.tweens.addCounter({
       from: 0,
       to: 100,
@@ -944,7 +944,7 @@ export class PlayScene extends Phaser.Scene {
         this.bg.setTint(Phaser.Display.Color.GetColor(c.r, c.g, c.b));
       },
       onComplete: () => {
-        if (!on) this.bg.clearTint();
+        if (!on) this.bg.setTint(BG_TINT);
       },
     });
   }
