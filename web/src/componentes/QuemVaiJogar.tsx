@@ -12,7 +12,7 @@ interface Props {
   onExcluir: (id: string) => Promise<void>;
 }
 
-/** Tela "Quem vai jogar?": até 2 perfis por conta (Q23). */
+/** Tela "Quem vai jogar?": até `maxPerfis` perfis por conta (Q23; valor vem da API). */
 export function QuemVaiJogar({ perfis, maxPerfis: MAX_PERFIS, atualId, onEntrar, onCriar, onExcluir }: Props) {
   const [gerenciando, setGerenciando] = useState(false);
   const [confirmarId, setConfirmarId] = useState<string | null>(null);

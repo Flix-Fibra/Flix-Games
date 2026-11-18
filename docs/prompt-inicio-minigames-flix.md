@@ -12,7 +12,7 @@
 
 1. **Sem anúncios por enquanto**, inclusive na tela de game over. O hub envia `restart` direto, sem anúncio (Q34 do painel `andamento.md`).
 2. **Catálogo:** começa com 15 jogos (G01 a G15) e a meta futura é chegar a 20.
-3. **Identidade:** conta Flix com perfis ligados ao cliente (até 2 por conta, Q23). Não há ranking por apelido anônimo. Público igual à Q30: sem jogos infantis; segue valendo a regra de evitar violência gráfica.
+3. **Identidade:** conta Flix com perfis ligados ao cliente (até 4 por conta, Q23). Não há ranking por apelido anônimo. Público igual à Q30: sem jogos infantis; segue valendo a regra de evitar violência gráfica.
 4. **Doom-like (G11):** tentar uma versão com menos violência: inimigo diferente e, no lugar da arma de fogo, outro tipo de projétil. Continuam valendo as regras de licença e de nome.
 5. **Equipe:** não há donos fixos por área. O Rafael foi originalmente encarregado do hub, mas qualquer pessoa pode atuar em qualquer área.
 6. **Código de referência:** é permitido usar e colar trechos pontuais de código dos jogos de referência quando facilitarem o desenvolvimento, desde que não reproduzam grande parte nem a totalidade da obra. Registrar origem e licença do trecho no `ASSETS.md`. Trechos de repositórios GPL, CC BY-SA ou sem licença são risco assumido pelo time; o jurídico avalia na revisão do jogo pronto. Sprites, sons, imagens e vídeos de terceiros continuam proibidos.
@@ -116,7 +116,7 @@ O objetivo é que o jogo final não seja uma obra derivada de nenhum jogo de ref
 
 ### 2.6 Privacidade (LGPD)
 
-- O ranking usa o **perfil do jogador, ligado à conta Flix do cliente** (decisão de 16/11/2026; até 2 perfis por conta). O ranking mostra apenas apelido, avatar e posição, nunca CPF, e-mail, telefone ou endereço. O tratamento dos dados é do hub, com o jurídico (LGPD).
+- O ranking usa o **perfil do jogador, ligado à conta Flix do cliente** (decisão de 16/11/2026; até 4 perfis por conta desde 18/11/2026). O ranking mostra apenas apelido, avatar e posição, nunca CPF, e-mail, telefone ou endereço. O tratamento dos dados é do hub, com o jurídico (LGPD).
 - A configuração do personagem (seção 9) é guardada pelo hub e entregue ao jogo. O jogo não guarda nem envia essa configuração para lugar nenhum.
 - O jogo não coleta dado pessoal. Quem envia pontuação e quem exibe anúncio é o hub.
 - Sem bibliotecas de analytics, anúncios ou rastreamento dentro dos jogos. Isso é responsabilidade do hub.

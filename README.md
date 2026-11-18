@@ -1,7 +1,7 @@
 # Flix-Games-
 Jogos da Flix fibra para clientes
 
-Portal de jogos para clientes FLIX, com entrada pelo App Flix e pelo site, navegação inspirada em consoles, até 2 perfis por conta e rankings por jogo. Em desenvolvimento: interface e API funcionam localmente com **login simulado e dados fictícios**; a integração com o login do App Flix (Q02) ainda não existe.
+Portal de jogos para clientes FLIX, com entrada pelo App Flix e pelo site, navegação inspirada em consoles, até 4 perfis por conta e rankings por jogo. Em desenvolvimento: interface e API funcionam localmente com **login simulado e dados fictícios**; a integração com o login do App Flix (Q02) ainda não existe.
 
 ## Por onde continuar
 

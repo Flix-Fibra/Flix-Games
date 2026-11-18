@@ -13,7 +13,7 @@ from .sessao import COOKIE, Db, Sessao, criar_sessao
 
 router = APIRouter(prefix="/api")
 
-MAX_PERFIS = 2  # Q23
+MAX_PERFIS = 4  # Q23 (era 2 até 18/11/2026)
 CORES = ["#D2232A", "#2773D2", "#7654C4", "#15803D"]
 RE_APELIDO = re.compile(r"^[A-Za-zÀ-ÿ0-9 _-]{3,20}$")
 # [H] Lista mínima; a moderação de verdade (Q25) é revisão da equipe + denúncia.
@@ -121,7 +121,7 @@ def desconectar_aparelho(aparelho_id: UUID, s: Sessao, c: Db) -> None:
 # ---------- Perfis ----------
 @router.post("/perfis", status_code=201)
 def criar_perfil(dados: NovoPerfil, s: Sessao, c: Db) -> dict:
-    # Trava a conta: duas requisições ao mesmo tempo não passam do limite de 2
+    # Trava a conta: duas requisições ao mesmo tempo não passam do limite de MAX_PERFIS
     c.execute("SELECT id FROM contas WHERE id = %s FOR UPDATE", (s["conta_id"],))
     usadas = [r["cor"] for r in c.execute("SELECT cor FROM perfis WHERE conta_id = %s", (s["conta_id"],))]
     if len(usadas) >= MAX_PERFIS:

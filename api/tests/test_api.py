@@ -38,13 +38,15 @@ def test_saude_confere_o_banco(app_ativo):
 
 
 # ---------- Perfis (Q23) ----------
-def test_limite_de_2_perfis_por_conta(app_ativo):
+def test_limite_de_4_perfis_por_conta(app_ativo):
     c = novo_cliente(app_ativo)
+    assert c.get("/api/sessao").json()["maxPerfis"] == 4  # a interface lê o limite daqui
     assert c.post("/api/perfis", json={"apelido": "Um"}).status_code == 422  # curto demais
-    assert c.post("/api/perfis", json={"apelido": "Primeiro"}).status_code == 201
-    assert c.post("/api/perfis", json={"apelido": "Segundo"}).status_code == 201
-    r = c.post("/api/perfis", json={"apelido": "Terceiro"})
-    assert r.status_code == 409 and "Limite" in r.json()["detail"]
+    criados = [c.post("/api/perfis", json={"apelido": a}) for a in ("Primeiro", "Segundo", "Terceiro", "Quarto")]
+    assert [r.status_code for r in criados] == [201] * 4
+    assert len({r.json()["cor"] for r in criados}) == 4  # cada perfil com uma cor diferente
+    r = c.post("/api/perfis", json={"apelido": "Quinto"})
+    assert r.status_code == 409 and "Limite de 4" in r.json()["detail"]
 
 
 def test_apelido_invalido_repetido_e_proibido(app_ativo):
