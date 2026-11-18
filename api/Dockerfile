@@ -14,6 +14,8 @@ COPY api/migracoes ./migracoes
 COPY api/tests ./tests
 # Catálogo do personagem: fonte única, a mesma que os jogos usam (packages/flix-avatar)
 COPY packages/flix-avatar/src/catalog.json packages/flix-avatar/src/palettes.json ./avatar/
+# Catálogo do personagem Flix (gerado por scripts/personagem/montar.py): a API só aceita ids que estão nele
+COPY web/public/personagem/catalogo.json ./personagem/
 
 # Não roda como root dentro do container
 RUN useradd --system --uid 10001 --no-create-home flix

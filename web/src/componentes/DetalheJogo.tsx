@@ -1,11 +1,12 @@
-import { useEffect, useState, type CSSProperties, type FormEvent } from 'react';
+import { createPortal } from 'react-dom';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { iniciais } from '../dados/apelido';
 import { regraDoRanking, vistoHa } from '../dados/formatar';
 import { servico } from '../dados/servico';
 import type { Comentario, Jogo, Perfil, ResumoAvaliacao } from '../dados/tipos';
 import { useAviso } from './Aviso';
 import { BotaoFavoritar } from './BotaoFavoritar';
-import { CapaJogo, Play } from './Icones';
+import { CapaJogo, Play, urlDaPrevia } from './Icones';
 import { Linha, SemRanking, useRanking } from './ListaRanking';
 
 interface Props {
@@ -22,6 +23,22 @@ const LIMITE = 500;
 export function DetalheJogo({ jogo, perfil, onJogar, onFavoritar, onVoltar }: Props) {
   const fav = perfil.favoritos.includes(jogo.id);
   const avisar = useAviso();
+  const previa = urlDaPrevia(jogo);
+  // A animação vai do alto da tela até logo abaixo do topo da página (capa, nome, botões e estrelas)
+  const topo = useRef<HTMLDivElement>(null);
+  const [alturaPrevia, setAlturaPrevia] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    if (!previa) return;
+    const medir = () => {
+      const r = topo.current?.getBoundingClientRect();
+      if (r) setAlturaPrevia(Math.round(r.bottom + window.scrollY + 24));
+    };
+    medir();
+    const obs = new ResizeObserver(medir);
+    if (topo.current) obs.observe(topo.current);
+    window.addEventListener('resize', medir);
+    return () => { obs.disconnect(); window.removeEventListener('resize', medir); };
+  }, [previa]);
   const [avaliacao, setAvaliacao] = useState<ResumoAvaliacao | null>(null);
   const [comentarios, setComentarios] = useState<Comentario[] | null>(null);
   const [erro, setErro] = useState(false);
@@ -56,7 +73,14 @@ export function DetalheJogo({ jogo, perfil, onJogar, onFavoritar, onVoltar }: Pr
 
       {/* Topo no estilo de página de produto: capa, nome, categoria com a média, e Jogar com a nota ao lado */}
       {/* div, não <header>: o estilo global transforma todo <header> na barra fixa do topo */}
-      <div className="gx-detalhe-topo">
+      {/* Trecho do jogo rodando atrás do alto da página, de ponta a ponta, como um GIF ilustrativo (só decoração) */}
+      {previa && createPortal(
+        <div className="gx-previa-fundo" aria-hidden="true" style={alturaPrevia ? ({ '--previa-h': `${alturaPrevia}px` } as CSSProperties) : undefined}>
+          <img src={previa} alt="" draggable={false} decoding="async" />
+        </div>,
+        document.body,
+      )}
+      <div ref={topo} className={'gx-detalhe-topo' + (previa ? ' com-previa' : '')}>
         <span data-capa={jogo.id} className="gx-cartao-capa gx-detalhe-capa" style={{ '--t1': jogo.cor1, '--t2': jogo.cor2 } as CSSProperties}>
           <CapaJogo jogo={jogo} />
         </span>

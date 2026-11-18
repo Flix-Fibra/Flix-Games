@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from 're
 import { formatarPontos } from '../dados/formatar';
 import { ErroApi, servico } from '../dados/servico';
 import type { AvatarConfig, Jogo, ResultadoPartida } from '../dados/tipos';
-import { Trofeu } from './Icones';
+import { Fechar, Som, TelaCheia, Trofeu } from './Icones';
 
 /**
  * Lado do HUB do contrato com os jogos (docs/prompt-inicio-minigames-flix.md, seção 6).
@@ -57,6 +57,8 @@ const PROPORCAO: Record<string, number> = { snake: 540 / 960 };
 
 /** Computador: mouse e tela larga. No celular e no tablet o jogo continua como está. */
 const ehComputador = () => window.matchMedia('(hover: hover) and (pointer: fine) and (min-width: 900px)').matches;
+
+const AVISO_MS = 4500; // tempo do aviso de ranking no topo
 
 export function Jogando({ jogo, avatar, onFechar, entrando = false }: Props) {
   const [comEntrada] = useState(entrando); // fixo desde a abertura (não reanima ao terminar o lançamento)
@@ -129,11 +131,12 @@ export function Jogando({ jogo, avatar, onFechar, entrando = false }: Props) {
     return () => { document.removeEventListener('keydown', tecla); document.body.style.overflow = ''; };
   }, [onFechar]);
 
-  function jogarDeNovo() {
-    setFase({ tipo: 'jogando' });
-    enviar({ type: 'restart' }); // sem anúncio por enquanto (decisão 1 de 16/11)
-    quadro.current?.focus();
-  }
+  // O aviso de resultado some sozinho (o jogo segue na tela de fim dele)
+  useEffect(() => {
+    if (fase.tipo !== 'resultado' && fase.tipo !== 'erro') return;
+    const t = window.setTimeout(() => setFase({ tipo: 'jogando' }), AVISO_MS);
+    return () => window.clearTimeout(t);
+  }, [fase]);
 
   function alternarSom() {
     const novo = !mudo;
@@ -165,17 +168,17 @@ export function Jogando({ jogo, avatar, onFechar, entrando = false }: Props) {
       className={'gx-jogo' + (computador ? ' pc' : '') + (telaCheia ? ' cheia' : '') + (computador && proporcao ? ' proporcional' : '') + (comEntrada ? ' entrando' : '')}
       style={{ '--t1': jogo.cor1, '--t2': jogo.cor2, '--prop': proporcao ?? 1 } as CSSProperties}>
       <div className="gx-jogo-barra">
-        <button className="gx-jogo-btn" type="button" onClick={() => onFechar(houvePartida.current)} aria-label="Sair do jogo">✕</button>
+        <button className="gx-jogo-btn" type="button" onClick={() => onFechar(houvePartida.current)} aria-label="Sair do jogo"><Fechar /></button>
         <strong>{jogo.nome}</strong>
         <span className="gx-jogo-dir">
           {computador && (
             <button className="gx-jogo-btn" type="button" onClick={alternarTelaCheia} aria-pressed={telaCheia}
               aria-label={telaCheia ? 'Sair da tela cheia' : 'Tela cheia'} title={telaCheia ? 'Sair da tela cheia (Esc)' : 'Tela cheia'}>
-              {telaCheia ? '🗗' : '⛶'}
+              <TelaCheia ligada={telaCheia} />
             </button>
           )}
           <button className="gx-jogo-btn" type="button" onClick={alternarSom} aria-pressed={mudo} aria-label={mudo ? 'Ligar som' : 'Desligar som'}>
-            {mudo ? '🔇' : '🔊'}
+            <Som mudo={mudo} />
           </button>
         </span>
       </div>
@@ -191,32 +194,16 @@ export function Jogando({ jogo, avatar, onFechar, entrando = false }: Props) {
       />
       </div>
       {fase.tipo === 'carregando' && <div className="gx-jogo-aviso">Carregando…</div>}
-      {(fase.tipo === 'enviando' || fase.tipo === 'resultado' || fase.tipo === 'erro') && (
-        <div className="gx-jogo-fim" role="status">
-          <div className="gx-jogo-cartao">
-            {fase.tipo === 'enviando' && <p>Salvando sua pontuação…</p>}
-            {fase.tipo === 'erro' && <><h2>Ops</h2><p>{fase.texto}</p></>}
-            {fase.tipo === 'resultado' && (fase.r.aceita ? (
-              <>
-                <h2>Fim de jogo</h2>
-                <p className="gx-jogo-pontos">{formatarPontos(fase.pontos, jogo.unidade)}</p>
-                {jogo.ranking && fase.r.posicao && (
-                  <p className="gx-chip ouro"><Trofeu />{fase.r.posicao}º no ranking · recorde {formatarPontos(fase.r.melhor ?? 0, jogo.unidade)}</p>
-                )}
-              </>
-            ) : (
-              <>
-                <h2>Partida não contou</h2>
-                <p>Esta pontuação não entrou no ranking ({fase.r.motivo}).</p>
-              </>
-            ))}
-            {fase.tipo !== 'enviando' && (
-              <div className="gx-jogo-acoes">
-                <button className="btn light" type="button" onClick={() => onFechar(houvePartida.current)}>Sair</button>
-                <button className="btn" type="button" onClick={jogarDeNovo}>Jogar de novo</button>
-              </div>
-            )}
-          </div>
+      {/* Fim de partida: a tela de fim e o "jogar de novo" são do próprio jogo. O hub só avisa, discreto e sem
+          bloquear, a posição no ranking (ou por que a partida não contou). */}
+      {(fase.tipo === 'resultado' || fase.tipo === 'erro') && (
+        <div key={fase.tipo === 'resultado' ? `r${fase.pontos}` : fase.texto} className="gx-jogo-toast" role="status">
+          {fase.tipo === 'erro' && fase.texto}
+          {fase.tipo === 'resultado' && (fase.r.aceita
+            ? (jogo.ranking && fase.r.posicao
+              ? <><Trofeu />{fase.r.posicao}º no ranking · recorde {formatarPontos(fase.r.melhor ?? 0, jogo.unidade)}</>
+              : <>Pontuação salva: {formatarPontos(fase.pontos, jogo.unidade)}</>)
+            : <>Partida não contou ({fase.r.motivo}).</>)}
         </div>
       )}
     </div>

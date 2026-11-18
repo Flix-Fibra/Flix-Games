@@ -4,4 +4,5 @@
 !api/**
 !packages/flix-avatar/src/catalog.json
 !packages/flix-avatar/src/palettes.json
+!web/public/personagem/catalogo.json
 **/__pycache__

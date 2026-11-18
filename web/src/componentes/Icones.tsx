@@ -32,6 +32,12 @@ export function urlDaCapa(jogo: Jogo): string | null {
   return `/games/${encodeURIComponent(jogo.pasta)}/${jogo.capa.split('/').map(encodeURIComponent).join('/')}`;
 }
 
+/** Endereço da prévia animada do jogo (também servida junto com o jogo), ou null. */
+export function urlDaPrevia(jogo: Jogo): string | null {
+  if (!jogo.pasta || !jogo.previa) return null;
+  return `/games/${encodeURIComponent(jogo.pasta)}/${jogo.previa.split('/').map(encodeURIComponent).join('/')}`;
+}
+
 /** Capa do jogo (imagem que vem do próprio jogo); sem capa, o ícone desenhado. */
 export function CapaJogo({ jogo }: { jogo: Jogo }) {
   const url = urlDaCapa(jogo);
@@ -83,3 +89,23 @@ const APARELHO: Record<'cel' | 'pc' | 'tab', ReactNode> = {
   tab: <><rect x="4.5" y="2.5" width="15" height="19" rx="2.5" /><path d="M11 18.5h2" /></>,
 };
 export const IconeAparelho = ({ tipo }: { tipo: 'cel' | 'pc' | 'tab' }) => <Svg>{APARELHO[tipo]}</Svg>;
+
+/** Ícones de traço da barra do jogo (mesmo estilo entre si: linha 2, pontas arredondadas). */
+function Traco({ children }: { children: ReactNode }) {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+      strokeLinejoin="round" aria-hidden="true" focusable="false">{children}</svg>
+  );
+}
+export const Fechar = () => <Traco><path d="M6 6l12 12M18 6 6 18" /></Traco>;
+export const TelaCheia = ({ ligada }: { ligada: boolean }) => (
+  <Traco>{ligada
+    ? <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+    : <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />}</Traco>
+);
+export const Som = ({ mudo }: { mudo: boolean }) => (
+  <Traco>
+    <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" />
+    {mudo ? <path d="M16 9.5l5 5M21 9.5l-5 5" /> : <path d="M15.5 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" />}
+  </Traco>
+);

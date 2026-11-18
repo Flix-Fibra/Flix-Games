@@ -15,6 +15,7 @@
     "catalogo:conferir": "node scripts/sincronizar-catalogo.mjs --conferir",
     "dev:nestshoot": "npm run dev -w games/nestshoot",
     "build:nestshoot": "npm run build -w games/nestshoot",
+    "personagem": "python3 scripts/personagem/montar.py",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

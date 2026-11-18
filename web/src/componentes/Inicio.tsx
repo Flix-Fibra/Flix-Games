@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { formatarPontos, regraDoRanking } from '../dados/formatar';
 import type { Jogo, Perfil } from '../dados/tipos';
-import { carregar } from '../lpc/motor';
 import { useAviso } from './Aviso';
 import { Barras, CapaJogo, Coracao, Mini, Pessoa, Play, Trofeu } from './Icones';
 import { BotaoFavoritar } from './BotaoFavoritar';
 import { Linha, SemRanking, useRanking } from './ListaRanking';
-import { RetratoLpc } from './personagem/EditorLpc';
+import { RetratoPersonagem } from './personagem/EditorPersonagem';
 
 interface Props {
   jogos: Jogo[];
@@ -134,8 +133,6 @@ export function Inicio({ jogos, perfil, onFavoritar, onVerRanking, onJogar, onCr
 /** Destaque do atalho do personagem: abre o editor direto, sem passar pelo Perfil. */
 function HeroPersonagem({ perfil, semJogos, onCriar }: { perfil: Perfil; semJogos: boolean; onCriar: () => void }) {
   const tem = !!perfil.personagem;
-  // Retrato: o motor carrega a configuração salva deste perfil
-  useEffect(() => { if (perfil.personagem) void carregar(perfil.personagem); }, [perfil.personagem]);
   return (
     <>
       <div className="gx-hero gx-hero-personagem" aria-live="polite">
@@ -143,13 +140,13 @@ function HeroPersonagem({ perfil, semJogos, onCriar }: { perfil: Perfil; semJogo
           <p className="gx-sobre">Seu personagem</p>
           <h1 className="gx-hero-titulo">{tem ? 'Seu personagem' : 'Crie seu personagem'}</h1>
           <p className="gx-hero-desc">
-            {tem ? 'Troque cabelo, roupa e cores quando quiser.' : 'Monte o seu visual: corpo, cabelo, roupa e cores.'} Ele aparece no seu perfil e no ranking.
+            {tem ? 'Troque cabelo, barba e cores quando quiser.' : 'Monte o seu visual: corpo, cabelo, barba e cores.'} Ele aparece no seu perfil e no ranking.
           </p>
           <div className="gx-acoes">
             <button className="gx-btn gx-btn-jogar" onClick={onCriar}><Pessoa /><span>{tem ? 'Editar personagem' : 'Criar personagem'}</span></button>
           </div>
         </div>
-        {tem && <div className="gx-hero-retrato" aria-hidden="true"><RetratoLpc tamanho={140} /></div>}
+        {perfil.personagem && <div className="gx-hero-retrato" aria-hidden="true"><RetratoPersonagem personagem={perfil.personagem} altura={180} /></div>}
       </div>
       {semJogos && (
         <div className="gx-faixas">

@@ -3,8 +3,8 @@ import { iniciais, limparApelido, validarApelido } from '../dados/apelido';
 import { formatarPontos, tipoAparelho, vistoHa } from '../dados/formatar';
 import { servico } from '../dados/servico';
 import type { Aparelho, Jogo, Perfil as TPerfil } from '../dados/tipos';
-import { EditorLpc, RetratoLpc } from './personagem/EditorLpc';
-import { carregar } from '../lpc/motor';
+import { EditorPersonagem } from './personagem/EditorPersonagem';
+import { fotoDoRosto } from '../personagem/flix';
 import { useAviso } from './Aviso';
 import { Camera, IconeAparelho, Mini, Trocar, Trofeu } from './Icones';
 
@@ -24,8 +24,15 @@ export function Perfil({ jogos, perfil, perfis, onSalvar, onTrocarPerfil, onSair
   const [msg, setMsg] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
   const [aparelhos, setAparelhos] = useState<Aparelho[] | null>(null);
   const [editor, setEditor] = useState(false);
-  // Retrato do personagem (Universal LPC): o motor carrega a configuração salva deste perfil
-  useEffect(() => { if (perfil.personagem && !editor) void carregar(perfil.personagem); }, [perfil.personagem, editor]);
+  // Foto do rosto do personagem salvo
+  const [foto, setFoto] = useState<string | null>(null);
+  useEffect(() => {
+    setFoto(null);
+    if (!perfil.personagem) return;
+    let ativo = true;
+    void fotoDoRosto(perfil.personagem).then((u) => { if (ativo) setFoto(u); });
+    return () => { ativo = false; };
+  }, [perfil.personagem]);
 
   useEffect(() => { setApelido(perfil.apelido); setMsg(null); }, [perfil.id, perfil.apelido]);
   useEffect(() => { servico.aparelhos().then(setAparelhos).catch(() => setAparelhos([])); }, []);
@@ -76,7 +83,7 @@ export function Perfil({ jogos, perfil, perfis, onSalvar, onTrocarPerfil, onSair
           <div className="perfil-foto">
             <button className="perfil-avatar" type="button" aria-label="Editar personagem" style={{ background: perfil.cor, color: '#fff' }}
               onClick={() => setEditor(true)}>
-              <span id="p-avatar">{perfil.personagem ? <RetratoLpc tamanho={96} /> : iniciais(perfil.apelido)}</span>
+              <span id="p-avatar">{foto ? <img className="avatar-foto" src={foto} alt="" draggable={false} /> : iniciais(perfil.apelido)}</span>
               <span className="perfil-avatar-trocar" aria-hidden="true"><Camera />Trocar</span>
             </button>
           </div>
@@ -157,7 +164,7 @@ export function Perfil({ jogos, perfil, perfis, onSalvar, onTrocarPerfil, onSair
           </section>
         </div>
       </div>
-      {editor && <EditorLpc perfil={perfil} onSalvo={onAtualizado} onFechar={() => setEditor(false)} />}
+      {editor && <EditorPersonagem perfil={perfil} onSalvo={onAtualizado} onFechar={() => setEditor(false)} />}
     </section>
   );
 }

@@ -35,12 +35,12 @@ class Fim(BaseModel):
 @router.get("/jogos")
 def listar_jogos(c: Db) -> list[dict]:
     linhas = c.execute(
-        """SELECT id, nome, genero, descricao, cor1, cor2, metrica, unidade, ordem, tem_ranking, pasta, capa
+        """SELECT id, nome, genero, descricao, cor1, cor2, metrica, unidade, ordem, tem_ranking, pasta, capa, previa
              FROM jogos WHERE publicado ORDER BY vitrine, id"""
     ).fetchall()
     return [
         {"id": l["id"], "nome": l["nome"], "genero": l["genero"], "descricao": l["descricao"], "cor1": l["cor1"], "cor2": l["cor2"],
-         "metrica": l["metrica"], "unidade": l["unidade"], "ordem": l["ordem"], "ranking": l["tem_ranking"], "pasta": l["pasta"], "capa": l["capa"]}
+         "metrica": l["metrica"], "unidade": l["unidade"], "ordem": l["ordem"], "ranking": l["tem_ranking"], "pasta": l["pasta"], "capa": l["capa"], "previa": l["previa"]}
         for l in linhas
     ]
 

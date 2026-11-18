@@ -1,5 +1,5 @@
 // Formatos devolvidos pela API (api/app). Mudou lá, muda aqui.
-import type { PersonagemLpc } from '../lpc/motor';
+import type { PersonagemFlix } from '../personagem/flix';
 
 export type Aba = 'inicio' | 'jogos' | 'ranking' | 'perfil' | 'creditos';
 
@@ -16,6 +16,7 @@ export interface Jogo {
   ranking: boolean;
   pasta: string | null;  // build em /games/<pasta>/; null = ainda não entregue
   capa: string | null;   // imagem dentro da pasta do jogo (vem do game.json); null = ícone desenhado
+  previa?: string | null; // animação curta (WebP) dentro da pasta do jogo, atrás do topo da página "Ver"
 }
 
 /** Desempenho de um perfil em um jogo. Sem posição = ainda não pontuou. */
@@ -38,7 +39,7 @@ export interface Perfil {
   cor: string;
   oculto: boolean;
   avatar: AvatarConfig | null; // null = personagem padrão
-  personagem: PersonagemLpc | null; // editor Universal LPC (configuração para reconstruir)
+  personagem: PersonagemFlix | null; // personagem Flix (configuração para reconstruir, não imagem)
   desde: string;         // MM/AAAA
   partidas: number;
   nivel: number;

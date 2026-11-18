@@ -1,88 +1,58 @@
-"""Personagem do editor Universal LPC (web/lpc).
+"""Personagem Flix: arte própria da equipe (assets/personagem), uma pose de frente.
 
-Guarda a configuração (tipo de corpo + peças escolhidas), não uma imagem. Cada peça, variação e cor é
-conferida contra app/lpc_permitidos.json, gerado do catálogo do LPC por web/scripts/lpc-gerar.mjs com a
-regra de licença do portal (todas as imagens da peça com CC0, OGA-BY ou CC-BY, sem "compartilhar igual").
+Cada visual é um personagem completo (corpo + cabelo) desenhado pela equipe. O perfil guarda só o corpo e o visual
+escolhidos, conferidos contra o catálogo gerado por scripts/personagem/montar.py (web/public/personagem/catalogo.json):
+nada de texto ou imagem; campo desconhecido é recusado. Personagem salvo num formato antigo volta como None:
+a pessoa escolhe de novo.
 """
 import json
-import re
+import os
 from pathlib import Path
 from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from psycopg.types.json import Jsonb
 
 from .sessao import Db, Sessao
 
-PERMITIDOS: dict = json.loads((Path(__file__).parent / "lpc_permitidos.json").read_text(encoding="utf-8"))
-ITENS: dict[str, dict] = PERMITIDOS["itens"]
-# "muscular" fica de fora: o corpo base dele só existe em CC-BY-SA/GPL
-CORPOS = {"male", "female", "teen"}
-RE_TEXTO = re.compile(r"^[\w\s().,'&+\-/]{0,100}$", re.UNICODE)
+
+def _catalogo() -> dict:
+    """Na imagem Docker fica em /app/personagem; rodando direto do repositório, em web/public/personagem."""
+    for p in (os.environ.get("PERSONAGEM_DIR"), Path(__file__).resolve().parent.parent / "personagem",
+              Path(__file__).resolve().parents[2] / "web" / "public" / "personagem"):
+        if p and (Path(p) / "catalogo.json").exists():
+            return json.loads((Path(p) / "catalogo.json").read_text(encoding="utf-8"))
+    raise RuntimeError("Catálogo do personagem não encontrado (web/public/personagem/catalogo.json)")
 
 
-class Escolha(BaseModel):
+CATALOGO = _catalogo()
+# Pares (corpo, visual) que existem: visual feminino só no corpo feminino e masculino só no masculino
+_VISUAIS = {(v["corpo"], v["id"]) for v in CATALOGO["visuais"]}
+Id = Field(min_length=1, max_length=40)
+
+
+class PersonagemFlix(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    itemId: str = Field(min_length=1, max_length=80)
-    name: str = Field(default="", max_length=100)
-    subId: int | None = Field(default=None, ge=0, le=20)
-    variant: str | None = Field(default=None, max_length=60)
-    recolor: str | None = Field(default=None, max_length=60)
-
-    @field_validator("name")
-    @classmethod
-    def _nome(cls, v: str) -> str:
-        # nome de exibição gerado pelo LPC; só texto simples
-        if not RE_TEXTO.fullmatch(v):
-            raise ValueError("Nome de peça inválido.")
-        return v
-
-
-class PersonagemLpc(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    v: Literal[2]
-    motor: Literal["lpc"]
-    bodyType: str
-    selections: dict[str, Escolha] = Field(max_length=60)
+    v: Literal[4]
+    motor: Literal["flix"]
+    corpo: str = Id
+    visual: str = Id
 
     @model_validator(mode="after")
-    def _no_catalogo(self) -> "PersonagemLpc":
-        if self.bodyType not in CORPOS:
-            raise ValueError("Tipo de corpo inválido.")
-        erros: list[str] = []
-        for grupo, e in self.selections.items():
-            item = ITENS.get(e.itemId)
-            if item is None:
-                erros.append(f"{e.itemId} (peça não permitida)")
-                continue
-            slot = e.subId if e.subId is not None else 0
-            grupos_validos = {item["t"], *(r["g"] for r in item["r"])}
-            if grupo not in grupos_validos:
-                erros.append(f"{grupo} (grupo)")
-            # licença checada por tipo de corpo e variação (imagens realmente usadas)
-            liberadas = item["b"].get(self.bodyType)
-            variante = e.variant or ""
-            if liberadas is None:
-                erros.append(f"{e.itemId} (não liberada para este corpo)")
-            elif item["v"] and variante not in liberadas:
-                erros.append(f"{e.itemId}: variação {variante or '(padrão)'}")
-            if e.recolor not in (None, ""):
-                cores = item["r"][slot]["c"] if slot < len(item["r"]) else []
-                if e.recolor not in cores:
-                    erros.append(f"{e.itemId}: cor {e.recolor}")
-        if erros:
-            raise ValueError("Personagem com peça fora do catálogo permitido: " + ", ".join(erros[:5]))
+    def _no_catalogo(self) -> "PersonagemFlix":
+        if (self.corpo, self.visual) not in _VISUAIS:
+            raise ValueError("Personagem fora do catálogo.")
         return self
 
 
 def personagem_valido(bruto) -> dict | None:
-    """Personagem salvo que deixou de valer (peça retirada numa atualização do LPC) volta como None."""
+    """Personagem do formato antigo, ou com peça que saiu do catálogo, volta como None (a pessoa cria de novo)."""
     if bruto is None:
         return None
     try:
-        return PersonagemLpc.model_validate(bruto).model_dump(mode="json")
+        return PersonagemFlix.model_validate(bruto).model_dump(mode="json")
     except ValueError:
         return None
 
@@ -91,7 +61,7 @@ router = APIRouter(prefix="/api")
 
 
 @router.put("/perfis/{perfil_id}/personagem")
-def salvar_personagem(perfil_id: UUID, personagem: PersonagemLpc, s: Sessao, c: Db) -> dict:
+def salvar_personagem(perfil_id: UUID, personagem: PersonagemFlix, s: Sessao, c: Db) -> dict:
     from .consultas import montar_perfil
 
     r = c.execute(

@@ -1,0 +1,251 @@
+{
+  "_leia": "Cada visual é um personagem completo (corpo + cabelo) desenhado pela equipe, de frente, fundo transparente. O script só padroniza o tamanho (olhos→pés) e a posição; não recorta nem redesenha nada. Rodar: npm run personagem.",
+  "corpos": {
+    "m": {
+      "nome": "Masculino",
+      "careca": "careca-masculino.png"
+    },
+    "f": {
+      "nome": "Feminino",
+      "careca": "careca-feminino.png"
+    }
+  },
+  "visuais": [
+    {
+      "id": "ondulado",
+      "nome": "Ondulado",
+      "corpo": "m",
+      "arquivo": "masculino.png"
+    },
+    {
+      "id": "afro-curto",
+      "nome": "Afro curto",
+      "corpo": "m",
+      "arquivo": "masculinos/01_afro_curto.png"
+    },
+    {
+      "id": "black-power",
+      "nome": "Black power",
+      "corpo": "m",
+      "arquivo": "masculinos/02_black_power.png"
+    },
+    {
+      "id": "liso-curto-lateral",
+      "nome": "Liso curto lateral",
+      "corpo": "m",
+      "arquivo": "masculinos/03_liso_curto_lateral.png"
+    },
+    {
+      "id": "castanho-repartido",
+      "nome": "Castanho repartido",
+      "corpo": "m",
+      "arquivo": "masculinos/04_castanho_repartido.png"
+    },
+    {
+      "id": "trancas-nago",
+      "nome": "Tranças nagô",
+      "corpo": "m",
+      "arquivo": "masculinos/05_trancas_nago.png"
+    },
+    {
+      "id": "box-braids-medias",
+      "nome": "Box braids médias",
+      "corpo": "m",
+      "arquivo": "masculinos/06_box_braids_medias.png"
+    },
+    {
+      "id": "twists-curtos",
+      "nome": "Twists curtos",
+      "corpo": "m",
+      "arquivo": "masculinos/07_twists_curtos.png"
+    },
+    {
+      "id": "locs-castanhos",
+      "nome": "Locs castanhos",
+      "corpo": "m",
+      "arquivo": "masculinos/08_locs_castanhos.png"
+    },
+    {
+      "id": "afro-flat-top",
+      "nome": "Afro flat top",
+      "corpo": "m",
+      "arquivo": "masculinos/09_afro_flat_top.png"
+    },
+    {
+      "id": "buzz-cut",
+      "nome": "Buzz cut",
+      "corpo": "m",
+      "arquivo": "masculinos/10_buzz_cut.png"
+    },
+    {
+      "id": "curto-espetado",
+      "nome": "Curto espetado",
+      "corpo": "m",
+      "arquivo": "masculinos/11_curto_espetado.png"
+    },
+    {
+      "id": "loiro-lateral",
+      "nome": "Loiro lateral",
+      "corpo": "m",
+      "arquivo": "masculinos/12_loiro_lateral.png"
+    },
+    {
+      "id": "coque-masculino",
+      "nome": "Coque",
+      "corpo": "m",
+      "arquivo": "masculinos/13_coque_masculino.png"
+    },
+    {
+      "id": "moicano-crespo",
+      "nome": "Moicano crespo",
+      "corpo": "m",
+      "arquivo": "masculinos/14_moicano_crespo.png"
+    },
+    {
+      "id": "mullet-castanho",
+      "nome": "Mullet castanho",
+      "corpo": "m",
+      "arquivo": "masculinos/15_mullet_castanho.png"
+    },
+    {
+      "id": "tobias",
+      "nome": "Tobias",
+      "corpo": "m",
+      "arquivo": "masculinos/16_crespo_com_barba.png",
+      "categoria": "desenvolvedores"
+    },
+    {
+      "id": "ian",
+      "nome": "Ian",
+      "corpo": "m",
+      "arquivo": "masculinos/17_twists_com_brincos.png",
+      "categoria": "desenvolvedores"
+    },
+    {
+      "id": "rafael",
+      "nome": "Rafael",
+      "corpo": "m",
+      "arquivo": "masculinos/18_rafael.png",
+      "categoria": "desenvolvedores",
+      "_obs": "camisa com a estampa copiada da camisa do Ian (original sem estampa em fontes/originais/rafael_sem_estampa.png)"
+    },
+    {
+      "id": "cacheado-longo",
+      "nome": "Cacheado ruivo",
+      "corpo": "f",
+      "arquivo": "feminino.png"
+    },
+    {
+      "id": "black-power",
+      "nome": "Black power",
+      "corpo": "f",
+      "arquivo": "femininos/01_black_power.png"
+    },
+    {
+      "id": "cacheado-castanho",
+      "nome": "Cacheado castanho",
+      "corpo": "f",
+      "arquivo": "femininos/02_cacheado_castanho.png"
+    },
+    {
+      "id": "liso-preto",
+      "nome": "Liso preto",
+      "corpo": "f",
+      "arquivo": "femininos/03_liso_preto.png"
+    },
+    {
+      "id": "castanho-com-franja",
+      "nome": "Castanho com franja",
+      "corpo": "f",
+      "arquivo": "femininos/04_castanho_com_franja.png"
+    },
+    {
+      "id": "trancas-nago-longas",
+      "nome": "Tranças nagô longas",
+      "corpo": "f",
+      "arquivo": "femininos/05_trancas_nago_longas.png"
+    },
+    {
+      "id": "box-braids-longas",
+      "nome": "Box braids longas",
+      "corpo": "f",
+      "arquivo": "femininos/06_box_braids_longas.png"
+    },
+    {
+      "id": "dois-afro-puffs",
+      "nome": "Dois afro puffs",
+      "corpo": "f",
+      "arquivo": "femininos/07_dois_afro_puffs.png"
+    },
+    {
+      "id": "twists-longos",
+      "nome": "Twists longos",
+      "corpo": "f",
+      "arquivo": "femininos/08_twists_longos.png"
+    },
+    {
+      "id": "locs-pontas-acobreadas",
+      "nome": "Locs com pontas acobreadas",
+      "corpo": "f",
+      "arquivo": "femininos/09_locs_pontas_acobreadas.png"
+    },
+    {
+      "id": "chanel-preto",
+      "nome": "Chanel preto",
+      "corpo": "f",
+      "arquivo": "femininos/10_chanel_preto.png"
+    },
+    {
+      "id": "pixie-loiro",
+      "nome": "Pixie loiro",
+      "corpo": "f",
+      "arquivo": "femininos/11_pixie_loiro.png"
+    },
+    {
+      "id": "rabo-de-cavalo",
+      "nome": "Rabo de cavalo",
+      "corpo": "f",
+      "arquivo": "femininos/12_rabo_de_cavalo.png"
+    },
+    {
+      "id": "coque-castanho",
+      "nome": "Coque castanho",
+      "corpo": "f",
+      "arquivo": "femininos/13_coque_castanho.png"
+    },
+    {
+      "id": "duas-trancas-ruivas",
+      "nome": "Duas tranças ruivas",
+      "corpo": "f",
+      "arquivo": "femininos/14_duas_trancas_ruivas.png"
+    },
+    {
+      "id": "ondulado-ruivo",
+      "nome": "Ondulado ruivo",
+      "corpo": "f",
+      "arquivo": "femininos/15_ondulado_ruivo.png"
+    }
+  ],
+  "categorias": {
+    "desenvolvedores": {
+      "nome": "Desenvolvedores"
+    }
+  },
+  "_categorias": "Categoria opcional por visual: aparece numa aba própria do editor (em vez da aba do corpo). 'categorias' dá o nome de cada aba.",
+  "secretos": [
+    {
+      "id": "piscina",
+      "nome": "???",
+      "corpo": "m",
+      "arquivo": "secretos/piscina.png",
+      "largura": 720,
+      "rosto": [
+        0.52,
+        0.345,
+        0.27
+      ],
+      "_obs": "Easter egg (botão minúsculo no rodapé). Foto nítida, sem pixelar. NÃO publicar sem autorização da pessoa retratada (e dos responsáveis, se menor) — LGPD."
+    }
+  ],
+  "_secretos": "Personagens secretos: foto nítida (não vira pixel art), fora das abas do editor; liberados pelo easter egg. 'rosto' = [centro x, centro y, lado] em fração da imagem, para a foto do perfil."
+}

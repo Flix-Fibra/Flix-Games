@@ -13,3 +13,7 @@ lpc-gerado/
 Network Snake/
 Network Snake.zip
 
+
+# Personagem secreto (easter egg): foto de pessoa real, fora do repositório até haver autorização (LGPD)
+assets/personagem/fontes/secretos/
+web/public/personagem/piscina-*.webp

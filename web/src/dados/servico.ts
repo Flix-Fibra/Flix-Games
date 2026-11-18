@@ -1,4 +1,4 @@
-import type { PersonagemLpc } from '../lpc/motor';
+import type { PersonagemFlix } from '../personagem/flix';
 import type { Aparelho, AvatarConfig, CatalogoAvatar, Comentario, DetalhesJogo, Jogo, LinhaRanking, Perfil, ResultadoPartida, ResumoAvaliacao, Sessao } from './tipos';
 
 /** Erro da API com a mensagem já pronta para mostrar ao cliente. */
@@ -66,7 +66,7 @@ export const servico = {
     api<ResultadoPartida>('POST', '/partidas/fim', { runId, pontos, duracaoMs }),
 
   catalogoAvatar: () => api<CatalogoAvatar>('GET', '/avatar/catalogo'),
-  salvarPersonagem: (perfilId: string, personagem: PersonagemLpc) =>
+  salvarPersonagem: (perfilId: string, personagem: PersonagemFlix) =>
     api<Perfil>('PUT', `/perfis/${encodeURIComponent(perfilId)}/personagem`, personagem),
   salvarAvatar: (perfilId: string, avatar: AvatarConfig) => api<Perfil>('PUT', `/perfis/${encodeURIComponent(perfilId)}/avatar`, avatar),
 

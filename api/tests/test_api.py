@@ -140,6 +140,18 @@ def test_catalogo_devolve_a_capa_do_jogo(app_ativo):
     assert "capa" in jogos["g05"] and jogos["g05"]["capa"] is None
 
 
+def test_previa_so_aceita_animacao_dentro_da_pasta_do_jogo(app_ativo):
+    import psycopg
+    import pytest
+    sql("UPDATE jogos SET pasta = 'snake', previa = 'img/previa.webp' WHERE id = 'g03'")
+    jogos = {j["id"]: j for j in TestClient(app).get("/api/jogos").json()}
+    assert jogos["g03"]["previa"] == "img/previa.webp"
+    for ruim in ("../x.webp", "/etc/x.webp", "img/../../x.webp", "x.mp4", "https://x.com/a.webp"):
+        with pytest.raises(psycopg.errors.CheckViolation):
+            sql(f"UPDATE jogos SET previa = '{ruim}' WHERE id = 'g03'")
+    sql("UPDATE jogos SET previa = NULL WHERE id = 'g03'")
+
+
 def test_capa_nao_aceita_caminho_fora_da_pasta_do_jogo(app_ativo):
     import psycopg
     import pytest
@@ -241,40 +253,37 @@ def test_personagem_com_peca_retirada_volta_como_padrao(app_ativo):
     assert c.get("/api/sessao").json()["perfis"][0]["avatar"] is None
 
 
-# ---------- Personagem do editor Universal LPC ----------
-LPC_OK = {
-    "v": 2, "motor": "lpc", "bodyType": "female",
-    "selections": {
-        "body": {"itemId": "body", "name": "Body color (light)", "variant": "", "recolor": "light"},
-        "head": {"itemId": "heads_human_male", "name": "Human Male (light)", "variant": "", "recolor": "light"},
-        "expression": {"itemId": "face_neutral", "name": "Neutral (light)", "variant": "", "recolor": "light"},
-    },
-}
+# ---------- Personagem Flix (arte própria) ----------
+FLIX_OK = {"v": 4, "motor": "flix", "corpo": "f", "visual": "box-braids-longas"}
 
 
-def test_salva_personagem_lpc(app_ativo):
+def test_salva_personagem_flix(app_ativo):
     c, pid = com_perfil(app_ativo, "Pixelado")
-    r = c.put(f"/api/perfis/{pid}/personagem", json=LPC_OK)
+    r = c.put(f"/api/perfis/{pid}/personagem", json=FLIX_OK)
     assert r.status_code == 200, r.text
-    assert r.json()["personagem"]["selections"]["body"]["recolor"] == "light"
+    assert r.json()["personagem"] == FLIX_OK
 
 
-def test_personagem_lpc_recusa_peca_fora_da_licenca_ou_corpo(app_ativo):
+def test_personagem_flix_so_aceita_visual_do_catalogo(app_ativo):
     c, pid = com_perfil(app_ativo, "Recusado")
-    import copy
-    ruins = []
-    p = copy.deepcopy(LPC_OK); p["selections"]["feet"] = {"itemId": "feet_slippers", "name": "x", "variant": "", "recolor": ""}; ruins.append(p)  # licença fora
-    p = copy.deepcopy(LPC_OK); p["bodyType"] = "muscular"; ruins.append(p)                     # corpo base só CC-BY-SA/GPL
-    p = copy.deepcopy(LPC_OK); p["selections"]["body"]["recolor"] = "#ff0000"; ruins.append(p)  # cor livre
-    p = copy.deepcopy(LPC_OK); p["selections"]["body"]["itemId"] = "nao_existe"; ruins.append(p)
-    p = copy.deepcopy(LPC_OK); p["selections"]["head"]["name"] = "<script>"; ruins.append(p)
-    p = copy.deepcopy(LPC_OK); p["extra"] = 1; ruins.append(p)
-    p = copy.deepcopy(LPC_OK); p["selections"]["hat"] = {"itemId": "hat_magic_celestial", "name": "x", "variant": "", "recolor": ""}; ruins.append(p)  # chapéus fora do perfil
-    p = copy.deepcopy(LPC_OK); p["selections"]["body"]["recolor"] = "zombie"; ruins.append(p)        # pele de fantasia
-    p = copy.deepcopy(LPC_OK); p["selections"]["body"]["recolor"] = "all.lpcr.blue"; ruins.append(p)  # outra versão de paleta
-    p = copy.deepcopy(LPC_OK); p["selections"]["head"]["itemId"] = "heads_orc_male"; ruins.append(p)    # cabeça de fantasia
+    ruins = [
+        {**FLIX_OK, "corpo": "x"},
+        {**FLIX_OK, "visual": "../../etc"},
+        {**FLIX_OK, "visual": "<script>"},
+        {**FLIX_OK, "corpo": "m"},                # visual feminino no corpo masculino
+        {**FLIX_OK, "extra": 1},                  # campo desconhecido
+        {**FLIX_OK, "v": 3},
+        {k: v for k, v in FLIX_OK.items() if k != "visual"},
+    ]
     for corpo in ruins:
         assert c.put(f"/api/perfis/{pid}/personagem", json=corpo).status_code == 422, corpo
+
+
+def test_personagem_lpc_antigo_volta_como_none(app_ativo):
+    """Personagem salvo no editor antigo (LPC, removido) não quebra o perfil: volta como None e a pessoa cria de novo."""
+    c, pid = com_perfil(app_ativo, "Antigo")
+    sql("UPDATE perfis SET personagem = %s::jsonb WHERE id = %s", '{"v": 2, "motor": "lpc", "bodyType": "female", "selections": {}}', pid)
+    assert c.get("/api/sessao").json()["perfis"][0]["personagem"] is None
 
 
 # ---------- Página do jogo: avaliação, comentários e denúncias ----------

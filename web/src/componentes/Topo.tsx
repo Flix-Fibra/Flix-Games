@@ -1,5 +1,5 @@
 import { startTransition, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { fotoDoRosto } from './personagem/PreviaLpc';
+import { fotoDoRosto } from '../personagem/flix';
 import { iniciais } from '../dados/apelido';
 import type { Aba, Perfil } from '../dados/tipos';
 import { Barras, Casa, Controle, Pessoa } from './Icones';

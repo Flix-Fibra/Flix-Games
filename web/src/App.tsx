@@ -6,7 +6,7 @@ import { FundoPlasma } from './componentes/FundoPlasma';
 import { Jogando } from './componentes/Jogando';
 import { Lancamento } from './componentes/Lancamento';
 import { Jogos } from './componentes/Jogos';
-import { EditorLpc } from './componentes/personagem/EditorLpc';
+import { EditorPersonagem } from './componentes/personagem/EditorPersonagem';
 import { Perfil } from './componentes/Perfil';
 import { QuemVaiJogar } from './componentes/QuemVaiJogar';
 import { Ranking } from './componentes/Ranking';
@@ -159,11 +159,11 @@ function Portal() {
             )}
           </main>
           <p className="gx-aviso-prototipo">
-            <a href="#creditos">Créditos e Licenças</a> · código-fonte sob GPL-3.0{import.meta.env.DEV && ' · desenvolvimento: conta de teste e dados fictícios'}
+            <a href="#creditos">Créditos e Licenças</a> {import.meta.env.DEV && ' · desenvolvimento: conta de teste e dados fictícios'}
           </p>
         </>
       )}
-      {editorAberto && perfil && <EditorLpc perfil={perfil} onSalvo={trocarPerfil} onFechar={() => setEditorAberto(false)} />}
+      {editorAberto && perfil && <EditorPersonagem perfil={perfil} onSalvo={trocarPerfil} onFechar={() => setEditorAberto(false)} />}
       {jogando && perfil && <Jogando entrando={!!lancando} jogo={jogando} avatar={perfil.avatar} onFechar={fecharJogo} />}
       {lancando && <Lancamento jogo={lancando} onFim={() => setLancando(null)} />}
       {(quemAberto || !perfil) && (
