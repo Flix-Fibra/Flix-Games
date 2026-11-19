@@ -26,12 +26,12 @@ const hud = document.getElementById('hud')!;
 hud.innerHTML = `
   <div class="top">
     <div class="portrait"></div>
-    <div class="score chip"><b data-score>0</b><small>andares</small></div>
-    <div class="best chip">Recorde<b data-best>0</b></div>
+    <div class="score"><b data-score>0</b><small data-score-label>ANDARES</small></div>
+    <div class="best"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="M6 2h12v2h4v3a5 5 0 0 1-5 5h-.3A6 6 0 0 1 13 15.9V19h4v3H7v-3h4v-3.1A6 6 0 0 1 7.3 12H7a5 5 0 0 1-5-5V4h4V2Zm0 4H4v1a3 3 0 0 0 2 2.8V6Zm12 0v3.8A3 3 0 0 0 20 7V6h-2Z"/></svg><small data-best-label>RECORDE</small><b data-best>0</b></div>
   </div>
-  <div class="stats chip">
+  <div class="stats">
     <div class="phase"><span data-phase-name></span><span class="shield" data-shield>Escudo</span><div class="bar"><i data-bar></i></div></div>
-    <div class="rocket" data-rocket-box><span>Foguete</span><div class="bar"><i data-rocket></i></div></div>
+    <div class="rocket" data-rocket-box><span data-rocket-label>FOGUETE</span><div class="bar"><i data-rocket></i></div></div>
   </div>
   <div class="toast" data-toast></div>
   <div class="overlay on" data-menu>
@@ -40,11 +40,12 @@ hud.innerHTML = `
     <p class="muted">3 andares seguidos sem quicar quebram o próximo.<br />O <span class="sig">sinal</span> dá um escudo.</p>
     <button data-start>Toque para começar</button>
   </div>
-  <div class="overlay" data-over>
-    <h2>Sinal perdido!</h2>
-    <p class="big"><b data-final>0</b> andares</p>
-    <p class="muted" data-final-best></p>
-    <button data-again>Jogar de novo</button>
+  <div class="overlay fim" data-over>
+    <div class="fim-titulo">FIM DE JOGO</div>
+    <div class="fim-pontos" data-final></div>
+    <div class="fim-rotulo">ANDARES</div>
+    <div class="fim-linha" data-final-best-box><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 2h12v2h4v3a5 5 0 0 1-5 5h-.3A6 6 0 0 1 13 15.9V19h4v3H7v-3h4v-3.1A6 6 0 0 1 7.3 12H7a5 5 0 0 1-5-5V4h4V2Zm0 4H4v1a3 3 0 0 0 2 2.8V6Zm12 0v3.8A3 3 0 0 0 20 7V6h-2Z"/></svg><span data-final-best></span></div>
+    <button class="fim-botao" data-again>REINICIAR</button>
   </div>`;
 const q = <T extends HTMLElement = HTMLElement>(sel: string) => hud.querySelector<T>(sel)!;
 const el = {
@@ -61,6 +62,7 @@ const el = {
   over: q('[data-over]'),
   final: q('[data-final]'),
   finalBest: q('[data-final-best]'),
+  finalBestBox: q('[data-final-best-box]'),
   again: q<HTMLButtonElement>('[data-again]'),
   start: q<HTMLButtonElement>('[data-start]'),
 };
@@ -108,13 +110,15 @@ function showToast(text: string): void {
 }
 
 function updateHud(): void {
+  const rocketing = ball.rocket > 0 || ball.safeLanding;
+  // placar com fonte lisa (estilo próprio do Signal Drop, igual à tela de fim)
   el.score.textContent = String(score);
   el.best.textContent = String(best);
-  el.phaseName.textContent = paletteFor(phase).name;
+  el.phaseName.textContent = paletteFor(phase).name.toUpperCase();
   el.bar.style.width = `${((score % FLOORS_PER_PHASE) / FLOORS_PER_PHASE) * 100}%`;
+  world.setProgressoFase((score % FLOORS_PER_PHASE) / FLOORS_PER_PHASE);
   el.shield.classList.toggle('on', ball.shield);
   // Barra do foguete: enche com os andares; durante o foguete, mostra quanto falta.
-  const rocketing = ball.rocket > 0 || ball.safeLanding;
   el.rocket.style.width = `${(rocketing ? ball.rocket / ROCKET_FLOORS : ball.charge / CHARGE_MAX) * 100}%`;
   el.rocketBox.classList.toggle('on', rocketing);
 }
@@ -142,6 +146,7 @@ function newRun(): void {
 
 function gameOver(cause: string): void {
   mode = 'over';
+  soltarMouse(); // o cursor volta para clicar em REINICIAR
   sfx('shock');
   setPortrait('sad');
   best = saveBest(score);
@@ -151,8 +156,11 @@ function gameOver(cause: string): void {
     durationMs: performance.now() - startedAt,
     meta: { floors: score, phase: phase + 1, cause },
   });
+  // Tela de fim no estilo próprio do Signal Drop (fonte lisa, igual ao placar)
+  const recorde = score >= best && score > 0;
   el.final.textContent = String(score);
-  el.finalBest.textContent = score >= best && score > 0 ? 'Novo recorde!' : `Recorde: ${best}`;
+  el.finalBest.textContent = recorde ? 'NOVO RECORDE!' : `RECORDE: ${best}`;
+  el.finalBestBox.classList.toggle('recorde', recorde);
   // O botão de recomeçar é sempre o do jogo (o hub não mostra outro).
   el.again.hidden = false;
   window.setTimeout(() => {
@@ -221,8 +229,10 @@ function simulate(dt: number): void {
 
 let last = performance.now();
 function frame(now: number): void {
-  const dt = Math.min(0.05, (now - last) / 1000); // trava para não "pular" depois de aba em segundo plano
+  const real = (now - last) / 1000;
+  const dt = Math.min(0.05, real); // trava para não "pular" depois de aba em segundo plano
   last = now;
+  if (!paused) world.medirQuadro(real); // aparelho fraco: baixa a resolução sozinho
   if (!paused) {
     if (mode === 'play') simulate(dt);
     world.setRotation(rotation);
@@ -249,6 +259,7 @@ canvas.addEventListener('pointerdown', (e) => {
   canvas.setPointerCapture(e.pointerId);
 });
 canvas.addEventListener('pointermove', (e) => {
+  if (e.pointerType === 'mouse') return; // mouse gira sem clicar (abaixo); arrastar é só para o toque
   if (dragX === null || mode !== 'play' || paused) return;
   rotation += ((e.clientX - dragX) / canvas.clientWidth) * Math.PI * 2 * DRAG_TURNS_PER_WIDTH;
   dragX = e.clientX;
@@ -256,6 +267,25 @@ canvas.addEventListener('pointermove', (e) => {
 const endDrag = () => (dragX = null);
 canvas.addEventListener('pointerup', endDrag);
 canvas.addEventListener('pointercancel', endDrag);
+
+// Mouse (computador): durante a partida o cursor some e basta mover o mouse para girar a torre, sem clicar.
+// Ao começar (clique no botão), o ponteiro é travado na página (Pointer Lock): o mouse nunca bate na borda da tela.
+// Se a trava não vier (Esc, navegador sem suporte, recomeço pelo hub), mover o mouse continua girando.
+const comMouse = window.matchMedia('(pointer: fine)').matches;
+function travarMouse(): void {
+  if (!comMouse) return;
+  document.body.classList.add('jogando');
+  const pedido = canvas.requestPointerLock?.() as unknown as Promise<void> | undefined;
+  pedido?.catch?.(() => {}); // sem trava: segue com o cursor escondido
+}
+function soltarMouse(): void {
+  document.body.classList.remove('jogando');
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+document.addEventListener('mousemove', (e) => {
+  if (!comMouse || mode !== 'play' || paused) return;
+  rotation += (e.movementX / canvas.clientWidth) * Math.PI * 2 * DRAG_TURNS_PER_WIDTH;
+});
 
 // Teclado (para testar no computador).
 const keys = new Set<string>();
@@ -269,10 +299,12 @@ setInterval(() => {
 
 el.start.addEventListener('click', () => {
   unlockAudio();
+  if (mode === 'menu') travarMouse();
   if (mode === 'menu') newRun();
 });
 el.again.addEventListener('click', () => {
   unlockAudio();
+  if (mode === 'over') travarMouse();
   if (mode === 'over') newRun();
 });
 
@@ -309,7 +341,10 @@ bridge.onHubMessage((msg: HubToGame) => {
       last = performance.now();
       break;
     case 'restart':
-      if (mode === 'over' || mode === 'menu') newRun();
+      if (mode === 'over' || mode === 'menu') {
+        travarMouse(); // sem clique a trava não vem, mas o cursor some e o mouse gira igual
+        newRun();
+      }
       break;
   }
 });
