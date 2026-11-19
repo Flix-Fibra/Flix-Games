@@ -39,12 +39,10 @@ export class MenuScene extends Phaser.Scene {
 
     this.add
       .text(GAME_W / 2, 178, 'ESTOQUE', { fontFamily: FONT, fontSize: '38px', fontStyle: 'bold', color: COLORS.text })
-      .setOrigin(0.5)
-      .setResolution(2);
+      .setOrigin(0.5);
     this.add
       .text(GAME_W / 2, 218, 'FLIX', { fontFamily: FONT, fontSize: '38px', fontStyle: 'bold', color: COLORS.flixRedText })
-      .setOrigin(0.5)
-      .setResolution(2);
+      .setOrigin(0.5);
 
     this.add.image(GAME_W / 2, 292, portraitKey('happy')).setScale(2.5);
 
@@ -53,20 +51,17 @@ export class MenuScene extends Phaser.Scene {
       .text(GAME_W / 2, 352, best > 0 ? `Seu melhor: ${best}` : 'Ligue os cabos de ponta a ponta!', {
         fontFamily: FONT, fontSize: '13px', color: COLORS.textMuted,
       })
-      .setOrigin(0.5)
-      .setResolution(2);
+      .setOrigin(0.5);
 
     const tap = this.add
       .text(GAME_W / 2, 404, 'TOQUE PARA COMEÇAR', { fontFamily: FONT, fontSize: '16px', fontStyle: 'bold', color: COLORS.text })
-      .setOrigin(0.5)
-      .setResolution(2);
+      .setOrigin(0.5);
     this.tweens.add({ targets: tap, alpha: 0.35, duration: 700, yoyo: true, repeat: -1 });
     this.add
       .text(GAME_W / 2, GAME_H - 34, '← → mover · ↑ girar · ↓ descer\nespaço: derrubar de uma vez\nNo celular: arraste para mover, toque para girar', {
         fontFamily: FONT, fontSize: '10px', color: COLORS.textMuted, align: 'center', lineSpacing: 3,
       })
-      .setOrigin(0.5)
-      .setResolution(2);
+      .setOrigin(0.5);
 
     this.input.once('pointerdown', () => this.begin());
     this.input.keyboard?.once('keydown', () => this.begin());

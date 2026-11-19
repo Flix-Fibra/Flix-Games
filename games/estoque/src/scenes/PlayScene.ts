@@ -139,7 +139,6 @@ export class PlayScene extends Phaser.Scene {
         fontFamily: FONT, fontSize: '28px', fontStyle: 'bold', color: COLORS.text, stroke: '#000000', strokeThickness: 4,
       })
       .setOrigin(0.5)
-      .setResolution(2)
       .setDepth(15);
 
     this.bridge.sendStarted(this.runId);
@@ -197,22 +196,22 @@ export class PlayScene extends Phaser.Scene {
     // toque: arrastar para os lados move, tocar gira, arrastar para baixo acelera, deslizar rápido para baixo derruba
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       this.touchActive = true;
-      this.touchStartX = this.touchAnchorX = p.x;
-      this.touchStartY = p.y;
+      this.touchStartX = this.touchAnchorX = p.worldX;
+      this.touchStartY = p.worldY;
       this.touchStartT = this.time.now;
       this.touchMoved = false;
       this.touchHard = false;
     });
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
       if (!this.touchActive || !p.isDown || this.touchHard) return;
-      while (Math.abs(p.x - this.touchAnchorX) >= SWIPE_STEP) {
-        const dir = p.x > this.touchAnchorX ? 1 : -1;
+      while (Math.abs(p.worldX - this.touchAnchorX) >= SWIPE_STEP) {
+        const dir = p.worldX > this.touchAnchorX ? 1 : -1;
         this.touchAnchorX += dir * SWIPE_STEP;
         this.touchMoved = true;
         this.tryMove(dir);
       }
-      const dy = p.y - this.touchStartY;
-      const dx = Math.abs(p.x - this.touchStartX);
+      const dy = p.worldY - this.touchStartY;
+      const dx = Math.abs(p.worldX - this.touchStartX);
       if (dy > HARD_PX && dy > dx * 1.5 && this.time.now - this.touchStartT < HARD_FAST_MS) {
         this.touchHard = true;
         this.touchMoved = true;
@@ -317,11 +316,14 @@ export class PlayScene extends Phaser.Scene {
     }
     const x0 = DEVICE_X;
     const x1 = GAME_W - DEVICE_X;
-    const run = { t: 0 };
+    // `done`: o último quadro do sinal pode chegar depois do fim da animação; sem a trava, o rastro ficava na tela
+    const run = { t: 0, done: false };
     this.tweens.add({
       targets: run, t: 1, delay: CONNECT_MS, duration: PULSE_MS, ease: 'Sine.easeInOut',
       onStart: () => sfx('collect', r.cleared.length),
+      onComplete: () => this.pulse.clear(),
       onUpdate: () => {
+        if (run.done) return;
         const g = this.pulse;
         g.clear();
         const x = x0 + (x1 - x0) * run.t;
@@ -334,8 +336,9 @@ export class PlayScene extends Phaser.Scene {
     });
 
     this.time.delayedCall(CONNECT_MS + PULSE_MS, () => {
-      if (this.over) return;
+      run.done = true;
       this.pulse.clear();
+      if (this.over) return;
       this.flash.clear();
       for (const y of r.cleared) this.flash.fillStyle(0xffffff, 1).fillRect(BOARD_X - PLUG_W, BOARD_Y + y * CELL, w + PLUG_W * 2, CELL);
       this.flash.setAlpha(0.9);
@@ -354,6 +357,7 @@ export class PlayScene extends Phaser.Scene {
     this.time.delayedCall(CONNECT_MS + PULSE_MS + FLASH_MS, () => {
       if (this.over) return;
       this.flash.clear();
+      this.pulse.clear();
       this.busy = false;
       if (r.levelUp) this.showLevelUp(levelFor(this.state.lines));
       this.nextPiece();
@@ -401,7 +405,6 @@ export class PlayScene extends Phaser.Scene {
     const t = this.add
       .text(x, y, text, { fontFamily: FONT, fontSize: '16px', fontStyle: 'bold', color: COLORS.gold, stroke: '#000000', strokeThickness: 3 })
       .setOrigin(0.5)
-      .setResolution(2)
       .setDepth(12);
     this.tweens.add({ targets: t, y: y - 26, alpha: 0, duration: 800, onComplete: () => t.destroy() });
   }
@@ -413,7 +416,6 @@ export class PlayScene extends Phaser.Scene {
         fontFamily: FONT, fontSize: '20px', fontStyle: 'bold', color: COLORS.gold, stroke: '#000000', strokeThickness: 4,
       })
       .setOrigin(0.5)
-      .setResolution(2)
       .setScale(0)
       .setDepth(14);
     this.tweens.add({ targets: t, scale: 1 + (n - 2) * 0.18, duration: 200, ease: 'Back.easeOut' });
@@ -427,7 +429,6 @@ export class PlayScene extends Phaser.Scene {
         fontFamily: FONT, fontSize: '30px', fontStyle: 'bold', color: COLORS.gold, stroke: '#000000', strokeThickness: 5,
       })
       .setOrigin(0.5)
-      .setResolution(2)
       .setScale(0)
       .setDepth(14);
     this.tweens.add({ targets: t, scale: 1, duration: 260, ease: 'Back.easeOut' });
@@ -503,7 +504,7 @@ export class PlayScene extends Phaser.Scene {
   /** Faixa de baixo: dicas dos controles à esquerda, próxima peça à direita. */
   private buildBar(): void {
     const style = { fontFamily: FONT, fontSize: '9px', color: COLORS.textMuted, lineSpacing: 3 };
-    this.add.text(12, BAR_Y + 24, '← → mover   ↑ girar\n↓ descer   espaço: derrubar', style).setOrigin(0, 0.5).setResolution(2).setDepth(6);
+    this.add.text(12, BAR_Y + 24, '← → mover   ↑ girar\n↓ descer   espaço: derrubar', style).setOrigin(0, 0.5).setDepth(6);
     hudText(this, PREVIEW_X - 32, BAR_Y + 24, 'PRÓXIMA', 1).setOrigin(1, 0.5).setDepth(6);
     const g = this.add.graphics().setDepth(5);
     g.fillStyle(COLORS.shelf, 1).fillRoundedRect(PREVIEW_X - 28, BAR_Y + 6, 56, 36, 5);

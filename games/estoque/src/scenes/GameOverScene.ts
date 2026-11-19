@@ -65,8 +65,7 @@ export class GameOverScene extends Phaser.Scene {
     } else {
       this.add
         .text(GAME_W / 2, GAME_H - 18, 'modo de desenvolvimento (sem hub)', { fontFamily: FONT, fontSize: '9px', color: COLORS.textMuted })
-        .setOrigin(0.5)
-        .setResolution(2);
+        .setOrigin(0.5);
     }
   }
 }

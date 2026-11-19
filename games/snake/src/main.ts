@@ -58,8 +58,26 @@ bridge.sendReady();
 
 // Evita menu de contexto e rolagem durante o jogo (o canvas ocupa a tela toda).
 window.addEventListener('contextmenu', (e) => e.preventDefault());
+// Arrastar o dedo (deslizar a cobra) nunca pode rolar a página nem acionar o puxar-para-atualizar do navegador.
+document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+document.addEventListener('gesturestart', (e) => e.preventDefault());
 
 // Ajuda de depuração: abrir com ?debug na URL expõe o jogo em `window.__flixGame`.
 if (new URLSearchParams(window.location.search).has('debug')) {
   Object.assign(window, { __flixGame: game });
+}
+
+// Tela cheia no celular: o navegador só permite depois de um toque, então entra no primeiro toque na tela (em computador não muda
+// nada). Dentro do hub (iframe) o pedido só vale se o iframe tiver `allow="fullscreen"`; se falhar, o jogo segue normalmente.
+if (window.matchMedia('(pointer: coarse)').matches) {
+  const enterFullscreen = () => {
+    window.removeEventListener('pointerup', enterFullscreen);
+    try {
+      if (game.scale.isFullscreen || !game.scale.fullscreen.available) return;
+      game.scale.startFullscreen({ navigationUI: 'hide' });
+    } catch {
+      /* sem suporte (ex.: iPhone) */
+    }
+  };
+  window.addEventListener('pointerup', enterFullscreen);
 }
