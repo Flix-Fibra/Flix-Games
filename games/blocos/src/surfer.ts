@@ -16,7 +16,7 @@ const FEET_SINK = 3; // os pés entram um pouco no deck, para ficarem colados
 const SCALE = 0.62;
 const TURN_SPEED = 60; // px/s: abaixo disso não vira (evita tremer quando o dedo para)
 /** Tempo seguido indo para o outro lado antes de ela virar (ms). */
-export const TURN_DELAY_MS = 300;
+export const TURN_DELAY_MS = 100;
 export const BOARD_FRAMES = 30;
 
 /** Pés da jogadora: a cabeça da raquete fica exatamente na linha da rebatida. */
