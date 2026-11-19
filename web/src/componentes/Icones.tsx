@@ -33,9 +33,14 @@ export function urlDaCapa(jogo: Jogo): string | null {
 }
 
 /** Endereço da prévia animada do jogo (também servida junto com o jogo), ou null. */
+/** Endereço de um arquivo dentro da pasta do jogo (capa, prévia, telas), com cada trecho do caminho escapado. */
+export function urlNoJogo(jogo: Jogo, caminho: string): string {
+  return `/games/${encodeURIComponent(jogo.pasta ?? '')}/${caminho.split('/').map(encodeURIComponent).join('/')}`;
+}
+
 export function urlDaPrevia(jogo: Jogo): string | null {
   if (!jogo.pasta || !jogo.previa) return null;
-  return `/games/${encodeURIComponent(jogo.pasta)}/${jogo.previa.split('/').map(encodeURIComponent).join('/')}`;
+  return urlNoJogo(jogo, jogo.previa);
 }
 
 /** Capa do jogo (imagem que vem do próprio jogo); sem capa, o ícone desenhado. */
@@ -68,6 +73,8 @@ export function CoracaoFavorito({ cheio, animar }: { cheio: boolean; animar: boo
 }
 
 export const Coracao = () => <Svg><path d="M12 21s-7.5-4.6-9.5-9.3C1.1 8.3 3.3 4.5 7 4.5c2 0 3.6 1.1 5 3 1.4-1.9 3-3 5-3 3.7 0 5.9 3.8 4.5 7.2C19.5 16.4 12 21 12 21z" /></Svg>;
+/** Lápis: editar perfil (Gerenciar perfis). */
+export const Lapis = () => <Svg><path d="M4 17.2V20h2.8l8.3-8.3-2.8-2.8zm12.7-7.5 1.6-1.6a1 1 0 0 0 0-1.4l-1.3-1.3a1 1 0 0 0-1.4 0L14 7z" /></Svg>;
 export const Lixeira = () => <Svg><path d="M9 3h6l1 2h4v2H4V5h4zM6 9h12l-1 12H7z" /></Svg>;
 export const Play = () => <Svg><path d="M8 5v14l11-7z" /></Svg>;
 export const Barras = () => <Svg><path d="M4 20V10h4v10zm6 0V4h4v16zm6 0v-7h4v7z" /></Svg>;
@@ -75,6 +82,8 @@ export const Casa = () => <Svg><path d="M3 11 12 4l9 7v9h-6v-6H9v6H3z" /></Svg>;
 export const Controle = () => (
   <Svg><path d="M7 7h10a5 5 0 0 1 4.9 6l-.8 3.8a2.5 2.5 0 0 1-4.3 1.2L14.5 16h-5l-2.3 2a2.5 2.5 0 0 1-4.3-1.2L2.1 13A5 5 0 0 1 7 7zm1 3v1.5H6.5v2H8V15h2v-1.5h1.5v-2H10V10zm7.5 1a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4zm2.5-2a1.2 1.2 0 1 0 0 2.4A1.2 1.2 0 0 0 18 9z" /></Svg>
 );
+/** Megafone: card de Novidades do Início. */
+export const Megafone = () => <Svg><path d="M3 10v4a1 1 0 0 0 1 1h2l1.2 4.2a1 1 0 0 0 1 .8H10l-1.3-5H9l8 4V5L9 9H4a1 1 0 0 0-1 1zm16-1.5v7a3.5 3.5 0 0 0 0-7z" /></Svg>;
 export const Pessoa = () => <Svg><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6z" /></Svg>;
 export const Trocar = () => (
   <Svg><path d="M7 7h11l-3-3m3 3-3 3M17 17H6l3 3m-3-3 3-3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></Svg>
@@ -108,4 +117,9 @@ export const Som = ({ mudo }: { mudo: boolean }) => (
     <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" />
     {mudo ? <path d="M16 9.5l5 5M21 9.5l-5 5" /> : <path d="M15.5 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" />}
   </Traco>
+);
+
+/** Lupa: campo de pesquisa da aba Jogos. */
+export const Lupa = () => (
+  <Svg><path d="M10.5 3a7.5 7.5 0 0 1 5.9 12.1l4.2 4.2-1.4 1.4-4.2-4.2A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11z" /></Svg>
 );

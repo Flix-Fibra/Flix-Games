@@ -7,6 +7,7 @@ import {
   type Catalogo, type PersonagemFlix,
 } from '../../personagem/flix';
 import { useAviso } from '../Aviso';
+import { Pessoa } from '../Icones';
 import { Segredo } from '../Segredo';
 
 const sortear = <T,>(l: T[]) => l[Math.floor(Math.random() * l.length)]!;
@@ -49,6 +50,7 @@ export function EditorPersonagem({ perfil, onSalvo, onFechar }: Props) {
   const [cat, setCat] = useState<Catalogo | null>(null);
   const [p, setP] = useState<PersonagemFlix | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const [sem, setSem] = useState(false); // opção "sem avatar" escolhida
   const [aba, setAba] = useState<string | null>(null); // corpo (m/f) ou categoria especial
 
   useEffect(() => {
@@ -65,11 +67,16 @@ export function EditorPersonagem({ perfil, onSalvo, onFechar }: Props) {
   }, []);
 
   async function salvar() {
-    if (!p) return;
+    if (!p && !sem) return;
     setSalvando(true);
     try {
-      onSalvo(await servico.salvarPersonagem(perfil.id, p));
-      avisar('Personagem salvo!');
+      if (sem) {
+        onSalvo(await servico.removerPersonagem(perfil.id));
+        avisar('Perfil sem avatar.');
+      } else {
+        onSalvo(await servico.salvarPersonagem(perfil.id, p!));
+        avisar('Personagem salvo!');
+      }
       onFechar();
     } catch (e) {
       avisar(e instanceof Error ? e.message : 'Não foi possível salvar.');
@@ -82,6 +89,7 @@ export function EditorPersonagem({ perfil, onSalvo, onFechar }: Props) {
     if (!cat) return;
     const corpo = sortear(cat.corpos).id;
     setP({ v: 4, motor: 'flix', corpo, visual: sortear(visuaisDoCorpo(cat, corpo)).id });
+    setSem(false);
     setAba(corpo);
   }
 
@@ -112,16 +120,18 @@ export function EditorPersonagem({ perfil, onSalvo, onFechar }: Props) {
         <button className="gx-jogo-btn" type="button" onClick={onFechar} aria-label="Fechar sem salvar">✕</button>
         <strong>Seu personagem</strong>
         <span className="gx-segredo-lugar">
-          <Segredo onUsar={(x) => { setP(x); setAba('secreto'); avisar('Personagem secreto! Toque em Salvar para usar.'); }} />
+          <Segredo onUsar={(x) => { setP(x); setSem(false); setAba('secreto'); avisar('Personagem secreto! Toque em Salvar para usar.'); }} />
         </span>
       </div>
 
       <div className="gx-av-corpo">
         <div className="gx-av-palco pf-palco">
-          {p ? <PreviaPersonagem personagem={p} /> : <p className="perfil-dica">Carregando…</p>}
+          {sem
+            ? <div className="pf-sem" role="img" aria-label="Sem avatar"><Pessoa /></div>
+            : p ? <PreviaPersonagem personagem={p} /> : <p className="perfil-dica">Carregando…</p>}
           <div className="pf-acoes">
             <button type="button" className="btn light" onClick={aleatorio} disabled={!p}>🎲 Aleatório</button>
-            <button type="button" className="btn light" onClick={exportar} disabled={!p}>Baixar imagem</button>
+            <button type="button" className="btn light" onClick={exportar} disabled={!p || sem}>Baixar imagem</button>
           </div>
         </div>
 
@@ -140,12 +150,15 @@ export function EditorPersonagem({ perfil, onSalvo, onFechar }: Props) {
               </div>
               <h4>Visual</h4>
               <div className="pf-grade">
+                <button type="button" className={'pf-op' + (sem ? ' ativo' : '')} aria-pressed={sem} onClick={() => setSem(true)}>
+                  <span className="pf-mini-vazio pf-mini-sem"><Pessoa /></span><span>Sem avatar</span>
+                </button>
                 {(cat.corpos.some((c) => c.id === aba) ? visuaisDoCorpo(cat, aba ?? p.corpo) : visuaisDaCategoria(cat, aba ?? '')).map((v) => {
                   const op: PersonagemFlix = { v: 4, motor: 'flix', corpo: v.corpo, visual: v.id };
-                  const ativo = p.visual === v.id && p.corpo === v.corpo;
+                  const ativo = !sem && p.visual === v.id && p.corpo === v.corpo;
                   return (
                     <button key={`${v.corpo}-${v.id}`} type="button" className={'pf-op' + (ativo ? ' ativo' : '')} aria-pressed={ativo}
-                      onClick={() => setP(op)}>
+                      onClick={() => { setP(op); setSem(false); }}>
                       <Mini p={op} /><span>{v.nome}</span>
                     </button>
                   );
@@ -158,7 +171,7 @@ export function EditorPersonagem({ perfil, onSalvo, onFechar }: Props) {
 
       <div className="gx-av-rodape">
         <button className="btn light" type="button" onClick={onFechar}>Cancelar</button>
-        <button className="btn" type="button" onClick={salvar} disabled={salvando || !p}>{salvando ? 'Salvando…' : 'Salvar personagem'}</button>
+        <button className="btn" type="button" onClick={salvar} disabled={salvando || (!p && !sem)}>{salvando ? 'Salvando…' : sem ? 'Salvar sem avatar' : 'Salvar personagem'}</button>
       </div>
     </div>,
     document.body,

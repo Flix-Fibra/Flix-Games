@@ -4,6 +4,7 @@
   "name": "Network Snake",
   "capa": "img/logo.png",
   "previa": "img/previa.webp",
+  "imagens": ["img/telas/tela-1.webp", "img/telas/tela-2.webp", "img/telas/tela-3.webp"],
   "_nome": "Network Snake confirmado pelo solicitante em 17/11/2026. Nome e capa vão para a plataforma por scripts/sincronizar-catalogo.mjs.",
   "avatarTier": "B",
   "avatarViews": ["portrait"],

@@ -45,9 +45,14 @@ def novo_cliente(app_ativo, ref: str | None = None) -> TestClient:
     return c
 
 
+def novo(apelido: str, **extra) -> dict:
+    """Corpo de criação de perfil: nickname, mais nome e sobrenome (obrigatórios)."""
+    return {"apelido": apelido, "nome": "Teste", "sobrenome": "Flix", **extra}
+
+
 def com_perfil(app_ativo, apelido: str = "Jogador1", ref: str | None = None) -> tuple[TestClient, str]:
     c = novo_cliente(app_ativo, ref)
-    r = c.post("/api/perfis", json={"apelido": apelido})
+    r = c.post("/api/perfis", json=novo(apelido))
     assert r.status_code == 201, r.text
     pid = r.json()["id"]
     assert c.put("/api/sessao/perfil", json={"perfilId": pid}).status_code == 204

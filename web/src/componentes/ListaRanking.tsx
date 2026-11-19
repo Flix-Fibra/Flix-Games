@@ -27,7 +27,7 @@ export function Linha({ l, jogo }: { l: LinhaRanking; jogo: Jogo }) {
     <li className={'gx-linha' + (l.eu ? ' eu' : '')}>
       <span className={'gx-pos' + p}>{l.posicao}º</span>
       <span className="gx-mini-av" style={l.eu ? { background: l.cor, color: '#fff' } : undefined}>{iniciais(l.apelido)}</span>
-      <span className="gx-apelido">{l.apelido}{l.eu ? ' (você)' : ''}</span>
+      <span className="gx-apelido"><strong>{l.apelido}{l.eu ? ' (você)' : ''}</strong>{l.nome && <small>{l.nome}</small>}</span>
       <span className="gx-pontos">{formatarNumero(l.pontos, jogo.unidade)} <small>{rotuloUnidade(jogo.unidade)}</small></span>
     </li>
   );
@@ -42,7 +42,11 @@ export function Podio({ linhas, jogo }: { linhas: LinhaRanking[]; jogo: Jogo }) 
       {itens.map(([l, cor], i) => (
         <div key={i} className="gx-podio-item" style={{ '--cor': cor } as CSSProperties}>
           <div className="gx-podio-av">{iniciais(l.apelido)}</div>
-          <div className="gx-podio-base"><strong>{l.posicao}º {l.apelido}</strong><span>{formatarNumero(l.pontos, jogo.unidade)}</span></div>
+          <div className="gx-podio-base">
+            <strong>{l.posicao}º {l.apelido}</strong>
+            {l.nome && <small className="gx-podio-nome">{l.nome}</small>}
+            <span>{formatarNumero(l.pontos, jogo.unidade)}</span>
+          </div>
         </div>
       ))}
     </div>

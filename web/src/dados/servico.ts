@@ -1,5 +1,5 @@
 import type { PersonagemFlix } from '../personagem/flix';
-import type { Aparelho, AvatarConfig, CatalogoAvatar, Comentario, DetalhesJogo, Jogo, LinhaRanking, Perfil, ResultadoPartida, ResumoAvaliacao, Sessao } from './tipos';
+import type { AlteracaoPerfil, Aparelho, AvatarConfig, CatalogoAvatar, Comentario, DetalhesJogo, Jogo, LinhaRanking, Perfil, ResultadoPartida, ResumoAvaliacao, Sessao, NovoPerfil } from './tipos';
 
 /** Erro da API com a mensagem já pronta para mostrar ao cliente. */
 export class ErroApi extends Error {
@@ -54,8 +54,8 @@ export const servico = {
   jogos: () => api<Jogo[]>('GET', '/jogos'),
   ranking: (jogoId: string) => api<LinhaRanking[]>('GET', `/ranking/${encodeURIComponent(jogoId)}`),
 
-  criarPerfil: (apelido: string) => api<Perfil>('POST', '/perfis', { apelido }),
-  alterarPerfil: (id: string, dados: { apelido?: string; oculto?: boolean }) => api<Perfil>('PATCH', `/perfis/${encodeURIComponent(id)}`, dados),
+  criarPerfil: (dados: NovoPerfil) => api<Perfil>('POST', '/perfis', dados),
+  alterarPerfil: (id: string, dados: AlteracaoPerfil) => api<Perfil>('PATCH', `/perfis/${encodeURIComponent(id)}`, dados),
   excluirPerfil: (id: string) => api<void>('DELETE', `/perfis/${encodeURIComponent(id)}`),
   favoritar: (perfilId: string, jogoId: string, sim: boolean) =>
     api<void>(sim ? 'PUT' : 'DELETE', `/perfis/${encodeURIComponent(perfilId)}/favoritos/${encodeURIComponent(jogoId)}`),
@@ -68,6 +68,8 @@ export const servico = {
   catalogoAvatar: () => api<CatalogoAvatar>('GET', '/avatar/catalogo'),
   salvarPersonagem: (perfilId: string, personagem: PersonagemFlix) =>
     api<Perfil>('PUT', `/perfis/${encodeURIComponent(perfilId)}/personagem`, personagem),
+  /** Opção "sem avatar": o perfil fica sem personagem. */
+  removerPersonagem: (perfilId: string) => api<Perfil>('DELETE', `/perfis/${encodeURIComponent(perfilId)}/personagem`),
   salvarAvatar: (perfilId: string, avatar: AvatarConfig) => api<Perfil>('PUT', `/perfis/${encodeURIComponent(perfilId)}/avatar`, avatar),
 
   // Página do jogo: o perfil vem da sessão (a API nunca aceita o perfil do cliente)

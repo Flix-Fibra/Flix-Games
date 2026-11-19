@@ -1,23 +1,35 @@
-import { useMemo, useState, type CSSProperties } from 'react';
-import type { Jogo, Perfil } from '../dados/tipos';
+import { useMemo, useState } from 'react';
+import type { Jogo, Perfil, ResumoAvaliacao } from '../dados/tipos';
 import { useAviso } from './Aviso';
+import { CartaoJogo } from './CartaoJogo';
 import { DetalheJogo } from './DetalheJogo';
-import { CapaJogo, Coracao, Play } from './Icones';
+import { Coracao, Lupa } from './Icones';
+import { jogosNovos } from '../dados/novidades';
 
 interface Props {
   jogos: Jogo[];
   perfil: Perfil;
   onJogar: (jogo: Jogo) => void;
   onFavoritar: (jogo: Jogo) => Promise<void>;
+  onAvaliado?: (jogoId: string, avaliacao: ResumoAvaliacao) => void;
 }
 
 const TODOS = 'Todos';
 const FAVORITOS = 'Favoritos';
+const NOVOS = 'Novos';
+const MAIS_JOGADOS = 'Mais jogados';
 
-/** Página "Jogos": todos os jogos do hub, com filtro de favoritos e por categoria (gênero do jogo). */
-export function Jogos({ jogos, perfil, onJogar, onFavoritar }: Props) {
+/** Texto sem acento e em minúsculas, para a pesquisa achar "Cabecada" em "Cabeçada". */
+const normalizar = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+/**
+ * Página "Jogos": todos os jogos do hub, com pesquisa por nome e filtros (Favoritos, Todos, Novos, Mais jogados e
+ * as categorias, que são os gêneros dos jogos). A pesquisa vale dentro do filtro escolhido.
+ */
+export function Jogos({ jogos, perfil, onJogar, onFavoritar, onAvaliado }: Props) {
   const avisar = useAviso();
   const [filtro, setFiltro] = useState(TODOS);
+  const [busca, setBusca] = useState('');
   const [aberto, setAberto] = useState<Jogo | null>(null); // jogo aberto no botão "Ver"
 
   // Categorias vêm dos próprios jogos: aparece só categoria que tem jogo, com a contagem.
@@ -28,14 +40,20 @@ export function Jogos({ jogos, perfil, onJogar, onFavoritar }: Props) {
   }, [jogos]);
 
   const favoritos = jogos.filter((j) => perfil.favoritos.includes(j.id));
-  const lista = filtro === TODOS ? jogos : filtro === FAVORITOS ? favoritos : jogos.filter((j) => j.genero === filtro);
+  const novos = useMemo(() => jogosNovos(jogos), [jogos]);
+  // Mais jogados: só quem já teve partida terminada, do mais para o menos jogado (empate: ordem do catálogo)
+  const maisJogados = useMemo(() => jogos.filter((j) => (j.partidas ?? 0) > 0).sort((a, b) => (b.partidas ?? 0) - (a.partidas ?? 0)), [jogos]);
+  const doFiltro = filtro === TODOS ? jogos : filtro === FAVORITOS ? favoritos : filtro === NOVOS ? novos
+    : filtro === MAIS_JOGADOS ? maisJogados : jogos.filter((j) => j.genero === filtro);
+  const termo = normalizar(busca);
+  const lista = termo ? doFiltro.filter((j) => normalizar(j.nome).includes(termo)) : doFiltro;
 
   function jogar(j: Jogo) {
     if (j.pasta) onJogar(j);
     else avisar(`"${j.nome}" chega em breve`);
   }
 
-  if (aberto) return <DetalheJogo jogo={aberto} perfil={perfil} onJogar={jogar} onFavoritar={onFavoritar} onVoltar={() => setAberto(null)} />;
+  if (aberto) return <DetalheJogo jogo={aberto} perfil={perfil} onJogar={jogar} onFavoritar={onFavoritar} onVoltar={() => setAberto(null)} onAvaliado={onAvaliado} />;
 
   return (
     <section className="gx-view ativa" aria-label="Jogos">
@@ -48,9 +66,16 @@ export function Jogos({ jogos, perfil, onJogar, onFavoritar }: Props) {
         <p className="perfil-dica gx-vazio">Os jogos chegam em breve.</p>
       ) : (
         <>
-          <div className="gx-categorias" role="tablist" aria-label="Categorias">
-            {/* Favoritos vem antes de Todos */}
-            {[[FAVORITOS, favoritos.length] as const, [TODOS, jogos.length] as const, ...categorias].map(([nome, n]) => (
+          <label className="gx-busca">
+            <Lupa />
+            <input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Pesquisar jogos pelo nome"
+              aria-label="Pesquisar jogos pelo nome" autoComplete="off" enterKeyHint="search" />
+          </label>
+
+          <div className="gx-categorias" role="tablist" aria-label="Filtros">
+            {/* Favoritos vem antes de Todos; depois, Novos e Mais jogados; por fim, as categorias */}
+            {[[FAVORITOS, favoritos.length] as const, [TODOS, jogos.length] as const, [NOVOS, novos.length] as const,
+              [MAIS_JOGADOS, maisJogados.length] as const, ...categorias].map(([nome, n]) => (
               <button key={nome} type="button" role="tab" aria-selected={filtro === nome}
                 className={'gx-categoria' + (filtro === nome ? ' ativo' : '') + (nome === FAVORITOS ? ' fav' : '')} onClick={() => setFiltro(nome)}>
                 {nome === FAVORITOS && <Coracao />}{nome}<span className="gx-categoria-n">{n}</span>
@@ -58,26 +83,19 @@ export function Jogos({ jogos, perfil, onJogar, onFavoritar }: Props) {
             ))}
           </div>
 
-          {filtro === FAVORITOS && favoritos.length === 0 && (
-            <p className="perfil-dica gx-vazio">Você ainda não tem favoritos. No Início, escolha um jogo e toque em Favoritar.</p>
+          {lista.length === 0 && (
+            <p className="perfil-dica gx-vazio">
+              {termo ? `Nenhum jogo com “${busca.trim()}” no nome${filtro === TODOS ? '' : ` em ${filtro}`}.`
+                : filtro === FAVORITOS ? 'Você ainda não tem favoritos. Toque no coração abaixo de um jogo para favoritá-lo.'
+                : filtro === NOVOS ? 'Nenhum jogo chegou nos últimos 30 dias.'
+                : filtro === MAIS_JOGADOS ? 'Ninguém terminou uma partida ainda.'
+                : 'Nenhum jogo nesta categoria.'}
+            </p>
           )}
           <ul className="gx-grade-jogos">
             {lista.map((j) => (
-              <li key={j.id} className="gx-cartao-jogo">
-                <button type="button" data-capa={j.id} className="gx-cartao-capa" style={{ '--t1': j.cor1, '--t2': j.cor2 } as CSSProperties}
-                  onClick={() => setAberto(j)} aria-label={`Ver ${j.nome}`}>
-                  <CapaJogo jogo={j} />
-                  {perfil.favoritos.includes(j.id) && <span className="gx-tile-fav"><Coracao /></span>}
-                </button>
-                <span className="gx-cartao-info">
-                  <strong>{j.nome}</strong>
-                  <small>{j.genero}</small>
-                </span>
-                <span className="gx-cartao-botoes">
-                  <button type="button" className="gx-cartao-jogar" onClick={() => jogar(j)}><Play />{j.pasta ? 'Jogar' : 'Em breve'}</button>
-                  <button type="button" className="gx-cartao-ver" onClick={() => setAberto(j)}>Ver</button>
-                </span>
-              </li>
+              <CartaoJogo key={j.id} jogo={j} favorito={perfil.favoritos.includes(j.id)}
+                onJogar={jogar} onVer={setAberto} onFavoritar={onFavoritar} />
             ))}
           </ul>
         </>

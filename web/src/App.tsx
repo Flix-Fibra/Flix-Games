@@ -12,7 +12,7 @@ import { QuemVaiJogar } from './componentes/QuemVaiJogar';
 import { Ranking } from './componentes/Ranking';
 import { Topo } from './componentes/Topo';
 import { ErroApi, servico } from './dados/servico';
-import type { Aba, Jogo, Perfil as TPerfil } from './dados/tipos';
+import type { AlteracaoPerfil, Aba, Jogo, Perfil as TPerfil, ResumoAvaliacao, NovoPerfil } from './dados/tipos';
 
 const ABAS: Aba[] = ['inicio', 'jogos', 'ranking', 'perfil', 'creditos'];
 
@@ -20,7 +20,7 @@ type Carga =
   | { estado: 'carregando' }
   | { estado: 'sem-sessao' }
   | { estado: 'erro' }
-  | { estado: 'pronto'; jogos: Jogo[]; perfis: TPerfil[]; perfilId: string | null; maxPerfis: number };
+  | { estado: 'pronto'; jogos: Jogo[]; perfis: TPerfil[]; perfilId: string | null; maxPerfis: number; cores: string[] };
 
 function Portal() {
   const avisar = useAviso();
@@ -38,7 +38,7 @@ function Portal() {
     Promise.all([servico.sessao(), servico.jogos()])
       .then(([s, jogos]) => {
         const hash = window.location.hash.slice(1);
-        setCarga({ estado: 'pronto', jogos, perfis: s.perfis, perfilId: s.perfilId, maxPerfis: s.maxPerfis });
+        setCarga({ estado: 'pronto', jogos, perfis: s.perfis, perfilId: s.perfilId, maxPerfis: s.maxPerfis, cores: s.cores ?? [] });
         if ((ABAS as string[]).includes(hash)) setAba(hash as Aba);
         setQuemAberto(hash === 'perfis' || !s.perfilId);
       })
@@ -77,7 +77,7 @@ function Portal() {
   }
 
   const pronto = carga; // já estreitado para 'pronto' (as funções abaixo usam esta constante)
-  const { perfis, perfilId, maxPerfis } = pronto;
+  const { perfis, perfilId, maxPerfis, cores } = pronto;
   // Só aparecem no hub os jogos que abrem de verdade: com pasta entregue e que não sejam o jogo de teste do hub.
   const jogos = pronto.jogos.filter(jogoNoHub);
   const perfil = perfis.find((p) => p.id === perfilId) ?? null;
@@ -94,13 +94,20 @@ function Portal() {
     if (p) avisar(`Olá, ${p.apelido}!`);
   }
 
-  async function criar(apelido: string) {
-    const novo = await servico.criarPerfil(apelido);
+  async function criar(dados: NovoPerfil) {
+    const novo = await servico.criarPerfil(dados);
     await servico.escolherPerfil(novo.id);
     setCarga({ ...pronto, perfis: [...perfis, novo], perfilId: novo.id });
     setQuemAberto(false);
     irPara('inicio');
     avisar(`Olá, ${novo.apelido}!`);
+  }
+
+  // Gerenciar perfis: edita qualquer perfil da conta (não só o que está jogando)
+  async function editarPerfil(id: string, dados: AlteracaoPerfil) {
+    const p = await servico.alterarPerfil(id, dados);
+    setCarga((c) => (c.estado !== 'pronto' ? c : { ...c, perfis: c.perfis.map((x) => (x.id === p.id ? p : x)) }));
+    avisar(`Perfil ${p.apelido} salvo`);
   }
 
   async function excluir(id: string) {
@@ -117,7 +124,14 @@ function Portal() {
     trocarPerfil({ ...perfil, favoritos: sim ? [...perfil.favoritos, j.id] : perfil.favoritos.filter((f) => f !== j.id) });
   }
 
-  async function salvar(dados: { apelido?: string; oculto?: boolean }) {
+  // Nova nota dada na página do jogo: atualiza a média no catálogo em memória (cartões com estrelas)
+  function avaliado(jogoId: string, r: ResumoAvaliacao) {
+    setCarga((c) => c.estado !== 'pronto' ? c : {
+      ...c, jogos: c.jogos.map((j) => (j.id === jogoId ? { ...j, avaliacao: { media: r.media, total: r.total } } : j)),
+    });
+  }
+
+  async function salvar(dados: AlteracaoPerfil) {
     if (!perfil) return;
     trocarPerfil(await servico.alterarPerfil(perfil.id, dados));
   }
@@ -146,9 +160,10 @@ function Portal() {
           <main>
             {aba === 'inicio' && (
               <Inicio jogos={jogos} perfil={perfil} onFavoritar={favoritar} onCriarPersonagem={() => setEditorAberto(true)}
-                onVerRanking={(j) => { setRankingJogo(j.id); irPara('ranking'); }} onJogar={abrirJogo} />
+                onVerRanking={(j) => { setRankingJogo(j.id); irPara('ranking'); }} onJogar={abrirJogo} onAvaliado={avaliado}
+                onExplorar={() => irPara('jogos')} />
             )}
-            {aba === 'jogos' && <Jogos jogos={jogos} perfil={perfil} onJogar={abrirJogo} onFavoritar={favoritar} />}
+            {aba === 'jogos' && <Jogos jogos={jogos} perfil={perfil} onJogar={abrirJogo} onFavoritar={favoritar} onAvaliado={avaliado} />}
             {aba === 'ranking' && (jogos.some((j) => j.ranking)
               ? <Ranking jogos={jogos} perfil={perfil} jogoId={rankingJogo} onJogo={setRankingJogo} />
               : <p className="perfil-dica gx-vazio">O ranking aparece quando os jogos chegarem.</p>)}
@@ -167,7 +182,7 @@ function Portal() {
       {jogando && perfil && <Jogando entrando={!!lancando} jogo={jogando} avatar={perfil.avatar} onFechar={fecharJogo} />}
       {lancando && <Lancamento jogo={lancando} onFim={() => setLancando(null)} />}
       {(quemAberto || !perfil) && (
-        <QuemVaiJogar perfis={perfis} maxPerfis={maxPerfis} atualId={perfilId} onEntrar={entrar} onCriar={criar} onExcluir={excluir} />
+        <QuemVaiJogar perfis={perfis} maxPerfis={maxPerfis} cores={cores} atualId={perfilId} onEntrar={entrar} onCriar={criar} onEditar={editarPerfil} onExcluir={excluir} />
       )}
     </>
   );

@@ -5,7 +5,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Path, Request, Response
 from pydantic import BaseModel, Field, field_validator
-from psycopg.errors import UniqueViolation
+from psycopg.errors import CheckViolation, UniqueViolation
 
 from .config import config
 from .consultas import montar_perfil
@@ -14,8 +14,26 @@ from .sessao import COOKIE, Db, Sessao, criar_sessao
 router = APIRouter(prefix="/api")
 
 MAX_PERFIS = 4  # Q23 (era 2 até 18/11/2026)
-CORES = ["#D2232A", "#2773D2", "#7654C4", "#15803D"]
+# Paleta da cor de fundo do perfil (o jogador escolhe ao criar ou editar). Sem escolha, vem a primeira ainda não usada
+# na conta. A interface lê esta lista de /api/sessao: uma fonte só. As 4 primeiras são as cores antigas.
+# 16 cores em duas fileiras de 8 na tela; todas escuras o bastante para as iniciais brancas ficarem legíveis.
+CORES = [
+    "#D2232A", "#2773D2", "#7654C4", "#15803D", "#E8590C", "#DB2777", "#0E7490", "#4B5563",
+    "#B45309", "#4D7C0F", "#0284C7", "#4338CA", "#9333EA", "#C026D3", "#BE123C", "#7C2D12",
+]
+
+
+def _cor_da_paleta(v: str | None) -> str | None:
+    if v is None:
+        return None
+    v = v.upper()
+    if v not in CORES:
+        raise ValueError("Escolha uma das cores da paleta.")
+    return v
 RE_APELIDO = re.compile(r"^[A-Za-zÀ-ÿ0-9 _-]{3,20}$")
+# Nome verdadeiro: letras (com acento), espaço, hífen e apóstrofo ("Ana Clara", "D'Ávila", "Silva-Souza")
+RE_NOME = re.compile(r"^[A-Za-zÀ-ÿ' -]+$")
+NICKNAME_EM_USO = "Esse nickname já está em uso. Escolha outro."  # único entre todos os jogadores (migração 009)
 # [H] Lista mínima; a moderação de verdade (Q25) é revisão da equipe + denúncia.
 PROIBIDOS = ("admin", "flix", "moderador", "suporte")
 
@@ -29,23 +47,75 @@ def _limpar_apelido(v: str) -> str:
     return v
 
 
+def _limpar_nome(v: str | None, maximo: int, campo: str) -> str:
+    """Nome ou sobrenome: obrigatórios (decisão do solicitante, 19/11/2026); fora do padrão é recusado."""
+    v = " ".join((v or "").split())
+    if not v:
+        raise ValueError(f"Preencha o {campo}.")
+    if len(v) > maximo or not RE_NOME.fullmatch(v):
+        raise ValueError(f"Use até {maximo} caracteres: letras, espaço, hífen ou apóstrofo.")
+    return v
+
+
 class NovoPerfil(BaseModel):
+    """Criação: nickname, nome e sobrenome obrigatórios; o nome só aparece no ranking com mostrarNome ligado."""
+
     apelido: str = Field(max_length=40)
+    nome: str = Field(max_length=80)
+    sobrenome: str = Field(max_length=120)
+    mostrar_nome: bool = Field(default=False, alias="mostrarNome")
+    cor: str | None = None
+
+    @field_validator("cor")
+    @classmethod
+    def _cor(cls, v: str | None) -> str | None:
+        return _cor_da_paleta(v)
 
     @field_validator("apelido")
     @classmethod
     def _apelido(cls, v: str) -> str:
         return _limpar_apelido(v)
 
+    @field_validator("nome")
+    @classmethod
+    def _nome(cls, v: str) -> str:
+        return _limpar_nome(v, 40, "nome")
+
+    @field_validator("sobrenome")
+    @classmethod
+    def _sobrenome(cls, v: str) -> str:
+        return _limpar_nome(v, 60, "sobrenome")
+
 
 class AlteraPerfil(BaseModel):
+    """Só os campos enviados mudam. Nome e sobrenome, quando enviados, não podem ficar vazios (são obrigatórios)."""
+
     apelido: str | None = Field(default=None, max_length=40)
     oculto: bool | None = None
+    nome: str | None = Field(default=None, max_length=80)
+    sobrenome: str | None = Field(default=None, max_length=120)
+    mostrar_nome: bool | None = Field(default=None, alias="mostrarNome")
+    cor: str | None = None
+
+    @field_validator("cor")
+    @classmethod
+    def _cor(cls, v: str | None) -> str | None:
+        return _cor_da_paleta(v)
 
     @field_validator("apelido")
     @classmethod
     def _apelido(cls, v: str | None) -> str | None:
         return None if v is None else _limpar_apelido(v)
+
+    @field_validator("nome")
+    @classmethod
+    def _nome(cls, v: str | None) -> str:
+        return _limpar_nome(v, 40, "nome")
+
+    @field_validator("sobrenome")
+    @classmethod
+    def _sobrenome(cls, v: str | None) -> str:
+        return _limpar_nome(v, 60, "sobrenome")
 
 
 class EscolhaPerfil(BaseModel):
@@ -83,6 +153,7 @@ def ver_sessao(s: Sessao, c: Db) -> dict:
         "perfilId": str(s["perfil_id"]) if s["perfil_id"] else None,
         "perfis": [montar_perfil(c, p["id"]) for p in perfis],
         "maxPerfis": MAX_PERFIS,
+        "cores": CORES,
     }
 
 
@@ -126,14 +197,15 @@ def criar_perfil(dados: NovoPerfil, s: Sessao, c: Db) -> dict:
     usadas = [r["cor"] for r in c.execute("SELECT cor FROM perfis WHERE conta_id = %s", (s["conta_id"],))]
     if len(usadas) >= MAX_PERFIS:
         raise HTTPException(409, f"Limite de {MAX_PERFIS} perfis por conta.")
-    cor = next((x for x in CORES if x not in usadas), CORES[0])
+    cor = dados.cor or next((x for x in CORES if x not in usadas), CORES[0])
     try:
         with c.transaction():
             p = c.execute(
-                "INSERT INTO perfis (conta_id, apelido, cor) VALUES (%s, %s, %s) RETURNING id", (s["conta_id"], dados.apelido, cor)
+                "INSERT INTO perfis (conta_id, apelido, cor, nome, sobrenome, mostrar_nome) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
+                (s["conta_id"], dados.apelido, cor, dados.nome, dados.sobrenome, dados.mostrar_nome),
             ).fetchone()
     except UniqueViolation:
-        raise HTTPException(409, "Esse apelido já está em uso nesta conta.") from None
+        raise HTTPException(409, NICKNAME_EM_USO) from None
     assert p is not None
     return montar_perfil(c, p["id"])
 
@@ -141,14 +213,27 @@ def criar_perfil(dados: NovoPerfil, s: Sessao, c: Db) -> dict:
 @router.patch("/perfis/{perfil_id}")
 def alterar_perfil(perfil_id: UUID, dados: AlteraPerfil, s: Sessao, c: Db) -> dict:
     _do_dono(c, perfil_id, s["conta_id"])
+    enviados = dados.model_fields_set
     try:
         with c.transaction():
             if dados.apelido is not None:
                 c.execute("UPDATE perfis SET apelido = %s WHERE id = %s", (dados.apelido, perfil_id))
             if dados.oculto is not None:
                 c.execute("UPDATE perfis SET oculto = %s WHERE id = %s", (dados.oculto, perfil_id))
+            if dados.cor is not None:
+                c.execute("UPDATE perfis SET cor = %s WHERE id = %s", (dados.cor, perfil_id))
+            # Ligar a exibição vem DEPOIS de gravar o nome (a regra do banco exige nome para mostrar; os dois podem
+            # chegar na mesma requisição). Perfis antigos, criados antes do nome obrigatório, podem estar sem nome.
+            if "nome" in enviados:
+                c.execute("UPDATE perfis SET nome = %s WHERE id = %s", (dados.nome, perfil_id))
+            if "sobrenome" in enviados:
+                c.execute("UPDATE perfis SET sobrenome = %s WHERE id = %s", (dados.sobrenome, perfil_id))
+            if dados.mostrar_nome is not None:
+                c.execute("UPDATE perfis SET mostrar_nome = %s WHERE id = %s", (dados.mostrar_nome, perfil_id))
     except UniqueViolation:
-        raise HTTPException(409, "Esse apelido já está em uso nesta conta.") from None
+        raise HTTPException(409, NICKNAME_EM_USO) from None
+    except CheckViolation:
+        raise HTTPException(422, "Preencha o nome para mostrá-lo no ranking.") from None
     return montar_perfil(c, perfil_id)
 
 

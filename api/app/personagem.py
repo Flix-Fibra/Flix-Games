@@ -71,3 +71,17 @@ def salvar_personagem(perfil_id: UUID, personagem: PersonagemFlix, s: Sessao, c:
     if not r:
         raise HTTPException(404, "Perfil não encontrado.")
     return montar_perfil(c, perfil_id)
+
+
+@router.delete("/perfis/{perfil_id}/personagem")
+def remover_personagem(perfil_id: UUID, s: Sessao, c: Db) -> dict:
+    """Opção "sem avatar" do editor: o perfil volta a não ter personagem (o hub mostra o ícone padrão)."""
+    from .consultas import montar_perfil
+
+    r = c.execute(
+        "UPDATE perfis SET personagem = NULL WHERE id = %s AND conta_id = %s RETURNING id",
+        (perfil_id, s["conta_id"]),
+    ).fetchone()
+    if not r:
+        raise HTTPException(404, "Perfil não encontrado.")
+    return montar_perfil(c, perfil_id)

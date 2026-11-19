@@ -34,13 +34,25 @@ class Fim(BaseModel):
 
 @router.get("/jogos")
 def listar_jogos(c: Db) -> list[dict]:
+    # Avaliação (média de 1 a 5 e total) junto do catálogo: os cartões dos jogos mostram as estrelas sem uma
+    # consulta por jogo. Mesmo arredondamento da página do jogo (1 casa). `partidas` = partidas terminadas de todos
+    # os jogadores (filtro "Mais jogados" da aba Jogos).
     linhas = c.execute(
-        """SELECT id, nome, genero, descricao, cor1, cor2, metrica, unidade, ordem, tem_ranking, pasta, capa, previa
-             FROM jogos WHERE publicado ORDER BY vitrine, id"""
+        """SELECT j.id, j.nome, j.genero, j.descricao, j.cor1, j.cor2, j.metrica, j.unidade, j.ordem, j.tem_ranking,
+                  j.pasta, j.capa, j.previa, j.imagens, a.media, coalesce(a.total, 0) AS total, coalesce(p.partidas, 0) AS partidas
+             FROM jogos j
+             LEFT JOIN (SELECT jogo_id, round(avg(nota)::numeric, 1) AS media, count(*) AS total
+                          FROM avaliacoes GROUP BY jogo_id) a ON a.jogo_id = j.id
+             LEFT JOIN (SELECT jogo_id, count(*) AS partidas
+                          FROM partidas WHERE status = 'finalizada' GROUP BY jogo_id) p ON p.jogo_id = j.id
+            WHERE j.publicado ORDER BY j.vitrine, j.id"""
     ).fetchall()
     return [
         {"id": l["id"], "nome": l["nome"], "genero": l["genero"], "descricao": l["descricao"], "cor1": l["cor1"], "cor2": l["cor2"],
-         "metrica": l["metrica"], "unidade": l["unidade"], "ordem": l["ordem"], "ranking": l["tem_ranking"], "pasta": l["pasta"], "capa": l["capa"], "previa": l["previa"]}
+         "metrica": l["metrica"], "unidade": l["unidade"], "ordem": l["ordem"], "ranking": l["tem_ranking"], "pasta": l["pasta"], "capa": l["capa"], "previa": l["previa"],
+         "imagens": l["imagens"],
+         "avaliacao": {"media": float(l["media"]) if l["media"] is not None else None, "total": l["total"]},
+         "partidas": l["partidas"]}
         for l in linhas
     ]
 

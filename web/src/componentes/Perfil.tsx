@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { iniciais, limparApelido, validarApelido } from '../dados/apelido';
+import { iniciais, limparApelido, limparNome, nomeCompleto, validarApelido, validarNome } from '../dados/apelido';
 import { formatarPontos, tipoAparelho, vistoHa } from '../dados/formatar';
 import { servico } from '../dados/servico';
-import type { Aparelho, Jogo, Perfil as TPerfil } from '../dados/tipos';
+import type { AlteracaoPerfil, Aparelho, Jogo, Perfil as TPerfil } from '../dados/tipos';
 import { EditorPersonagem } from './personagem/EditorPersonagem';
 import { fotoDoRosto } from '../personagem/flix';
 import { useAviso } from './Aviso';
@@ -12,7 +12,7 @@ interface Props {
   jogos: Jogo[];
   perfil: TPerfil;
   perfis: TPerfil[];
-  onSalvar: (dados: { apelido?: string; oculto?: boolean }) => Promise<void>;
+  onSalvar: (dados: AlteracaoPerfil) => Promise<void>;
   onTrocarPerfil: () => void;
   onSair: () => Promise<void>;
   onAtualizado: (p: TPerfil) => void;
@@ -21,6 +21,8 @@ interface Props {
 export function Perfil({ jogos, perfil, perfis, onSalvar, onTrocarPerfil, onSair, onAtualizado }: Props) {
   const avisar = useAviso();
   const [apelido, setApelido] = useState(perfil.apelido);
+  const [nome, setNome] = useState(perfil.nome ?? '');
+  const [sobrenome, setSobrenome] = useState(perfil.sobrenome ?? '');
   const [msg, setMsg] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
   const [aparelhos, setAparelhos] = useState<Aparelho[] | null>(null);
   const [editor, setEditor] = useState(false);
@@ -35,6 +37,7 @@ export function Perfil({ jogos, perfil, perfis, onSalvar, onTrocarPerfil, onSair
   }, [perfil.personagem]);
 
   useEffect(() => { setApelido(perfil.apelido); setMsg(null); }, [perfil.id, perfil.apelido]);
+  useEffect(() => { setNome(perfil.nome ?? ''); setSobrenome(perfil.sobrenome ?? ''); }, [perfil.id, perfil.nome, perfil.sobrenome]);
   useEffect(() => { servico.aparelhos().then(setAparelhos).catch(() => setAparelhos([])); }, []);
 
   const comRanking = jogos.filter((j) => j.ranking);
@@ -45,11 +48,11 @@ export function Perfil({ jogos, perfil, perfis, onSalvar, onTrocarPerfil, onSair
   async function salvar(e: FormEvent) {
     e.preventDefault();
     const v = limparApelido(apelido);
-    const erro = validarApelido(v, perfis, perfil.id); // ajuda rápida; quem decide é a API
+    const erro = validarApelido(v, perfis, perfil.id) ?? validarNome(nome, 'nome') ?? validarNome(sobrenome, 'sobrenome'); // ajuda rápida; quem decide é a API
     if (erro) { setMsg({ tipo: 'erro', texto: erro }); return; }
     try {
-      await onSalvar({ apelido: v });
-      setMsg({ tipo: 'ok', texto: 'Apelido salvo.' });
+      await onSalvar({ apelido: v, nome: limparNome(nome), sobrenome: limparNome(sobrenome) });
+      setMsg({ tipo: 'ok', texto: 'Dados salvos.' });
     } catch (err) {
       setMsg({ tipo: 'erro', texto: err instanceof Error ? err.message : 'Não foi possível salvar.' });
     }
@@ -59,6 +62,16 @@ export function Perfil({ jogos, perfil, perfis, onSalvar, onTrocarPerfil, onSair
     try {
       await onSalvar({ oculto: valor });
       avisar(valor ? 'Seu perfil está oculto no ranking' : 'Seu perfil voltou a aparecer no ranking');
+    } catch (err) { avisar(err instanceof Error ? err.message : 'Não foi possível salvar.'); }
+  }
+
+  // Ligar a exibição envia junto o nome digitado (a API exige nome para mostrar)
+  async function mostrarNome(valor: boolean) {
+    const n = limparNome(nome);
+    if (valor && !n) { setMsg({ tipo: 'erro', texto: 'Preencha o nome para mostrá-lo no ranking.' }); return; }
+    try {
+      await onSalvar(valor ? { nome: n, sobrenome: limparNome(sobrenome), mostrarNome: true } : { mostrarNome: false });
+      avisar(valor ? 'Seu nome aparece no ranking, abaixo do nickname' : 'Seu nome não aparece mais no ranking');
     } catch (err) { avisar(err instanceof Error ? err.message : 'Não foi possível salvar.'); }
   }
 
@@ -89,6 +102,7 @@ export function Perfil({ jogos, perfil, perfis, onSalvar, onTrocarPerfil, onSair
           </div>
           <div className="perfil-dados">
             <h2>{perfil.apelido}</h2>
+            {nomeCompleto(perfil) && <p className="gx-nome-real">{nomeCompleto(perfil)}{perfil.mostrarNome ? '' : ' · só você vê'}</p>}
             <p>Cliente Flix · jogando desde {perfil.desde}</p>
             <span className="perfil-papel">Nível {perfil.nivel}</span>
             <button className="btn light gx-trocar" type="button" onClick={onTrocarPerfil}><Trocar />Trocar perfil</button>
@@ -102,16 +116,29 @@ export function Perfil({ jogos, perfil, perfis, onSalvar, onTrocarPerfil, onSair
 
         <div className="perfil-grade">
           <section className="card">
-            <h3>Apelido e privacidade</h3>
+            <h3>Nickname, nome e privacidade</h3>
             <form className="perfil-form" onSubmit={salvar} noValidate>
-              <label>Apelido público
-                <input value={apelido} onChange={(e) => setApelido(e.target.value)} maxLength={20} autoComplete="nickname" />
+              <label>Nickname
+                <input value={apelido} onChange={(e) => setApelido(e.target.value)} maxLength={20} autoComplete="nickname" required />
               </label>
-              <p className="perfil-dica">De 3 a 20 caracteres: letras, números, espaço, _ ou -. Apelidos ofensivos são removidos pela equipe Flix.</p>
+              <p className="perfil-dica">Obrigatório e único: nenhum outro jogador pode usar o mesmo. Aparece para todos. De 3 a 20 caracteres: letras, números, espaço, _ ou -. Nicknames ofensivos são removidos pela equipe Flix.</p>
+              <div className="gx-nome-campos">
+                <label>Nome
+                  <input value={nome} onChange={(e) => setNome(e.target.value)} maxLength={40} autoComplete="given-name" required />
+                </label>
+                <label>Sobrenome
+                  <input value={sobrenome} onChange={(e) => setSobrenome(e.target.value)} maxLength={60} autoComplete="family-name" required />
+                </label>
+              </div>
+              <label className="gx-switch">
+                <input type="checkbox" checked={perfil.mostrarNome} onChange={(e) => mostrarNome(e.target.checked)} />
+                <span className="gx-switch-trilho" aria-hidden="true" />
+                <span><strong>Mostrar meu nome no ranking</strong><small>Desligado, só você vê o seu nome. Ligado, ele aparece discretamente abaixo do nickname.</small></span>
+              </label>
               <label className="gx-switch">
                 <input type="checkbox" checked={perfil.oculto} onChange={(e) => ocultar(e.target.checked)} />
                 <span className="gx-switch-trilho" aria-hidden="true" />
-                <span><strong>Ocultar meu perfil do ranking</strong><small>Outros clientes não veem seu apelido nem sua posição.</small></span>
+                <span><strong>Ocultar meu perfil do ranking</strong><small>Outros clientes não veem seu nickname nem sua posição.</small></span>
               </label>
               {msg && <p className={'perfil-msg ' + msg.tipo} role="status">{msg.texto}</p>}
               <button className="btn" type="submit">Salvar</button>

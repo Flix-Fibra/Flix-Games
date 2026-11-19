@@ -1,12 +1,12 @@
-import { createPortal } from 'react-dom';
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
+import { useEffect, useState, type CSSProperties, type FormEvent } from 'react';
 import { iniciais } from '../dados/apelido';
 import { regraDoRanking, vistoHa } from '../dados/formatar';
 import { servico } from '../dados/servico';
 import type { Comentario, Jogo, Perfil, ResumoAvaliacao } from '../dados/tipos';
 import { useAviso } from './Aviso';
 import { BotaoFavoritar } from './BotaoFavoritar';
-import { CapaJogo, Play, urlDaPrevia } from './Icones';
+import { GaleriaJogo } from './GaleriaJogo';
+import { CapaJogo, Play } from './Icones';
 import { Linha, SemRanking, useRanking } from './ListaRanking';
 
 interface Props {
@@ -15,30 +15,16 @@ interface Props {
   onJogar: (jogo: Jogo) => void;
   onFavoritar: (jogo: Jogo) => Promise<void>;
   onVoltar: () => void;
+  /** Avisa a nova média depois que o jogador avalia (os cartões dos jogos mostram a nota). */
+  onAvaliado?: (jogoId: string, avaliacao: ResumoAvaliacao) => void;
 }
 
 const LIMITE = 500;
 
 /** Página do jogo: jogar, avaliar (1 a 5 estrelas), ranking e comentários dos clientes. */
-export function DetalheJogo({ jogo, perfil, onJogar, onFavoritar, onVoltar }: Props) {
+export function DetalheJogo({ jogo, perfil, onJogar, onFavoritar, onVoltar, onAvaliado }: Props) {
   const fav = perfil.favoritos.includes(jogo.id);
   const avisar = useAviso();
-  const previa = urlDaPrevia(jogo);
-  // A animação vai do alto da tela até logo abaixo do topo da página (capa, nome, botões e estrelas)
-  const topo = useRef<HTMLDivElement>(null);
-  const [alturaPrevia, setAlturaPrevia] = useState<number | null>(null);
-  useLayoutEffect(() => {
-    if (!previa) return;
-    const medir = () => {
-      const r = topo.current?.getBoundingClientRect();
-      if (r) setAlturaPrevia(Math.round(r.bottom + window.scrollY + 24));
-    };
-    medir();
-    const obs = new ResizeObserver(medir);
-    if (topo.current) obs.observe(topo.current);
-    window.addEventListener('resize', medir);
-    return () => { obs.disconnect(); window.removeEventListener('resize', medir); };
-  }, [previa]);
   const [avaliacao, setAvaliacao] = useState<ResumoAvaliacao | null>(null);
   const [comentarios, setComentarios] = useState<Comentario[] | null>(null);
   const [erro, setErro] = useState(false);
@@ -62,7 +48,9 @@ export function DetalheJogo({ jogo, perfil, onJogar, onFavoritar, onVoltar }: Pr
 
   async function avaliar(nota: number) {
     try {
-      setAvaliacao(await servico.avaliar(jogo.id, nota));
+      const r = await servico.avaliar(jogo.id, nota);
+      setAvaliacao(r);
+      onAvaliado?.(jogo.id, r);
       avisar(`Você deu ${nota} ${nota === 1 ? 'estrela' : 'estrelas'}`);
     } catch (e) { avisar(e instanceof Error ? e.message : 'Não foi possível avaliar.'); }
   }
@@ -73,14 +61,8 @@ export function DetalheJogo({ jogo, perfil, onJogar, onFavoritar, onVoltar }: Pr
 
       {/* Topo no estilo de página de produto: capa, nome, categoria com a média, e Jogar com a nota ao lado */}
       {/* div, não <header>: o estilo global transforma todo <header> na barra fixa do topo */}
-      {/* Trecho do jogo rodando atrás do alto da página, de ponta a ponta, como um GIF ilustrativo (só decoração) */}
-      {previa && createPortal(
-        <div className="gx-previa-fundo" aria-hidden="true" style={alturaPrevia ? ({ '--previa-h': `${alturaPrevia}px` } as CSSProperties) : undefined}>
-          <img src={previa} alt="" draggable={false} decoding="async" />
-        </div>,
-        document.body,
-      )}
-      <div ref={topo} className={'gx-detalhe-topo' + (previa ? ' com-previa' : '')}>
+      {/* O alto da página fica na cor do jogo (brilho do topo); a animação do jogo em ação está na galeria, abaixo de Sobre */}
+      <div className="gx-detalhe-topo">
         <span data-capa={jogo.id} className="gx-cartao-capa gx-detalhe-capa" style={{ '--t1': jogo.cor1, '--t2': jogo.cor2 } as CSSProperties}>
           <CapaJogo jogo={jogo} />
         </span>
@@ -102,6 +84,7 @@ export function DetalheJogo({ jogo, perfil, onJogar, onFavoritar, onVoltar }: Pr
       <section className="gx-secao">
         <h2 className="gx-secao-titulo">Sobre</h2>
         <p className="gx-secao-texto">{jogo.descricao}</p>
+        <GaleriaJogo jogo={jogo} />
       </section>
 
       {/* Comentários à esquerda e ranking à direita (no celular, um embaixo do outro) */}

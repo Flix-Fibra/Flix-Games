@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from app.config import config
 from app.main import app
 
-from .conftest import CABECALHO, com_perfil, novo_cliente, sql
+from .conftest import CABECALHO, com_perfil, novo, novo_cliente, sql
 
 
 # ---------- Segurança básica ----------
@@ -17,7 +17,7 @@ def test_sem_sessao_recebe_401(app_ativo):
 
 def test_alteracao_sem_cabecalho_csrf_e_recusada(app_ativo):
     c = novo_cliente(app_ativo)
-    r = c.post("/api/perfis", json={"apelido": "Teste"}, headers={"X-Flix-Games": ""})
+    r = c.post("/api/perfis", json=novo("Teste"), headers={"X-Flix-Games": ""})
     assert r.status_code == 403
 
 
@@ -41,20 +41,81 @@ def test_saude_confere_o_banco(app_ativo):
 def test_limite_de_4_perfis_por_conta(app_ativo):
     c = novo_cliente(app_ativo)
     assert c.get("/api/sessao").json()["maxPerfis"] == 4  # a interface lê o limite daqui
-    assert c.post("/api/perfis", json={"apelido": "Um"}).status_code == 422  # curto demais
-    criados = [c.post("/api/perfis", json={"apelido": a}) for a in ("Primeiro", "Segundo", "Terceiro", "Quarto")]
+    assert c.post("/api/perfis", json=novo("Um")).status_code == 422  # curto demais
+    criados = [c.post("/api/perfis", json=novo(a)) for a in ("Primeiro", "Segundo", "Terceiro", "Quarto")]
     assert [r.status_code for r in criados] == [201] * 4
     assert len({r.json()["cor"] for r in criados}) == 4  # cada perfil com uma cor diferente
-    r = c.post("/api/perfis", json={"apelido": "Quinto"})
+    r = c.post("/api/perfis", json=novo("Quinto"))
     assert r.status_code == 409 and "Limite de 4" in r.json()["detail"]
 
 
 def test_apelido_invalido_repetido_e_proibido(app_ativo):
     c = novo_cliente(app_ativo)
-    assert c.post("/api/perfis", json={"apelido": "<b>oi</b>"}).status_code == 422
-    assert c.post("/api/perfis", json={"apelido": "Admin Geral"}).status_code == 422
-    assert c.post("/api/perfis", json={"apelido": "Duplo"}).status_code == 201
-    assert c.post("/api/perfis", json={"apelido": "duplo"}).status_code == 409  # sem diferenciar maiúscula
+    assert c.post("/api/perfis", json=novo("<b>oi</b>")).status_code == 422
+    assert c.post("/api/perfis", json=novo("Admin Geral")).status_code == 422
+    assert c.post("/api/perfis", json=novo("Duplo")).status_code == 201
+    assert c.post("/api/perfis", json=novo("duplo")).status_code == 409  # sem diferenciar maiúscula
+
+
+def test_nickname_e_unico_entre_todas_as_contas(app_ativo):
+    a = novo_cliente(app_ativo)
+    b = novo_cliente(app_ativo)
+    assert a.post("/api/perfis", json=novo("So Um No Mundo")).status_code == 201
+    r = b.post("/api/perfis", json=novo("so um no mundo"))  # outra conta, maiúsculas diferentes
+    assert r.status_code == 409 and "nickname já está em uso" in r.json()["detail"]
+    pid = b.post("/api/perfis", json=novo("Outro Nome")).json()["id"]
+    assert b.patch(f"/api/perfis/{pid}", json={"apelido": "SO UM NO MUNDO"}).status_code == 409  # nem renomeando
+
+
+def test_nome_verdadeiro_so_aparece_no_ranking_quando_habilitado(app_ativo):
+    c, pid = com_perfil(app_ativo, "Nome Escondido")
+    outro, _ = com_perfil(app_ativo, "Quem Olha")
+    r = c.patch(f"/api/perfis/{pid}", json={"nome": "  Ana   Clara ", "sobrenome": "D'Ávila Souza"})
+    assert r.status_code == 200, r.text
+    assert (r.json()["nome"], r.json()["sobrenome"], r.json()["mostrarNome"]) == ("Ana Clara", "D'Ávila Souza", False)
+    _jogar(c, "g03", pontos=130, duracao_ms=3500, espera=1.6)
+
+    def linha_vista_pelo_outro():
+        return next(l for l in outro.get("/api/ranking/g03").json() if l["apelido"] == "Nome Escondido")
+
+    assert linha_vista_pelo_outro()["nome"] is None  # desligado: a API nem envia o nome
+    assert c.patch(f"/api/perfis/{pid}", json={"mostrarNome": True}).json()["mostrarNome"] is True
+    assert linha_vista_pelo_outro()["nome"] == "Ana Clara D'Ávila Souza"
+    # nome é obrigatório: não dá para apagar; desligar a exibição esconde de novo
+    assert c.patch(f"/api/perfis/{pid}", json={"nome": ""}).status_code == 422
+    assert c.patch(f"/api/perfis/{pid}", json={"mostrarNome": False}).json()["mostrarNome"] is False
+    assert linha_vista_pelo_outro()["nome"] is None
+
+
+def test_criar_perfil_exige_nome_e_sobrenome(app_ativo):
+    c = novo_cliente(app_ativo)
+    assert c.post("/api/perfis", json={"apelido": "Sem Nome Nenhum"}).status_code == 422
+    assert c.post("/api/perfis", json=novo("Sem Sobrenome", sobrenome="  ")).status_code == 422
+    r = c.post("/api/perfis", json=novo("Com Nome Visivel", nome="Ana", sobrenome="Souza", mostrarNome=True))
+    assert r.status_code == 201, r.text
+    assert (r.json()["nome"], r.json()["sobrenome"], r.json()["mostrarNome"]) == ("Ana", "Souza", True)
+    assert c.post("/api/perfis", json=novo("Nome Oculto Padrao")).json()["mostrarNome"] is False  # padrão: desligado
+
+
+def test_cor_do_perfil_escolhida_da_paleta(app_ativo):
+    c = novo_cliente(app_ativo)
+    cores = c.get("/api/sessao").json()["cores"]
+    assert len(cores) >= 4 and len(set(cores)) == len(cores)
+    r = c.post("/api/perfis", json=novo("Cor Escolhida", cor=cores[5].lower()))  # maiúscula ou minúscula
+    assert r.status_code == 201 and r.json()["cor"] == cores[5]
+    assert c.post("/api/perfis", json=novo("Cor Livre", cor="#123456")).status_code == 422  # fora da paleta
+    assert c.patch(f"/api/perfis/{r.json()['id']}", json={"cor": cores[2]}).json()["cor"] == cores[2]
+    assert c.patch(f"/api/perfis/{r.json()['id']}", json={"cor": "red"}).status_code == 422
+
+
+def test_nome_invalido_ou_mostrar_sem_nome_e_recusado(app_ativo):
+    c, pid = com_perfil(app_ativo, "Sem Nome Ainda")
+    sql("UPDATE perfis SET nome = NULL, sobrenome = NULL WHERE id = %s", pid)  # perfil antigo, de antes do nome obrigatório
+    assert c.patch(f"/api/perfis/{pid}", json={"nome": "<script>"}).status_code == 422
+    assert c.patch(f"/api/perfis/{pid}", json={"nome": "Ana2"}).status_code == 422  # número não é nome
+    assert c.patch(f"/api/perfis/{pid}", json={"sobrenome": "x" * 61}).status_code == 422
+    r = c.patch(f"/api/perfis/{pid}", json={"mostrarNome": True})
+    assert r.status_code == 422 and "Preencha o nome" in r.json()["detail"]
 
 
 def test_nao_exclui_o_unico_perfil(app_ativo):
@@ -150,6 +211,19 @@ def test_previa_so_aceita_animacao_dentro_da_pasta_do_jogo(app_ativo):
         with pytest.raises(psycopg.errors.CheckViolation):
             sql(f"UPDATE jogos SET previa = '{ruim}' WHERE id = 'g03'")
     sql("UPDATE jogos SET previa = NULL WHERE id = 'g03'")
+
+
+def test_imagens_so_aceitam_caminhos_dentro_da_pasta_do_jogo(app_ativo):
+    import psycopg
+    import pytest
+    sql("UPDATE jogos SET imagens = ARRAY['img/telas/tela-1.webp', 'img/telas/tela-2.png'] WHERE id = 'g03'")
+    jogos = {j["id"]: j for j in TestClient(app).get("/api/jogos").json()}
+    assert jogos["g03"]["imagens"] == ["img/telas/tela-1.webp", "img/telas/tela-2.png"]
+    ruins = [["../x.webp"], ["img/ok.webp", "/etc/x.png"], ["https://x.com/a.png"], ["x.gif"], [f"img/{i}.png" for i in range(9)]]
+    for ruim in ruins:
+        with pytest.raises(psycopg.errors.CheckViolation):
+            sql("UPDATE jogos SET imagens = %s WHERE id = 'g03'", ruim)
+    sql("UPDATE jogos SET imagens = '{}' WHERE id = 'g03'")
 
 
 def test_capa_nao_aceita_caminho_fora_da_pasta_do_jogo(app_ativo):
@@ -281,12 +355,59 @@ def test_personagem_flix_so_aceita_visual_do_catalogo(app_ativo):
 
 def test_personagem_lpc_antigo_volta_como_none(app_ativo):
     """Personagem salvo no editor antigo (LPC, removido) não quebra o perfil: volta como None e a pessoa cria de novo."""
-    c, pid = com_perfil(app_ativo, "Antigo")
+    c, pid = com_perfil(app_ativo, "Antigo LPC")
     sql("UPDATE perfis SET personagem = %s::jsonb WHERE id = %s", '{"v": 2, "motor": "lpc", "bodyType": "female", "selections": {}}', pid)
     assert c.get("/api/sessao").json()["perfis"][0]["personagem"] is None
 
 
+def test_sem_avatar_remove_o_personagem(app_ativo):
+    c, pid = com_perfil(app_ativo, "Sem Avatar")
+    assert c.put(f"/api/perfis/{pid}/personagem", json=FLIX_OK).status_code == 200
+    r = c.delete(f"/api/perfis/{pid}/personagem")
+    assert r.status_code == 200, r.text
+    assert r.json()["personagem"] is None
+    assert c.get("/api/sessao").json()["perfis"][0]["personagem"] is None
+
+
+def test_sem_avatar_nao_mexe_em_perfil_de_outra_conta(app_ativo):
+    dono, pid = com_perfil(app_ativo, "Dono Avatar")
+    assert dono.put(f"/api/perfis/{pid}/personagem", json=FLIX_OK).status_code == 200
+    invasor = novo_cliente(app_ativo)
+    assert invasor.delete(f"/api/perfis/{pid}/personagem").status_code == 404
+    assert dono.get("/api/sessao").json()["perfis"][0]["personagem"] == FLIX_OK
+
+
 # ---------- Página do jogo: avaliação, comentários e denúncias ----------
+def test_catalogo_traz_a_media_das_avaliacoes(app_ativo):
+    a, _ = com_perfil(app_ativo, "Critica A")
+    b, _ = com_perfil(app_ativo, "Critica B")
+    assert a.put("/api/jogos/g01/avaliacao", json={"nota": 5}).status_code == 200
+    assert b.put("/api/jogos/g01/avaliacao", json={"nota": 4}).status_code == 200
+    jogos = {j["id"]: j for j in a.get("/api/jogos").json()}
+    det = a.get("/api/jogos/g01/detalhes").json()["avaliacao"]
+    assert jogos["g01"]["avaliacao"] == {"media": det["media"], "total": det["total"]}  # mesma conta da página do jogo
+    assert jogos["g01"]["avaliacao"]["total"] >= 2
+    sem_nota = next(j for j in jogos.values() if j["avaliacao"]["total"] == 0)
+    assert sem_nota["avaliacao"]["media"] is None
+
+
+def test_perfil_traz_os_jogos_jogados_por_ultimo(app_ativo):
+    c, _ = com_perfil(app_ativo, "Jogador Recente")
+    assert c.get("/api/sessao").json()["perfis"][0]["recentes"] == []
+    for jogo in ("g01", "g03", "g01"):  # o g01 de novo: volta para o começo, sem repetir
+        assert c.post("/api/partidas/inicio", json={"jogoId": jogo, "runId": str(uuid.uuid4())}).status_code == 201
+        time.sleep(0.01)
+    assert c.get("/api/sessao").json()["perfis"][0]["recentes"] == ["g01", "g03"]
+
+
+def test_catalogo_conta_as_partidas_terminadas(app_ativo):
+    c, _ = com_perfil(app_ativo, "Conta Partidas")
+    antes = {j["id"]: j["partidas"] for j in c.get("/api/jogos").json()}
+    _jogar(c, "g03", pontos=50, duracao_ms=3500, espera=1.6)
+    c.post("/api/partidas/inicio", json={"jogoId": "g03", "runId": str(uuid.uuid4())})  # aberta: não conta
+    depois = {j["id"]: j["partidas"] for j in c.get("/api/jogos").json()}
+    assert depois["g03"] == antes["g03"] + 1
+
 def test_avaliacao_uma_nota_por_perfil_e_media(app_ativo):
     a, _ = com_perfil(app_ativo, "Avaliador A")
     b, _ = com_perfil(app_ativo, "Avaliador B")
@@ -317,13 +438,13 @@ def test_filtro_recusa_palavrao_link_email_e_telefone(app_ativo):
 
 
 def test_limite_de_comentarios_por_minuto(app_ativo):
-    c, _ = com_perfil(app_ativo, "Apressado")
+    c, _ = com_perfil(app_ativo, "Comenta Rapido")
     codigos = [c.post("/api/jogos/g03/comentarios", json={"texto": f"comentário {i}"}).status_code for i in range(4)]
     assert codigos == [201, 201, 201, 429]
 
 
 def test_so_apaga_o_proprio_comentario(app_ativo):
-    a, _ = com_perfil(app_ativo, "Dono")
+    a, _ = com_perfil(app_ativo, "Dono Comentario")
     b, _ = com_perfil(app_ativo, "Intruso")
     cid = a.post("/api/jogos/g03/comentarios", json={"texto": "meu comentário"}).json()["id"]
     assert b.delete(f"/api/comentarios/{cid}").status_code == 404
@@ -346,9 +467,9 @@ def test_tres_denuncias_ocultam_e_denuncia_repetida_nao_conta(app_ativo):
 
 
 def test_perfil_oculto_comenta_como_jogador_flix(app_ativo):
-    a, pid = com_perfil(app_ativo, "Discreto")
+    a, pid = com_perfil(app_ativo, "Discreta")
     b, _ = com_perfil(app_ativo, "Curiosa")
     sql("UPDATE perfis SET oculto = true WHERE id = %s", pid)
     a.post("/api/jogos/g03/comentarios", json={"texto": "anônimo aqui"})
     assert b.get("/api/jogos/g03/detalhes").json()["comentarios"][0]["apelido"] == "Jogador Flix"
-    assert a.get("/api/jogos/g03/detalhes").json()["comentarios"][0]["apelido"] == "Discreto"
+    assert a.get("/api/jogos/g03/detalhes").json()["comentarios"][0]["apelido"] == "Discreta"

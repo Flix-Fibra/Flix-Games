@@ -96,31 +96,56 @@ export async function desenhar(ctx: CanvasRenderingContext2D, p: PersonagemFlix,
   if (img) ctx.drawImage(img, 0, 0);
 }
 
+/**
+ * Enquadramentos da foto do personagem: `rosto` (só a cabeça, quadrada, para ícones pequenos como o botão de perfil)
+ * e `busto` (do peito para cima, retrato 3x4, para a ficha do jogador no Início).
+ */
+export type Enquadre = 'rosto' | 'busto';
+
+const QUEIXO_PX = 13; // o queixo fica ~13 px abaixo dos olhos em todos os personagens
+const PEITO_PX = 28; // o meio do peito fica ~28 px abaixo dos olhos: o busto mostra os ombros inteiros
+const MIN_BUSTO_L = 44; // largura mínima do 3x4, em pixels da arte (careca não fica com o rosto colado na borda)
+
 const fotos = new Map<string, Promise<string | null>>();
 /** Foto do rosto (data URL) para ícones pequenos, como o botão de perfil. Com cache por personagem. */
 export function fotoDoRosto(p: PersonagemFlix): Promise<string | null> {
-  const chave = JSON.stringify(p);
+  return foto(p, 'rosto');
+}
+/** Foto 3x4 do peito para cima (data URL), para a ficha do jogador no Início. Com cache por personagem. */
+export function fotoDoBusto(p: PersonagemFlix): Promise<string | null> {
+  return foto(p, 'busto');
+}
+
+function foto(p: PersonagemFlix, enquadre: Enquadre): Promise<string | null> {
+  const chave = enquadre + JSON.stringify(p);
   let f = fotos.get(chave);
   if (!f) {
     f = carregarCatalogo().then(async (cat) => {
       const v = visualDe(cat, p);
       if (v?.foto && v.rosto) {
-        // Secreto: recorte do rosto na foto, com suavização (é foto, não pixel art)
+        // Secreto: recorte na foto, com suavização (é foto, não pixel art). O busto desce e abre o quadro.
         const img = await imagem(v.foto);
         if (!img) return null;
         const [cx, cy, l] = v.rosto;
         const lado = l * img.width;
         const out = document.createElement('canvas');
-        out.width = out.height = 160;
-        out.getContext('2d')!.drawImage(img, cx * img.width - lado / 2, cy * img.height - lado / 2, lado, lado, 0, 0, 160, 160);
+        if (enquadre === 'busto') {
+          // 3x4: desce e abre o quadro a partir do rosto
+          const w = lado * 1.5, h = (w * 4) / 3;
+          out.width = 240; out.height = 320;
+          out.getContext('2d')!.drawImage(img, cx * img.width - w / 2, cy * img.height - h * 0.35, w, h, 0, 0, 240, 320);
+        } else {
+          out.width = out.height = 160;
+          out.getContext('2d')!.drawImage(img, cx * img.width - lado / 2, cy * img.height - lado / 2, lado, lado, 0, 0, 160, 160);
+        }
         return out.toDataURL('image/jpeg', 0.9);
       }
       const tela = document.createElement('canvas');
       [tela.width, tela.height] = cat.tamanho;
       const ctx = tela.getContext('2d', { willReadFrequently: true })!;
       await desenhar(ctx, p, cat);
-      // Enquadra a cabeça inteira (com o cabelo): acha o topo real da cabeça acima dos olhos e centraliza no quadrado.
-      // Cabelo alto (black power, coque) pede um recorte maior; careca, um menor.
+      // Acha o topo real da cabeça (com o cabelo) acima dos olhos: cabelo alto (black power, coque) pede um quadro
+      // maior; careca, um menor.
       const [ox, oy] = cat.olhos;
       const faixa = ctx.getImageData(Math.round(ox - 30), 0, 60, Math.round(oy)).data;
       let topo = Math.round(oy) - 14;
@@ -129,15 +154,31 @@ export function fotoDoRosto(p: PersonagemFlix): Promise<string | null> {
         for (let xx = 0; xx < 60; xx++) if (faixa[(yy * 60 + xx) * 4 + 3]! > 0) cheio++;
         if (cheio >= 3) { topo = yy; break; }
       }
-      const queixo = oy + 13; // o queixo fica ~13 px abaixo dos olhos em todos os personagens
-      const lado = Math.max(40, Math.round((queixo - topo) * 1.25));
-      const x = Math.round(ox - lado / 2);
-      const y = Math.round((topo + queixo) / 2 - lado / 2);
+      let w: number;
+      let h: number;
+      let y: number;
+      if (enquadre === 'busto') {
+        // 3x4 do topo da cabeça (com 3 px de folga) até o meio do peito, corte rente à borda de baixo. Cabelo muito
+        // largo (black power) pode passar das laterais, como numa foto 3x4 de verdade.
+        const base = Math.round(oy + PEITO_PX);
+        w = Math.max(MIN_BUSTO_L, Math.round(((base - (topo - 3)) * 3) / 4));
+        h = Math.round((w * 4) / 3);
+        y = base - h;
+      } else {
+        // Cabeça inteira centralizada no quadrado
+        const queixo = oy + QUEIXO_PX;
+        w = h = Math.max(40, Math.round((queixo - topo) * 1.25));
+        y = Math.round((topo + queixo) / 2 - h / 2);
+      }
+      const x = Math.round(ox - w / 2);
+      // Ampliação inteira (1 pixel da arte = n pixels), sem suavizar: nítido em tela Retina
+      const n = enquadre === 'busto' ? Math.max(2, Math.ceil(320 / h)) : 2;
       const out = document.createElement('canvas');
-      out.width = out.height = lado * 2;
+      out.width = w * n;
+      out.height = h * n;
       const o = out.getContext('2d')!;
       o.imageSmoothingEnabled = false;
-      o.drawImage(tela, x, y, lado, lado, 0, 0, lado * 2, lado * 2);
+      o.drawImage(tela, x, y, w, h, 0, 0, w * n, h * n);
       return out.toDataURL('image/png');
     }).catch(() => null);
     fotos.set(chave, f);

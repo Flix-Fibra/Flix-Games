@@ -17,6 +17,9 @@ export interface Jogo {
   pasta: string | null;  // build em /games/<pasta>/; null = ainda não entregue
   capa: string | null;   // imagem dentro da pasta do jogo (vem do game.json); null = ícone desenhado
   previa?: string | null; // animação curta (WebP) dentro da pasta do jogo, atrás do topo da página "Ver"
+  avaliacao?: { media: number | null; total: number }; // média de 1 a 5 (1 casa) e total de notas; media null = sem notas
+  partidas?: number;      // partidas terminadas de todos os jogadores (filtro "Mais jogados")
+  imagens?: string[];     // telas do jogo (dentro da pasta dele), na galeria da página "Ver" junto da prévia
 }
 
 /** Desempenho de um perfil em um jogo. Sem posição = ainda não pontuou. */
@@ -32,12 +35,16 @@ export interface Conquista {
   feita: boolean;
 }
 
-/** Até 2 por conta (Q23). Cada um tem ranking, progresso, favoritos e conquistas próprios. */
+/** Até 4 por conta (Q23; limite em MAX_PERFIS na API). Cada um tem ranking, progresso, favoritos e conquistas próprios. */
 export interface Perfil {
   id: string;
   apelido: string;
   cor: string;
   oculto: boolean;
+  // Nome verdadeiro (opcional). O dono sempre vê; os outros só no ranking, e só com mostrarNome ligado.
+  nome: string | null;
+  sobrenome: string | null;
+  mostrarNome: boolean;
   avatar: AvatarConfig | null; // null = personagem padrão
   personagem: PersonagemFlix | null; // personagem Flix (configuração para reconstruir, não imagem)
   desde: string;         // MM/AAAA
@@ -45,6 +52,7 @@ export interface Perfil {
   nivel: number;
   conquistas: Conquista[];
   favoritos: string[];
+  recentes: string[];    // jogos pela partida mais recente (a fileira do Início mostra os 3 primeiros que estão no hub)
   jogos: Record<string, EstatJogo>;
 }
 
@@ -52,11 +60,13 @@ export interface Sessao {
   perfilId: string | null; // quem está jogando neste aparelho
   perfis: Perfil[];
   maxPerfis: number;
+  cores: string[];       // paleta da cor de fundo do perfil (a API só aceita estas)
 }
 
 export interface LinhaRanking {
   posicao: number;
-  apelido: string;
+  apelido: string;       // nickname: único entre todos os jogadores, sempre visível
+  nome: string | null;   // nome verdadeiro, só quando o jogador habilitou (a API não envia nos outros casos)
   cor: string;
   pontos: number;
   eu: boolean;
@@ -130,4 +140,23 @@ export interface Comentario {
 export interface DetalhesJogo {
   avaliacao: ResumoAvaliacao;
   comentarios: Comentario[];
+}
+
+/** Campos que o dono pode mudar no perfil. Só os enviados mudam; nome/sobrenome vazios apagam. */
+export interface AlteracaoPerfil {
+  apelido?: string;
+  oculto?: boolean;
+  nome?: string | null;
+  sobrenome?: string | null;
+  mostrarNome?: boolean;
+  cor?: string;
+}
+
+/** Criação de perfil: nickname, nome e sobrenome obrigatórios; o nome só aparece no ranking com mostrarNome. */
+export interface NovoPerfil {
+  apelido: string;
+  nome: string;
+  sobrenome: string;
+  mostrarNome: boolean;
+  cor?: string; // da paleta de Sessao.cores; sem cor, a API usa a primeira ainda não usada na conta
 }
