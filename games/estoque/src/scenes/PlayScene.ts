@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { hudText } from '@flix/game-kit/src/phaserHud';
 import type { Expression } from '@flix/avatar';
 import type { HubBridge } from '@flix/game-sdk';
 import { cellKey } from '../art';
@@ -56,11 +57,11 @@ export class PlayScene extends Phaser.Scene {
   private danger!: Phaser.GameObjects.Graphics;
   private crate!: Phaser.GameObjects.Container;
   private portrait!: Phaser.GameObjects.Image;
-  private scoreText!: Phaser.GameObjects.Text;
-  private timeText!: Phaser.GameObjects.Text;
-  private levelText!: Phaser.GameObjects.Text;
-  private storedText!: Phaser.GameObjects.Text;
-  private chainText!: Phaser.GameObjects.Text;
+  private scoreText!: Phaser.GameObjects.BitmapText;
+  private timeText!: Phaser.GameObjects.BitmapText;
+  private levelText!: Phaser.GameObjects.BitmapText;
+  private storedText!: Phaser.GameObjects.BitmapText;
+  private chainText!: Phaser.GameObjects.BitmapText;
   private readyText!: Phaser.GameObjects.Text;
   private expressionTimer?: Phaser.Time.TimerEvent;
   private sparks: Spark[] = [];
@@ -466,14 +467,11 @@ export class PlayScene extends Phaser.Scene {
     this.add.rectangle(GAME_W / 2, HUD_H / 2, GAME_W, HUD_H, COLORS.hud).setDepth(5);
     this.add.rectangle(GAME_W / 2, HUD_H - 0.5, GAME_W, 1, COLORS.flixRed).setDepth(5);
     this.portrait = this.add.image(32, HUD_H / 2 - 1, portraitKey('neutral')).setScale(1.75).setDepth(6);
-    const label = { fontFamily: FONT, fontSize: '9px', color: COLORS.textMuted };
-    this.add.text(68, 6, 'PONTOS', label).setResolution(2).setDepth(6);
-    this.scoreText = this.add
-      .text(68, 16, '0', { fontFamily: FONT, fontSize: '23px', fontStyle: 'bold', color: COLORS.text })
-      .setResolution(2)
-      .setDepth(6);
+    // placar de fliperama: fonte pixel branca com contorno escuro (mesma de todos os jogos Flix)
+    hudText(this, 66, 3, 'PONTOS', 1).setDepth(6);
+    this.scoreText = hudText(this, 65, 14, '0', 3).setDepth(6);
     // caixa de estoque: para onde os itens guardados voam
-    this.add.text(STORE_X - 16, 6, 'ESTOQUE', label).setResolution(2).setDepth(6);
+    hudText(this, STORE_X - 18, 3, 'ESTOQUE', 1).setDepth(6);
     this.crate = this.add.container(STORE_X - 6, STORE_Y + 4).setDepth(6);
     const cg = this.add.graphics();
     cg.fillStyle(0xa8742c, 1).fillRoundedRect(-9, -7, 18, 15, 2.5);
@@ -481,26 +479,11 @@ export class PlayScene extends Phaser.Scene {
     cg.fillStyle(0xf0d9a0, 1).fillRect(-2, -7, 4, 15);
     cg.lineStyle(1, 0x000000, 0.3).strokeRoundedRect(-9, -7, 18, 15, 2.5);
     this.crate.add(cg);
-    this.storedText = this.add
-      .text(STORE_X + 8, 22, '0', { fontFamily: FONT, fontSize: '19px', fontStyle: 'bold', color: COLORS.text })
-      .setOrigin(0, 0.5)
-      .setResolution(2)
-      .setDepth(6);
-    this.chainText = this.add
-      .text(68, 46, '', { fontFamily: FONT, fontSize: '10px', fontStyle: 'bold', color: COLORS.gold })
-      .setResolution(2)
-      .setDepth(6);
-    this.add.text(GAME_W - 8, 6, 'TEMPO', label).setOrigin(1, 0).setResolution(2).setDepth(6);
-    this.timeText = this.add
-      .text(GAME_W - 8, 16, '2:00', { fontFamily: FONT, fontSize: '23px', fontStyle: 'bold', color: COLORS.text })
-      .setOrigin(1, 0)
-      .setResolution(2)
-      .setDepth(6);
-    this.levelText = this.add
-      .text(GAME_W - 8, 46, 'NÍVEL 1', { fontFamily: FONT, fontSize: '10px', color: COLORS.textMuted })
-      .setOrigin(1, 0)
-      .setResolution(2)
-      .setDepth(6);
+    this.storedText = hudText(this, STORE_X + 7, 31, '0', 2).setOrigin(0, 0.5).setDepth(6);
+    this.chainText = hudText(this, 66, 44, '', 1).setTint(0xf5c04a).setDepth(6);
+    hudText(this, GAME_W - 6, 3, 'TEMPO', 1).setOrigin(1, 0).setDepth(6);
+    this.timeText = hudText(this, GAME_W - 5, 14, '2:00', 3).setOrigin(1, 0).setDepth(6);
+    this.levelText = hudText(this, GAME_W - 6, 44, 'NÍVEL 1', 1).setOrigin(1, 0).setDepth(6);
   }
 
   private buildBar(): void {
@@ -566,7 +549,7 @@ export class PlayScene extends Phaser.Scene {
     }
     const sec = Math.ceil(Math.max(0, ROUND_MS - this.elapsed) / 1000);
     this.timeText.setText(`${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`);
-    this.timeText.setColor(sec <= 10 ? COLORS.flixRedText : COLORS.text);
+    this.timeText.setTint(sec <= 10 ? Phaser.Display.Color.HexStringToColor(COLORS.flixRedText).color : 0xffffff);
     this.levelText.setText(`NÍVEL ${levelFor(s.stored)}`);
   }
 }

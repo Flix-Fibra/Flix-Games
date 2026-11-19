@@ -5,7 +5,8 @@ import { unlockAudio } from '../audio';
 import type { Cause } from '../logic';
 import { saveBest } from '../storage';
 import { COLORS, FONT, FONT_TEXT, GAME_H, GAME_W } from '../theme';
-import { drawBackground, makeButton } from '../ui';
+import { drawBackground } from '../ui';
+import { telaFimDeJogo } from '@flix/game-kit/src/phaserHud';
 import { portraitKey } from './BootScene';
 
 interface GameOverData {
@@ -17,9 +18,9 @@ interface GameOverData {
 }
 
 const CAUSE_TEXT: Record<Cause, string> = {
-  obstacle: 'O cabo bateu na cerca',
-  self: 'O cabo se enrolou',
-  timeout: 'Tempo esgotado!',
+  obstacle: 'O CABO BATEU NA CERCA',
+  self: 'O CABO SE ENROLOU',
+  timeout: 'TEMPO ESGOTADO!',
 };
 
 /**
@@ -38,44 +39,27 @@ export class GameOverScene extends Phaser.Scene {
     const best = saveBest(data.score);
     const newRecord = data.score > 0 && data.score > data.previousBest;
 
-    // logo do jogo (modelo do gestor), entrando com um "pulo"
-    const logo = this.add.image(GAME_W / 2, 250, 'logo').setScale(0);
-    const logoScale = 380 / logo.width;
-    this.tweens.add({ targets: logo, scale: logoScale, duration: 380, ease: 'Back.easeOut' });
-    this.tweens.add({ targets: logo, y: 238, duration: 1500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: 450 });
-
-    this.add
-      .text(GAME_W / 2, 490, CAUSE_TEXT[data.cause], { fontFamily: FONT_TEXT, fontSize: '34px', color: COLORS.textMuted })
-      .setOrigin(0.5)
-      .setResolution(2);
-
-    this.add.image(92, 590, portraitKey(data.expression)).setScale(4);
-    this.add.text(330, 535, 'PONTOS', { fontFamily: FONT_TEXT, fontSize: '24px', color: COLORS.textMuted }).setOrigin(0.5).setResolution(2);
-    this.add
-      .text(330, 595, String(data.score), { fontFamily: FONT, fontSize: '84px', color: '#FFFFFF', stroke: '#0a1c3a', strokeThickness: 10 })
-      .setOrigin(0.5)
-      .setResolution(2);
-
-    this.add
-      .text(GAME_W / 2, 690, `${data.items} ${data.items === 1 ? "item conectado" : "itens conectados"}`, {
-        fontFamily: FONT_TEXT, fontSize: '32px', color: '#FFFFFF',
-      })
-      .setOrigin(0.5)
-      .setResolution(2);
-    this.add
-      .text(GAME_W / 2, 742, newRecord ? 'NOVO RECORDE!' : `Seu melhor: ${best}`, {
-        fontFamily: newRecord ? FONT : FONT_TEXT, fontSize: '32px', color: newRecord ? COLORS.gold : COLORS.textMuted,
-      })
-      .setOrigin(0.5)
-      .setResolution(2);
-
     const restart = () => {
       unlockAudio();
       this.scene.start('Play');
     };
 
-    // O botão de recomeçar é sempre o do jogo (o hub não mostra outro); a mensagem `restart` do hub continua valendo.
-    makeButton(this, GAME_W / 2, 850, 'JOGAR', { width: 230, height: 70, fontSize: 32, onClick: restart });
+    // Tela padrão dos jogos Flix (fliperama). O botão de recomeçar é sempre o do jogo (o hub não mostra outro);
+    // a mensagem `restart` do hub continua valendo.
+    telaFimDeJogo(this, {
+      largura: GAME_W,
+      altura: GAME_H,
+      retrato: this.add.image(0, 0, portraitKey(data.expression)).setScale(4),
+      pontos: data.score,
+      linhas: [
+        { texto: CAUSE_TEXT[data.cause] },
+        { texto: `${data.items} ${data.items === 1 ? 'ITEM CONECTADO' : 'ITENS CONECTADOS'}` },
+        newRecord ? { texto: 'NOVO RECORDE!', cor: 0xf5c04a } : { texto: `SEU MELHOR: ${best}`, cor: 0xb8c6e0 },
+      ],
+      px: { titulo: 5, pontos: 10, texto: 3, botao: 4 },
+      depth: 10,
+      onReiniciar: restart,
+    });
     if (bridge.embedded) {
       const off = bridge.onHubMessage((msg) => {
         if (msg.type === 'restart') restart();
