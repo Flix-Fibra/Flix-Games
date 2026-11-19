@@ -2,8 +2,22 @@
  * Identidade do Flix Runner (G01). Jogo em paisagem 960x540 (padrão do prompt dos minigames), escala "fit" para a tela.
  * O cenário percorre 18 cenários (`cenarios/*.jpg`, 1620x540), cada uma repetida duas vezes, separadas por uma torre 5G (`torre.png`), em laço infinito.
  */
-export const GAME_W = 960;
+/**
+ * Largura do mundo visível. A altura é sempre 540; a largura acompanha o formato da tela (de 960 a LARGURA_MAX) para o
+ * jogo ocupar a tela inteira sem faixas pretas. Definida antes de criar o jogo e de novo quando a janela muda de formato fora da partida (definirLargura, em main.ts).
+ */
+export let GAME_W = 960;
 export const GAME_H = 540;
+/** 800: telas 16:10 e 3:2 (notebooks, Mac) também ocupam tudo, sem faixas em cima e embaixo. */
+export const LARGURA_MIN = 800;
+/** Limite: tela muito larga mostraria os inimigos cedo demais (ficaria mais fácil que nos outros aparelhos). */
+export const LARGURA_MAX = 1280;
+/** Distância do texto do placar até a borda (maior no celular: cantos arredondados e entalhe da tela). */
+export let MARGEM_X = 20;
+export function definirLargura(largura: number, margem: number): void {
+  GAME_W = Math.round(Math.min(LARGURA_MAX, Math.max(LARGURA_MIN, largura)));
+  MARGEM_X = margem;
+}
 
 /** Linha do chão (onde ficam os pés), em y de tela. Ajustada à calçada/rua do cenário. */
 export const GROUND_Y = 478;
@@ -22,7 +36,7 @@ export const BRIDGE = { x: 130, deckTop: 51 };
 
 /**
  * Cenários de fundo (1620x540 cada), na ordem em que aparecem; cada um se repete `SCENE_REPEAT` vezes seguidas, com uma torre 5G
- * em cada emenda (cenário 1, torre, cenário 1, torre, cenário 2, torre, cenário 2, torre, cenário 3...), e a lista volta ao início.
+ * em cada emenda (cenário 1, torre, cenário 1, torre..., portal, cenário 2...), e a lista volta ao início.
  * `bridge`: tem rio no chão, então a ponte vai por cima da água.
  */
 export const SCENES = [
@@ -45,7 +59,7 @@ export const SCENES = [
   { key: 'cen_rn', file: 'cenarios/rn.jpg', bridge: false }, // Forte dos Reis Magos
   { key: 'cen_rs', file: 'cenarios/rs.jpg', bridge: false }, // Estação no pampa gaúcho
 ] as const;
-export const SCENE_REPEAT = 2;
+export const SCENE_REPEAT = 4; // 4 trechos por estado (~21 s): o portal ocupa o fim de cada um
 /** Deslocamento inicial do cenário na partida (a torre da primeira emenda começa fora da tela); o menu usa o mesmo. */
 export const START_OFFSET = 250;
 export const SCENE_W = 1620;
@@ -75,12 +89,24 @@ export const ENEMIES = [
   { key: 'en_lagao', file: 'inimigos/lagao.png', fps: 5.5, chao: false, virar: true }, // Lagão (o lag): espelhado para olhar para a personagem
 ] as const;
 export const ENEMY_FRAME = 192;
+
+/**
+ * Portal da Flix na troca de estado (arte da equipe, montada por scripts/runner/montar_portal.py, desenhada em 2x).
+ * `portalX`/`base`: centro e base do portal dentro do quadro; `juliaX`: onde a Julia está no 1º (entrada) ou no
+ * último quadro (saída). Tudo em pixels da folha (metade disso no mundo do jogo).
+ */
+export const PORTAL = {
+  entrada: { key: 'portal_entrada', file: 'portal/portal_entrada.png', w: 343, h: 267, portalX: 255, base: 265, juliaX: 47, quadros: 12, fps: 8 },
+  saida: { key: 'portal_saida', file: 'portal/portal_saida.png', w: 403, h: 267, portalX: 86, base: 265, juliaX: 347, quadros: 19, fps: 10 },
+  // o portal sozinho: abre (aparece aos poucos), gira em loop e fecha
+  girando: { key: 'portal_girando', file: 'portal/portal_girando.png', w: 176, h: 266, portalX: 88, base: 266, abrir: [0, 8], girar: [9, 40], fps: 10 },
+} as const;
 export const ENEMY_SCALE = 0.46; // ~88 px na tela, perto do tamanho do vírus antigo (78 px)
 
 /** Imagens carregadas na abertura: [chave, arquivo em `public/img/`]. */
 export const IMAGES: ReadonlyArray<readonly [string, string]> = [
-  ['menu_logo', 'menu/logo.png'], // logo Flix Runner sem fundo (517x269)
-  ['menu_personagem', 'menu/personagem.png'], // personagem com a arma de wifi (379x370)
+  ['menu_logo', 'menu/logo.png'], // logo Flix Runner em blocos pixel, sem fundo (780x336, desenhado em 2x; original em assets/jogos/flix-runner/menu)
+  ['menu_personagem', 'menu/personagem.png'], // personagem com a arma de wifi (571x680, desenhada em 2x)
   ...SCENES.map((s) => [s.key, s.file] as const), // cenários de fundo (1620x540)
   ['torre', 'torre.png'], // torre 5G sem fundo (321x800): separa uma cidade da outra
   ['ponte', 'ponte.png'],
