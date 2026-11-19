@@ -4,11 +4,14 @@
  */
 export const GAME_W = 270;
 export const GAME_H = 480;
-export const CELL = 34;
+export const CELL = 18;
 export const HUD_H = 60;
-export const BOARD_X = 16;
-export const BOARD_Y = 66; // o tabuleiro termina em 66 + 11*34 = 440
-export const BAR_Y = 440; // faixa de baixo: dica e próxima peça
+/** Faixa de cada lado da prateleira onde aparecem os conectores (e, ao completar a linha, os aparelhos). */
+export const PLUG_W = 26;
+export const BOARD_X = 45; // aparelho (0..19) + conector (19..45) + prateleira 10 x 18 (45..225) + conector + aparelho
+export const BOARD_Y = 66; // prateleira 10 x 20: termina em 66 + 20*18 = 426
+export const DEVICE_X = 10; // centro do aparelho da esquerda (o da direita é espelhado)
+export const BAR_Y = 432; // faixa de baixo: dicas e próxima peça
 
 export const COLORS = {
   background: 0x0b0b0d,
@@ -25,13 +28,15 @@ export const COLORS = {
   ghost: 0xffffff,
 } as const;
 
-/** Nome e cor do cartão de cada item (1 a 5). O desenho de cada item fica em `art.ts`. */
+/** Cor de cada cabo (1 a 7). Cada formato de peça é sempre o mesmo cabo (ver SHAPES em logic.ts). */
 export const ITEMS: Record<number, { name: string; card: number; cardDark: number }> = {
-  1: { name: 'Roteador', card: 0xffa6b0, cardDark: 0xd8606f },
-  2: { name: 'Cabo', card: 0xbfe0ff, cardDark: 0x6aa8e6 },
-  3: { name: 'Monitor', card: 0xffe29a, cardDark: 0xe0b14a },
-  4: { name: 'Furadeira', card: 0xa8ecc6, cardDark: 0x52b886 },
-  5: { name: 'Antena', card: 0x8f7df0, cardDark: 0x5a47c4 },
+  1: { name: 'Vermelho', card: 0xe8434f, cardDark: 0x9e1f2b },
+  2: { name: 'Ciano', card: 0x2fc4e8, cardDark: 0x157f9c },
+  3: { name: 'Amarelo', card: 0xf2c230, cardDark: 0xa98213 },
+  4: { name: 'Verde', card: 0x3fc46a, cardDark: 0x20803f },
+  5: { name: 'Roxo', card: 0x9b6bf0, cardDark: 0x5e3cb0 },
+  6: { name: 'Azul', card: 0x2f7fff, cardDark: 0x1a4cb0 },
+  7: { name: 'Laranja', card: 0xf58a2e, cardDark: 0xa95514 },
 };
 
 export const FONT = '"Trebuchet MS", Verdana, sans-serif';
