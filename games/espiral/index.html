@@ -24,24 +24,30 @@
       #hud .portrait { justify-self: start; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; background: rgba(12,14,20,.45);
                        border: 2px solid rgba(255,255,255,.75); }
       #hud .portrait canvas { width: 100%; height: 100%; image-rendering: pixelated; }
-      #hud .score { justify-self: center; text-align: center; padding: 4px 16px 6px; border-radius: 16px; }
-      #hud .score b { display: block; font-size: 40px; line-height: 1.05; font-variant-numeric: tabular-nums; }
-      #hud .score small { font-size: 11px; opacity: .85; letter-spacing: .02em; }
-      #hud .best { justify-self: end; font-size: 10px; text-align: right; padding: 5px 9px; border-radius: 10px; opacity: .95;
-                   text-transform: uppercase; letter-spacing: .04em; }
-      #hud .best b { display: block; font-size: 16px; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+      /* Placar de fliperama (fonte pixel dos jogos Flix, branca com contorno): direto sobre o céu, sem caixa */
+      /* Placar do Signal Drop (só neste jogo): fonte lisa do sistema, número numa caixa escura, troféu no recorde */
+      #hud .top, #hud .stats { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Helvetica, Arial, sans-serif; }
+      #hud .score { justify-self: center; display: flex; flex-direction: column; align-items: center; padding: 4px 18px 7px;
+                    border-radius: 10px; background: rgba(22, 24, 44, .78); box-shadow: 0 6px 18px rgba(0,0,0,.25); }
+      #hud .score b { font-size: 40px; font-weight: 700; line-height: 1.05; }
+      #hud .score small { font-size: 12px; font-weight: 700; letter-spacing: .32em; margin-right: -.32em; }
+      #hud .best { justify-self: end; display: grid; grid-template-columns: auto auto; column-gap: 8px; align-items: center; padding-top: 6px;
+                   text-shadow: 0 1px 6px rgba(0,0,0,.35); }
+      #hud .best svg { width: 18px; height: 18px; }
+      #hud .best small { font-size: 12px; font-weight: 700; letter-spacing: .06em; }
+      #hud .best b { grid-column: 1 / -1; justify-self: end; font-size: 28px; font-weight: 700; line-height: 1.1; }
       /* Barras curtas no canto esquerdo (o centro fica livre para a torre) */
       #hud .stats { position: absolute; left: calc(12px + env(safe-area-inset-left)); top: calc(66px + env(safe-area-inset-top));
-                    display: grid; gap: 7px; width: 112px; padding: 8px 10px; border-radius: 12px; font-size: 10px; }
-      #hud .phase, #hud .rocket { display: grid; grid-template-columns: 1fr auto; align-items: center; row-gap: 4px; }
-      #hud .phase .bar, #hud .rocket .bar { grid-column: 1 / -1; }
-      #hud .bar { height: 5px; border-radius: 3px; background: rgba(255,255,255,.22); overflow: hidden; }
-      #hud .bar i { display: block; height: 100%; width: 0; background: #ff3349; transition: width .2s; }
-      #hud .shield { padding: 1px 6px; border-radius: 8px; background: #37e2ff; color: #062a33; font-weight: bold; font-size: 9px;
+                    display: grid; gap: 6px; width: min(150px, calc(50vw - 76px)); } /* celular: não encosta na caixa dos andares */
+      #hud .phase, #hud .rocket { position: relative; display: grid; align-items: center; row-gap: 5px; padding: 6px 14px 8px; border-radius: 16px;
+                                  background: rgba(22, 24, 44, .72); font-size: 12px; font-weight: 700; letter-spacing: .04em; }
+      #hud .bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,.22); overflow: hidden; }
+      #hud .bar i { display: block; height: 100%; width: 0; background: #fff; transition: width .2s; }
+      #hud .shield { position: absolute; right: -6px; top: -8px; padding: 1px 6px; border-radius: 8px; background: #37e2ff; color: #062a33; font-weight: bold; font-size: 9px;
                      visibility: hidden; }
       #hud .shield.on { visibility: visible; }
       #hud .rocket span { font-weight: bold; }
-      #hud .rocket .bar i { background: linear-gradient(90deg, #ff8a1f, #ffd02e); }
+      #hud .rocket.on .bar i { background: linear-gradient(90deg, #ff8a1f, #ffd02e); } /* barra branca; laranja só durante o foguete */
       #hud .rocket.on span { color: #ffd02e; }
       #hud .rocket.on .bar { box-shadow: 0 0 8px #ff8a1f; }
       #hud .toast { position: absolute; left: 50%; top: 22%; transform: translate(-50%, 10px); opacity: 0;
@@ -52,6 +58,21 @@
                       justify-content: center; gap: 6px; text-align: center; padding: 24px; background: rgba(8,8,12,.62);
                       pointer-events: auto; }
       #hud .overlay.on { display: flex; }
+      body.jogando, body.jogando * { cursor: none !important; } /* computador: cursor some durante a partida */
+      /* Fim de jogo do Signal Drop (estilo próprio, igual ao placar): véu escuro com desfoque, fonte lisa do sistema */
+      #hud .overlay.fim { gap: 0; background: rgba(14, 16, 34, .58); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+                          font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Helvetica, Arial, sans-serif; }
+      #hud .fim-titulo { font-size: 30px; font-weight: 700; letter-spacing: .1em; color: #f6e7c1; text-shadow: 0 2px 12px rgba(0,0,0,.4); }
+      #hud .fim-pontos { margin: 14px 0 0; font-size: 120px; font-weight: 800; line-height: 1; text-shadow: 0 6px 24px rgba(0,0,0,.35); }
+      #hud .fim-rotulo { margin-top: 8px; font-size: 22px; font-weight: 700; letter-spacing: .42em; margin-right: -.42em; }
+      #hud .fim-linha { margin-top: 26px; display: flex; align-items: center; gap: 10px; font-size: 24px; font-weight: 700; letter-spacing: .04em; color: #b8c6e0; }
+      #hud .fim-linha svg { width: 26px; height: 26px; display: none; }
+      #hud .fim-linha.recorde { color: #f5c04a; }
+      #hud .fim-linha.recorde svg { display: block; }
+      #hud .fim-botao { margin-top: 30px; min-width: min(290px, 78vw); padding: 14px 28px; border-radius: 10px; background: #d4142c;
+                        font: 700 34px -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Helvetica, Arial, sans-serif;
+                        letter-spacing: .03em; box-shadow: 0 10px 28px rgba(0,0,0,.35); }
+      #hud .fim-botao:hover { background: #e8283f; }
       #hud h1 { margin: 0 0 8px; font-size: 30px; }
       #hud h1.logo { margin: 0 0 4px; line-height: 0; }
       #hud h1.logo img { width: min(66vw, 36vh, 280px); height: auto; filter: drop-shadow(0 10px 24px rgba(0,0,0,.5)); } #hud h2 { margin: 0; font-size: 26px; }

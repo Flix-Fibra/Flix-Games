@@ -1,6 +1,6 @@
 {
   "v": 2,
-  "versao": "23d5248a9e",
+  "versao": "78b0366d35",
   "tamanho": [
     121,
     154
@@ -133,6 +133,18 @@
     {
       "id": "rafael",
       "nome": "Rafael",
+      "corpo": "m",
+      "categoria": "desenvolvedores"
+    },
+    {
+      "id": "arthur",
+      "nome": "Arthur",
+      "corpo": "m",
+      "categoria": "desenvolvedores"
+    },
+    {
+      "id": "rodrigo",
+      "nome": "Rodrigo",
       "corpo": "m",
       "categoria": "desenvolvedores"
     },

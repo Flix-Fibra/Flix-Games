@@ -14,6 +14,8 @@ const R_IN = 0.95; // raio do poste
 const R_OUT = 3.0; // borda externa das placas
 const BALL_ORBIT = (R_IN + R_OUT) / 2; // distância da bola até o eixo
 const AHEAD = 12; // andares montados abaixo da bola
+const CAM_ALTURA = 3; // câmera acima da bola
+const CAM_MIRA = 6; // ponto de mira abaixo da bola (quanto maior, mais andares à frente aparecem)
 const BEHIND = 2; // andares mantidos acima
 const TRAIL = 10;
 
@@ -230,11 +232,22 @@ export class World {
   private readonly fog = new THREE.Fog(0x000000, 30, 90);
   private camY = 0;
   private camDist = 12;
+  /**
+   * Resolução do desenho 3D. O custo da GPU cresce com o quadrado dela: 1,5x custa quase metade de 2x e, na tela do
+   * celular, a diferença quase não aparece (o placar é HTML e continua nítido). Celular fraco: baixa até 1x (ver medirQuadro).
+   */
+  private pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
+  private amostra = { t: 0, n: 0 };
   private squash = 0;
-  private shock = 0; // segundos restantes do efeito de choque
-  private shockLen = 1;
-  private shockHalo!: THREE.Mesh;
-  private readonly shockSparks: { obj: THREE.Mesh; vel: THREE.Vector3 }[] = [];
+  /** Morte na alta tensão (animação da equipe): amassa, vira cubinhos e dois anéis se abrem na placa. */
+  private morte = 0; // segundos desde o choque (0 = sem morte em andamento)
+  private morteY = 0; // topo da placa onde a bola caiu
+  private corDaBola: THREE.Color | null = null; // cor normal, guardada enquanto ela fica laranja na morte
+  private readonly cubos: { obj: THREE.Mesh; vel: THREE.Vector3; giro: THREE.Vector3 }[] = [];
+  private readonly aneis: THREE.Mesh[] = [];
+  private readonly tracos: THREE.Mesh[] = [];
+  private shieldPop!: THREE.Mesh; // bolha do escudo estourando (escudo usado)
+  private pop = 0;
   private rocketOn = false;
   private readonly fire: { obj: THREE.Mesh; vel: THREE.Vector3; life: number }[] = [];
   private fireNext = 0;
@@ -247,7 +260,7 @@ export class World {
 
   constructor(container: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    this.renderer.setPixelRatio(this.pixelRatio);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     container.appendChild(this.renderer.domElement);
 
@@ -280,15 +293,40 @@ export class World {
     );
     this.ball.add(this.shieldMesh);
 
-    // Choque: halo elétrico em volta da bola e faíscas (bolinhas brilhantes, não linhas finas).
-    this.shockHalo = new THREE.Mesh(
-      new THREE.SphereGeometry(BALL_R * 1.9, 20, 14),
-      new THREE.MeshBasicMaterial({ color: 0x8fe9ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }),
+    // Escudo usado: a bolha azul do escudo cresce e some (diferente do choque, que é amarelo e elétrico).
+    this.shieldPop = new THREE.Mesh(
+      new THREE.SphereGeometry(BALL_R * 1.55, 20, 14),
+      new THREE.MeshBasicMaterial({ color: SIGNAL, transparent: true, opacity: 0, depthWrite: false }),
     );
-    this.shockHalo.visible = false;
-    this.ball.add(this.shockHalo);
-    const sparkGeo = new THREE.SphereGeometry(0.085, 8, 6);
-    const sparkMat = new THREE.MeshBasicMaterial({ color: 0x2fb8ff });
+    this.shieldPop.visible = false;
+    this.ball.add(this.shieldPop);
+
+    // Cubinhos da bola (mesmo material: mesma cor e luz da bola), anéis azul-claros e traços brancos do impacto
+    const cuboGeo = new THREE.BoxGeometry(BALL_R * 0.55, BALL_R * 0.55, BALL_R * 0.55);
+    for (let i = 0; i < 12; i++) {
+      const m = new THREE.Mesh(cuboGeo, this.ballMat);
+      m.visible = false;
+      this.scene.add(m);
+      this.cubos.push({ obj: m, vel: new THREE.Vector3(), giro: new THREE.Vector3() });
+    }
+    for (const larg of [0.07, 0.05]) {
+      const m = new THREE.Mesh(
+        new THREE.RingGeometry(1 - larg, 1, 48).rotateX(-Math.PI / 2),
+        new THREE.MeshBasicMaterial({ color: 0x8ff0ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }),
+      );
+      m.visible = false;
+      m.renderOrder = 2;
+      this.scene.add(m);
+      this.aneis.push(m);
+    }
+    const tracoGeo = new THREE.BoxGeometry(0.035, 0.012, BALL_R * 0.45);
+    const tracoMat = new THREE.MeshBasicMaterial({ color: 0xfff1d6 });
+    for (let i = 0; i < 4; i++) {
+      const m = new THREE.Mesh(tracoGeo, tracoMat);
+      m.visible = false;
+      this.scene.add(m);
+      this.tracos.push(m);
+    }
     // Fogo do foguete: bolinhas laranja que sobem atrás da bola, como um meteoro (reaproveitadas).
     const fireGeo = new THREE.SphereGeometry(0.09, 8, 6);
     for (let i = 0; i < 40; i++) {
@@ -299,12 +337,6 @@ export class World {
       m.visible = false;
       this.scene.add(m);
       this.fire.push({ obj: m, vel: new THREE.Vector3(), life: 0 });
-    }
-    for (let i = 0; i < 18; i++) {
-      const m = new THREE.Mesh(sparkGeo, sparkMat);
-      m.visible = false;
-      this.scene.add(m);
-      this.shockSparks.push({ obj: m, vel: new THREE.Vector3() });
     }
 
     const trailGeo = new THREE.SphereGeometry(BALL_R, 10, 8);
@@ -321,6 +353,7 @@ export class World {
   }
 
   setBallColor(hex: string): void {
+    this.corDaBola = null; // cor nova escolhida: vale ela, não a guardada
     this.ballMat.color.set(hex);
     this.trailMat.color.set(hex);
     this.splatMat.color.set(hex);
@@ -334,15 +367,25 @@ export class World {
     if (instant) this.bg.copy(this.bgTarget);
     this.backdrop.setPalette(p, instant);
     this.ground.setPalette(p);
+    this.ground.group.visible = !p.fundo; // a arte de fundo já traz o bairro
+  }
+
+  /** Andares descidos na fase atual (0 a 1): move a arte de fundo (ver backdrop.ts). */
+  setProgressoFase(k: number): void {
+    this.backdrop.setProgresso(k);
   }
 
   /** Começo de partida: apaga a torre antiga e posiciona a câmera. */
   reset(ballY: number): void {
     this.setRocket(false);
     for (const f of this.fire) f.obj.visible = false;
-    this.shock = 0;
-    this.shockHalo.visible = false;
-    for (const sp of this.shockSparks) sp.obj.visible = false;
+    this.pop = 0;
+    this.shieldPop.visible = false;
+    this.morte = 0;
+    this.ball.visible = true;
+    if (this.corDaBola) this.ballMat.color.copy(this.corDaBola);
+    this.corDaBola = null;
+    for (const o of [...this.cubos.map((c) => c.obj), ...this.aneis, ...this.tracos]) o.visible = false;
     for (const k of [...this.floors.keys()]) this.dropFloor(k);
     for (const d of this.debris) this.disposeDebris(d);
     this.debris.length = 0;
@@ -494,7 +537,7 @@ export class World {
    */
   setShadow(topY: number | null, ballY: number): void {
     const mat = this.shadow.material as THREE.MeshBasicMaterial;
-    if (topY === null) {
+    if (topY === null || this.morte > 0 || !this.ball.visible) {
       this.shadow.visible = false;
       return;
     }
@@ -567,11 +610,13 @@ export class World {
     // A câmera só desce: acompanha a bola quando ela cai, e não sobe no quique.
     const target = ballY + 1.5;
     if (target < this.camY) this.camY += (target - this.camY) * Math.min(1, dt * 9);
-    this.camera.position.set(0, this.camY + 4.2, this.camDist);
-    this.camera.lookAt(0, this.camY - 2.2, 0);
+    // Câmera de lado e mais afastada (pouco inclinada): a bola fica no alto da tela e os andares de baixo aparecem empilhados, sem um tapar o outro.
+    this.camera.position.set(0, this.camY + CAM_ALTURA, this.camDist);
+    this.camera.lookAt(0, this.camY - CAM_MIRA, 0);
     this.updateShock(dt);
+    this.updateMorte(dt);
     this.updateFire(dt);
-    this.backdrop.update(dt);
+    this.backdrop.update(dt, this.towerGroup.rotation.y);
     this.ground.update(dt, this.camY, this.towerGroup.rotation.y);
 
     // Céu: transição suave entre cenários.
@@ -582,7 +627,7 @@ export class World {
     // Bola achatada no quique.
     this.squash = Math.max(0, this.squash - dt * 6);
     const sq = this.squash * 0.35;
-    this.ball.scale.set(1 + sq * 0.6, 1 - sq, 1 + sq * 0.6);
+    if (this.morte <= 0) this.ball.scale.set(1 + sq * 0.6, 1 - sq, 1 + sq * 0.6);
 
     // Rastro: posições anteriores da bola.
     this.trailYs.unshift(ballY);
@@ -652,52 +697,114 @@ export class World {
     }
   }
 
-  /** Choque na alta tensão. `strong` (morte) solta faíscas e treme a tela; o fraco (escudo) só pisca. */
+  /** Alta tensão. `strong` (morte): animação da equipe (ver updateMorte). Fraco (escudo usado): a bolha do escudo estoura. */
   onShock(strong: boolean): void {
-    this.shockLen = this.shock = strong ? 0.9 : 0.35;
-    this.shockHalo.visible = true;
-    if (!strong) return;
-    for (const sp of this.shockSparks) {
-      sp.obj.position.copy(this.ball.position);
-      sp.obj.visible = true;
-      const a = Math.random() * Math.PI * 2;
-      const up = 1.5 + Math.random() * 4;
-      const out = 2 + Math.random() * 3;
-      sp.vel.set(Math.cos(a) * out, up, Math.sin(a) * out);
+    if (!strong) {
+      this.pop = 0.4;
+      this.shieldPop.visible = true;
+      return;
     }
+    // Animação da equipe (~0,9 s): amassa na placa com traços de impacto, explode em cubinhos e dois anéis se abrem
+    this.morte = 0.0001;
+    this.morteY = this.ball.position.y - BALL_R;
+    // a bola é vermelha; ao cair na alta tensão fica laranja (e os cubinhos, que usam o mesmo material, também)
+    this.corDaBola ??= this.ballMat.color.clone();
+    this.ballMat.color.setHex(0xf7931e);
+    const b = this.ball.position;
+    this.tracos.forEach((t, i) => {
+      const a = Math.PI * (0.62 + i * 0.25); // leque à frente e embaixo da bola (lado da câmera)
+      t.position.set(b.x + Math.cos(a) * BALL_R * 1.35, this.morteY + 0.02, b.z - Math.sin(a) * BALL_R * 1.35);
+      t.rotation.set(0, a + Math.PI / 2, 0);
+      t.visible = true;
+    });
+  }
+
+  /** Andamento da morte: 0–0,08 s amassada; depois cubinhos e anéis até ~0,9 s. */
+  private updateMorte(dt: number): void {
+    if (this.morte <= 0) return;
+    const antes = this.morte;
+    this.morte += dt;
+    const t = this.morte;
+    const AMASSA = 0.08;
+    const b = this.ball.position;
+    if (t < AMASSA) {
+      // achatada e larga, encostada na placa
+      this.ball.scale.set(1.45, 0.5, 1.45);
+      this.ball.position.y = this.morteY + BALL_R * 0.5;
+      return;
+    }
+    if (antes < AMASSA) {
+      // estoura: some a bola e os traços, saem os cubinhos e os anéis
+      this.ball.visible = false;
+      for (const tr of this.tracos) tr.visible = false;
+      this.cubos.forEach((c, i) => {
+        const a = (i / this.cubos.length) * Math.PI * 2 + Math.random() * 0.4;
+        const out = 2.2 + Math.random() * 2.2;
+        c.obj.position.set(b.x + Math.cos(a) * 0.15, this.morteY + BALL_R * 0.5, b.z - Math.sin(a) * 0.15);
+        c.vel.set(Math.cos(a) * out, 1.2 + Math.random() * 1.6, -Math.sin(a) * out); // voam baixo, em volta da bola
+        c.giro.set(Math.random() * 10 - 5, Math.random() * 10 - 5, Math.random() * 10 - 5);
+        c.obj.rotation.set(Math.random() * 3, Math.random() * 3, 0);
+        c.obj.scale.setScalar(0.7 + Math.random() * 0.6);
+        c.obj.visible = true;
+      });
+      for (const r of this.aneis) {
+        r.position.set(b.x, this.morteY + 0.025, b.z);
+        r.visible = true;
+      }
+    }
+    const k = Math.min(1, (t - AMASSA) / 0.8); // 0 → 1 depois do estouro
+    for (const c of this.cubos) {
+      if (!c.obj.visible) continue;
+      c.vel.y -= 12 * dt;
+      c.obj.position.addScaledVector(c.vel, dt);
+      c.obj.rotation.x += c.giro.x * dt;
+      c.obj.rotation.y += c.giro.y * dt;
+      c.obj.rotation.z += c.giro.z * dt;
+      if (k > 0.55) c.obj.scale.multiplyScalar(Math.max(0, 1 - dt * 6)); // somem encolhendo
+      if (k >= 1) c.obj.visible = false;
+    }
+    // anéis: o de fora abre mais e mais rápido; os dois somem juntos
+    const abre = 1 - (1 - Math.min(1, k * 1.6)) ** 3;
+    this.aneis.forEach((r, i) => {
+      r.scale.setScalar(BALL_R * (i === 0 ? 1.2 + abre * 3.6 : 0.8 + abre * 1.8));
+      (r.material as THREE.MeshBasicMaterial).opacity = 0.9 * (1 - k);
+      if (k >= 1) r.visible = false;
+    });
+    if (k >= 1) this.morte = 0;
   }
 
   private updateShock(dt: number): void {
-    if (this.shock <= 0) return;
-    this.shock = Math.max(0, this.shock - dt);
-    const k = this.shock / this.shockLen; // 1 → 0
-    const on = Math.floor(this.time * 30) % 2 === 0; // pisca rápido
-    this.ballMat.emissive.set(on ? 0xbff4ff : 0x2a6cff);
-    this.ballMat.emissiveIntensity = 0.4 + 0.8 * k;
-    const halo = this.shockHalo.material as THREE.MeshBasicMaterial;
-    halo.opacity = (on ? 0.55 : 0.25) * k;
-    this.shockHalo.scale.setScalar(1 + Math.random() * 0.25);
-    this.shockHalo.visible = this.shock > 0;
-    if (this.shockLen > 0.5) {
-      // Tremor de tela, diminuindo.
-      const amp = 0.14 * k;
-      this.camera.position.x += (Math.random() - 0.5) * amp;
-      this.camera.position.y += (Math.random() - 0.5) * amp;
+    if (this.pop > 0) {
+      this.pop = Math.max(0, this.pop - dt);
+      const t = 1 - this.pop / 0.4; // 0 → 1
+      this.shieldPop.scale.setScalar(1 + t * 1.6);
+      (this.shieldPop.material as THREE.MeshBasicMaterial).opacity = 0.5 * (1 - t);
+      this.shieldPop.visible = this.pop > 0;
     }
-    for (const sp of this.shockSparks) {
-      if (!sp.obj.visible) continue;
-      sp.vel.y -= 14 * dt;
-      sp.obj.position.addScaledVector(sp.vel, dt);
-      sp.obj.scale.setScalar(Math.max(0.01, k));
-      if (this.shock <= 0) sp.obj.visible = false;
-    }
+  }
+
+  /**
+   * Chamada a cada quadro com o tempo real dele. Se o aparelho não segura ~48 quadros/s por 2 s, baixa um degrau da
+   * resolução (1,5 → 1,25 → 1). Só baixa, nunca sobe: evita ficar alternando.
+   */
+  medirQuadro(seg: number): void {
+    if (this.pixelRatio <= 1 || seg <= 0 || seg > 0.25) return; // 0,25 s: aba em segundo plano, não conta
+    this.amostra.t += seg;
+    this.amostra.n++;
+    if (this.amostra.t < 2) return;
+    const media = this.amostra.t / this.amostra.n;
+    this.amostra = { t: 0, n: 0 };
+    if (media <= 1 / 48) return;
+    this.pixelRatio = Math.max(1, this.pixelRatio - 0.25);
+    this.renderer.setPixelRatio(this.pixelRatio);
+    this.resize();
   }
 
   render(): void {
     this.renderer.render(this.scene, this.camera);
   }
 
-  /** Ajusta tela e distância da câmera para a torre inteira caber na largura (celular em pé ou deitado). */
+  /** Ajusta tela e distância da câmera: a torre inteira cabe na largura e, em tela larga, fica como no celular em pé. */
   resize(): void {
     const parent = this.renderer.domElement.parentElement;
     const w = parent?.clientWidth || window.innerWidth;
@@ -707,8 +814,11 @@ export class World {
     this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
     const halfV = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
-    const needW = R_OUT * 1.3; // meia largura visível desejada
-    this.camDist = Math.max(10, needW / (halfV * Math.min(aspect, 1)));
+    const needW = R_OUT * 1.45; // meia largura visível desejada
+    // Enquadramento do celular em pé (~0,6) também em tela larga: mesma distância, mesmos andares à vista e a bola no
+    // mesmo lugar; o computador só ganha cenário dos lados (antes a câmera chegava perto e a bola sumia no topo)
+    const ASPECTO_CELULAR = 0.6;
+    this.camDist = Math.max(10, needW / (halfV * Math.min(aspect, ASPECTO_CELULAR)));
     // Neblina só longe: some nos andares muito abaixo e suaviza a cidade lá embaixo; perto da torre, nada de névoa.
     this.fog.near = this.camDist + 30;
     this.fog.far = this.camDist + 230;

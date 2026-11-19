@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { hudText } from '@flix/game-kit/src/phaserHud';
 import type { Expression } from '@flix/avatar';
 import type { HubBridge } from '@flix/game-sdk';
 import { sfx } from '../audio';
@@ -67,12 +68,12 @@ export class PlayScene extends Phaser.Scene {
   private shownKind = -1;
   private signalImg!: Phaser.GameObjects.Image;
   private signalGlow!: Phaser.GameObjects.Image;
-  private boostText!: Phaser.GameObjects.Text;
+  private boostText!: Phaser.GameObjects.BitmapText;
 
   private portrait!: Phaser.GameObjects.Image;
-  private scoreText!: Phaser.GameObjects.Text;
-  private levelText!: Phaser.GameObjects.Text;
-  private timeText!: Phaser.GameObjects.Text;
+  private scoreText!: Phaser.GameObjects.BitmapText;
+  private levelText!: Phaser.GameObjects.BitmapText;
+  private timeText!: Phaser.GameObjects.BitmapText;
   private readyText!: Phaser.GameObjects.Text;
   private expressionTimer?: Phaser.Time.TimerEvent;
 
@@ -502,14 +503,11 @@ export class PlayScene extends Phaser.Scene {
     g.lineBetween(116, 34, 116, 110);
 
     const label = (cx: number, text: string, iconWidth: number): number => {
-      const t2 = this.add
-        .text(cx + iconWidth / 2, HUD.labelY, text, { fontFamily: FONT, fontSize: '21px', color: '#FFFFFF', stroke: '#06101f', strokeThickness: 6 })
-        .setOrigin(0.5)
-        .setResolution(2)
-        .setDepth(DEPTH_HUD + 1);
+      // placar de fliperama: fonte pixel branca com contorno escuro (mesma de todos os jogos Flix)
+      const t2 = hudText(this, cx + iconWidth / 2, HUD.labelY, text, 2).setOrigin(0.5).setDepth(DEPTH_HUD + 1);
       return t2.x - t2.width / 2 - iconWidth / 2 - 4; // centro do ícone fica logo à esquerda do texto
     };
-    label(HUD.score.x, 'SCORE', 0);
+    label(HUD.score.x, 'PONTOS', 0);
 
     // TEMPO + relógio
     const clockX = label(HUD.time.x, 'TEMPO', 26) + 4;
@@ -535,20 +533,12 @@ export class PlayScene extends Phaser.Scene {
     this.bakeStatic(g, 'hud_placa', 0, 0, GAME_W, pl.y + pl.h + 8, DEPTH_HUD);
 
     const value = (cx: number) =>
-      this.add
-        .text(cx, HUD.boxY + 1, '0', { fontFamily: FONT, fontSize: '32px', color: '#FFFFFF', stroke: '#06101f', strokeThickness: 5 })
-        .setOrigin(0.5)
-        .setResolution(2)
-        .setDepth(DEPTH_HUD + 1);
+      hudText(this, cx, HUD.boxY + 1, '0', 4).setOrigin(0.5).setDepth(DEPTH_HUD + 1);
     this.scoreText = value(HUD.score.x);
     this.timeText = value(HUD.time.x).setText('2:00');
     this.levelText = value(HUD.level.x).setText('1');
 
-    this.boostText = this.add
-      .text(GAME_W / 2, FIELD_Y - 10, '', { fontFamily: FONT, fontSize: '22px', color: '#FF7A88', stroke: '#2a0008', strokeThickness: 5 })
-      .setOrigin(0.5)
-      .setResolution(2)
-      .setDepth(DEPTH_HUD + 1);
+    this.boostText = hudText(this, GAME_W / 2, FIELD_Y - 10, '', 2).setTint(0xff7a88).setOrigin(0.5).setDepth(DEPTH_HUD + 1);
   }
 
   // ---------- atualização por quadro ----------
@@ -562,10 +552,10 @@ export class PlayScene extends Phaser.Scene {
     this.levelText.setText(String(levelFor(s.eaten)));
     const sec = Math.ceil(Math.max(0, ROUND_MS + this.bonusMs - this.elapsed) / 1000);
     this.timeText.setText(`${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`);
-    const timeColor = sec <= 10 ? COLORS.flixRedText : '#FFFFFF';
+    const timeColor = sec <= 10 ? COLORS.flixRedText : '#FFFFFF'; // vira tinta da fonte pixel
     if (timeColor !== this.timeColor) {
       this.timeColor = timeColor; // setColor redesenha o texto e reenvia a textura: só quando a cor muda de fato
-      this.timeText.setColor(timeColor);
+      this.timeText.setTint(Phaser.Display.Color.HexStringToColor(timeColor).color);
     }
     this.boostText.setText(s.boostLeft > 0 ? 'PONTO EXTRA x2' : '');
   }

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { hudText, telaFimDeJogo } from '@flix/game-kit/src/phaserHud';
 import type { HubBridge } from '@flix/game-sdk';
 import {
   aimTilt,
@@ -186,11 +187,11 @@ export class PlayScene extends Phaser.Scene {
   /** Pedras que ainda restam na onda de morcegos, e o contador na tela (“3x [pedra] restantes!”). */
   private waveLeft = 0;
   private waveHud!: Phaser.GameObjects.Container;
-  private waveHudCount!: Phaser.GameObjects.Text;
+  private waveHudCount!: Phaser.GameObjects.BitmapText;
 
   private score: ScoreState = newScore();
-  private hudScore!: Phaser.GameObjects.Text;
-  private hudStreak!: Phaser.GameObjects.Text;
+  private hudScore!: Phaser.GameObjects.BitmapText;
+  private hudStreak!: Phaser.GameObjects.BitmapText;
   private frogClock = 0;
   private frogFrame = 0;
   private edges!: Phaser.GameObjects.Graphics;
@@ -234,13 +235,13 @@ export class PlayScene extends Phaser.Scene {
     this.spawnTarget(1);
     this.faceTarget();
 
-    this.hudScore = this.add
-      .text(GAME_W / 2, 70, '0', { fontFamily: FONT, fontSize: '84px', color: COLORS.text, stroke: COLORS.stroke, strokeThickness: 12 })
+    // placar de fliperama: fonte pixel branca com contorno escuro (mesma de todos os jogos Flix)
+    this.hudScore = hudText(this, GAME_W / 2, 56, '0', 9)
       .setOrigin(0.5, 0)
       .setScrollFactor(0)
       .setDepth(DEPTH.hud);
-    this.hudStreak = this.add
-      .text(GAME_W / 2, 180, '', { fontFamily: FONT, fontSize: '30px', color: '#FFE08A', stroke: COLORS.stroke, strokeThickness: 7 })
+    this.hudStreak = hudText(this, GAME_W / 2, 172, '', 4)
+      .setTint(0xffe08a)
       .setOrigin(0.5, 0)
       .setScrollFactor(0)
       .setDepth(DEPTH.hud);
@@ -531,11 +532,10 @@ export class PlayScene extends Phaser.Scene {
 
   /** Contador da onda: “3x [pedra] restantes!”. */
   private makeWaveHud(): void {
-    const label = (x: number, s: string, size: number) =>
-      this.add.text(x, 0, s, { fontFamily: FONT, fontSize: `${size}px`, color: '#FFFFFF', stroke: COLORS.stroke, strokeThickness: 8 }).setOrigin(0, 0.5);
-    this.waveHudCount = label(0, '3x', 44);
+    const label = (x: number, s: string, px: number) => hudText(this, x, 0, s, px).setOrigin(0, 0.5);
+    this.waveHudCount = label(0, '3x', 5);
     const icon = this.add.image(0, 0, 'pedra').setScale(1.1).setOrigin(0, 0.5);
-    const rest = label(0, 'restantes!', 34);
+    const rest = label(0, 'RESTANTES!', 4);
     icon.x = this.waveHudCount.width + 8;
     rest.x = icon.x + icon.displayWidth + 10;
     const w = rest.x + rest.width;
@@ -547,7 +547,7 @@ export class PlayScene extends Phaser.Scene {
   }
 
   private updateWaveHud(): void {
-    this.waveHudCount.setText(`${this.waveLeft}x`).setColor(this.waveLeft === 0 ? '#FF8A7A' : '#FFFFFF');
+    this.waveHudCount.setText(`${this.waveLeft}x`).setTint(this.waveLeft === 0 ? 0xff8a7a : 0xffffff);
     this.tweens.add({ targets: this.waveHud, scale: 1.12, duration: 90, yoyo: true });
   }
 
@@ -982,32 +982,20 @@ export class PlayScene extends Phaser.Scene {
   }
 
   private showGameOver(): void {
-    const cx = GAME_W / 2;
-    const fix = <T extends Phaser.GameObjects.Components.ScrollFactor & Phaser.GameObjects.Components.Depth>(o: T, d: number) =>
-      o.setScrollFactor(0).setDepth(d);
-    fix(this.add.rectangle(cx, GAME_H / 2, GAME_W, GAME_H, 0x061008, 0.6), DEPTH.over);
-    fix(this.add.rectangle(cx, 600, 560, 520, 0x3a2410, 0.95).setStrokeStyle(6, 0xf6e7b8, 0.9), DEPTH.over + 1);
-    const txt = (y: number, s: string, size: number, color: string, font = FONT) =>
-      fix(
-        this.add.text(cx, y, s, { fontFamily: font, fontSize: `${size}px`, color, stroke: '#1a0f05', strokeThickness: 7, align: 'center' }).setOrigin(0.5),
-        DEPTH.over + 2,
-      );
-    txt(420, 'FIM DE JOGO', 58, '#FF8A6A');
-    txt(500, 'PONTOS', 26, COLORS.textMuted, FONT_TEXT);
-    txt(570, String(this.score.score), 86, '#FFFFFF');
+    // Tela padrão dos jogos Flix (fliperama). O botão de recomeçar é sempre o do jogo, dentro e fora do hub
+    // (o hub não mostra mais o dele; docs/hub-iframe.md). A mensagem `restart` do hub continua valendo.
     const n = this.score.hits;
-    txt(650, `${n} ${n === 1 ? 'ninho' : 'ninhos'} · melhor sequência ${this.score.bestStreak}`, 28, '#F6E7B8', FONT_TEXT);
-
-    // Dentro do hub, o botão de recomeçar é do hub (mensagem `restart`); fora dele (desenvolvimento) mostramos o nosso.
-    if (!this.bridge.embedded) {
-      const btn = fix(this.add.rectangle(cx, 760, 320, 84, 0x5d8a2e).setStrokeStyle(5, 0xffffff), DEPTH.over + 2).setInteractive({ useHandCursor: true });
-      txt(760, 'REINICIAR', 38, '#FFFFFF');
-      btn.once('pointerup', () => this.scene.start('Menu'));
-      this.input.keyboard?.once('keydown-ENTER', () => this.scene.start('Menu'));
-      this.input.keyboard?.once('keydown-SPACE', () => this.scene.start('Menu'));
-    } else {
-      txt(760, 'Toque em “Jogar de novo”', 28, COLORS.textMuted, FONT_TEXT);
-    }
+    telaFimDeJogo(this, {
+      largura: GAME_W,
+      altura: GAME_H,
+      pontos: this.score.score,
+      linhas: [{ texto: `${n} ${n === 1 ? 'NINHO' : 'NINHOS'} · MELHOR SEQUÊNCIA ${this.score.bestStreak}` }],
+      px: { titulo: 8, pontos: 14, texto: 3, botao: 6 },
+      depth: DEPTH.over,
+      veu: [0x0a1a10, 0.62],
+      presaNaCamera: true,
+      onReiniciar: () => this.scene.start('Menu'),
+    });
   }
 
   // ---- efeitos --------------------------------------------------------------------------------------------------------

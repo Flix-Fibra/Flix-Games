@@ -963,3 +963,16 @@ button.gx-cartao-capa{width:100%;border:0;padding:0;cursor:pointer}
 .gx-segredo-titulo{margin:0;font-weight:600;text-align:center}
 .gx-segredo-acoes{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
 @keyframes gx-segredo-in{from{opacity:0}to{opacity:1}}
+
+/* Celular deitado: o jogo ocupa a tela inteira. A barra (sair e som) vira uma pílula pequena flutuando embaixo, no meio,
+   em vez de uma faixa no topo que roubava altura do jogo. */
+@media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
+  .gx-jogo .gx-jogo-barra,
+  .gx-jogo.cheia .gx-jogo-barra {
+    position: absolute; top: auto; left: 50%; right: auto; bottom: calc(6px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+    z-index: 3; display: flex; gap: 8px; padding: 4px; border-radius: 999px; background: rgba(0, 0, 0, .35) !important;
+  }
+  .gx-jogo .gx-jogo-barra strong { display: none; }
+  .gx-jogo .gx-jogo-btn { width: 34px; height: 34px; font-size: 15px; }
+  .gx-jogo .gx-jogo-quadro { padding-bottom: 0; }
+}

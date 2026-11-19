@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { COLORS, FONT, FONT_TEXT, GAME_H, GAME_W, SCENES, START_OFFSET } from '../theme';
+import { hudText } from '@flix/game-kit/src/phaserHud';
+import { GAME_H, GAME_W, SCENES, START_OFFSET } from '../theme';
 
 const ACCEPT_AFTER_MS = 350; // ignora o toque/tecla logo que a tela abre (evita começar sem querer depois de perder)
 
@@ -30,23 +31,21 @@ export class MenuScene extends Phaser.Scene {
     this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x000814, 0.5);
 
     // personagem à direita, abaixo do logo, no meio da altura da tela
-    this.add.image(GAME_W - 168, GAME_H / 2 + 38, 'menu_personagem').setScale(0.8);
+    this.add.image(GAME_W - 172, GAME_H / 2 + 34, 'menu_personagem').setScale(0.5); // arte em 2x: nítida na tela de 2x
 
     // logo flutuando poucos pixels para cima e para baixo
-    const logo = this.add.image(GAME_W / 2 - 40, 142, 'menu_logo').setScale(0.9);
+    const logo = this.add.image(GAME_W / 2 - 145, 214, 'menu_logo').setScale(0.5);
     this.tweens.add({ targets: logo, y: logo.y - 8, duration: 1500, ease: 'Sine.easeInOut', yoyo: true, repeat: -1 });
 
-    const prompt = this.add
-      .text(GAME_W / 2 - 150, 392, 'TOQUE OU APERTE ESPAÇO\nPARA JOGAR', {
-        fontFamily: FONT, fontSize: '30px', color: '#FFFFFF', stroke: '#06214d', strokeThickness: 7, align: 'center',
-      })
-      .setOrigin(0.5);
+    // textos na fonte pixel do placar (mesma de todos os jogos Flix)
+    // no celular, os textos falam de toque e arrasto; no computador, de teclas
+    const toque = this.sys.game.device.input.touch;
+    const prompt = this.add.container(GAME_W / 2 - 150, 392, [
+      hudText(this, 0, -16, toque ? 'TOQUE NA TELA' : 'TOQUE OU APERTE ESPAÇO', 3).setOrigin(0.5),
+      hudText(this, 0, 18, 'PARA JOGAR', 3).setOrigin(0.5),
+    ]);
     this.tweens.add({ targets: prompt, alpha: 0.45, duration: 800, yoyo: true, repeat: -1 });
-    this.add
-      .text(GAME_W / 2 - 150, 466, '↑ pular   ↓ abaixar   espaço atira (com a arma)', {
-        fontFamily: FONT_TEXT, fontSize: '18px', color: COLORS.textMuted, stroke: '#06214d', strokeThickness: 4,
-      })
-      .setOrigin(0.5);
+    hudText(this, GAME_W / 2 - 150, 466, toque ? 'ARRASTE ▲ PULAR   ARRASTE ▼ ABAIXAR   ⊕ ATIRAR' : '▲ PULAR   ▼ ABAIXAR   ESPAÇO ATIRA (COM A ARMA)', 1.5).setOrigin(0.5);
 
     const kb = this.input.keyboard!;
     kb.addCapture([Phaser.Input.Keyboard.KeyCodes.SPACE]);

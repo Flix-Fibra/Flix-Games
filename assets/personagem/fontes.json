@@ -130,6 +130,20 @@
       "_obs": "camisa com a estampa copiada da camisa do Ian (original sem estampa em fontes/originais/rafael_sem_estampa.png)"
     },
     {
+      "id": "arthur",
+      "nome": "Arthur",
+      "corpo": "m",
+      "arquivo": "masculinos/19_arthur.png",
+      "categoria": "desenvolvedores"
+    },
+    {
+      "id": "rodrigo",
+      "nome": "Rodrigo",
+      "corpo": "m",
+      "arquivo": "masculinos/20_rodrigo.png",
+      "categoria": "desenvolvedores"
+    },
+    {
       "id": "cacheado-longo",
       "nome": "Cacheado ruivo",
       "corpo": "f",

@@ -5,7 +5,7 @@
  * e gera o SQL que atualiza nome, capa e pasta desse jogo. Roda na entrega do jogo (e à mão em desenvolvimento).
  *
  * Uso (desenvolvimento):
- *   node scripts/sincronizar-catalogo.mjs | docker exec -i flixgames-db-1 psql -v ON_ERROR_STOP=1 -q -U flixgames -d flixgames
+ *   node scripts/sincronizar-catalogo.mjs | docker compose exec -T db psql -v ON_ERROR_STOP=1 -q -U flixgames -d flixgames
  * Só confere, sem gravar:
  *   node scripts/sincronizar-catalogo.mjs --conferir
  *
