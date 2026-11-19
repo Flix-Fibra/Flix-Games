@@ -16,6 +16,8 @@
     "dev:nestshoot": "npm run dev -w games/nestshoot",
     "build:nestshoot": "npm run build -w games/nestshoot",
     "personagem": "python3 scripts/personagem/montar.py",
+    "dev:blocos": "npm run dev -w games/blocos",
+    "build:blocos": "npm run build -w games/blocos",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

@@ -1,0 +1,17 @@
+{
+  "name": "@flix/game-blocos",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host"
+  },
+  "dependencies": {
+    "@flix/avatar": "0.1.0",
+    "@flix/game-kit": "0.1.0",
+    "@flix/game-sdk": "0.1.0",
+    "phaser": "3.90.0"
+  }
+}

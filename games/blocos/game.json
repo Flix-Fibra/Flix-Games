@@ -1,0 +1,9 @@
+{
+  "id": "blocos",
+  "name": "Space Ping",
+  "_nome_de_trabalho": "G04. Nome Space Ping definido pelo solicitante em 19/11/2026 (nome da pasta de arte); validar com o marketing antes de publicar. Sem temática de internet por enquanto (pedido do solicitante em 19/11/2026). Revisão do jurídico obrigatória (seção 2.2).",
+  "avatarTier": "A",
+  "avatarViews": ["side"],
+  "rankingMetric": "score",
+  "sdkVersion": "0.1.0"
+}

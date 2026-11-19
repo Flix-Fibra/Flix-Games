@@ -17,3 +17,6 @@ Network Snake.zip
 # Personagem secreto (easter egg): foto de pessoa real, fora do repositório até haver autorização (LGPD)
 assets/personagem/fontes/secretos/
 web/public/personagem/piscina-*.webp
+
+# Originais da arte do G04 (Space Ping) enviados pelo gestor; o jogo usa as versões preparadas em games/blocos/public/img
+Space Ping Assets/
