@@ -3,7 +3,6 @@ import { liso } from './liso';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BALL_R, BALL_WORLD_ANGLE, FLOOR_GAP, FLOOR_THICK, SEG_ANGLE, SEGMENTS, floorY, type Tower } from './logic';
 import { Backdrop } from './backdrop';
-import { Ground } from './ground';
 import { BALL_HEX, DANGER, PLATE, SIGNAL, STEEL, paletteFor } from './theme';
 
 const BALL_COLOR = new THREE.Color(BALL_HEX);
@@ -255,7 +254,6 @@ export class World {
   private time = 0;
   private bg = new THREE.Color();
   private readonly backdrop: Backdrop;
-  private readonly ground = new Ground();
   private bgTarget = new THREE.Color();
 
   constructor(container: HTMLElement) {
@@ -276,7 +274,6 @@ export class World {
     // O fundo é filho da câmera; por isso a câmera entra na cena.
     this.backdrop = new Backdrop(this.camera);
     this.scene.add(this.camera);
-    this.scene.add(this.ground.group);
 
     this.shadow.renderOrder = 1;
     this.shadow.position.set(0, 0, BALL_ORBIT);
@@ -366,8 +363,6 @@ export class World {
     this.bgTarget.set(p.horizon);
     if (instant) this.bg.copy(this.bgTarget);
     this.backdrop.setPalette(p, instant);
-    this.ground.setPalette(p);
-    this.ground.group.visible = !p.fundo; // a arte de fundo já traz o bairro
   }
 
   /** Andares descidos na fase atual (0 a 1): move a arte de fundo (ver backdrop.ts). */
@@ -617,7 +612,6 @@ export class World {
     this.updateMorte(dt);
     this.updateFire(dt);
     this.backdrop.update(dt, this.towerGroup.rotation.y);
-    this.ground.update(dt, this.camY, this.towerGroup.rotation.y);
 
     // Céu: transição suave entre cenários.
     this.bg.lerp(this.bgTarget, Math.min(1, dt * 2));

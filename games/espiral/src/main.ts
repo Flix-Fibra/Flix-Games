@@ -40,6 +40,11 @@ hud.innerHTML = `
     <p class="muted">3 andares seguidos sem quicar quebram o próximo.<br />O <span class="sig">sinal</span> dá um escudo.</p>
     <button data-start>Toque para começar</button>
   </div>
+  <div class="overlay fim" data-pausa>
+    <div class="fim-titulo">PAUSADO</div>
+    <div class="fim-linha">O mouse está livre.</div>
+    <button class="fim-botao" data-continuar>CONTINUAR</button>
+  </div>
   <div class="overlay fim" data-over>
     <div class="fim-titulo">FIM DE JOGO</div>
     <div class="fim-pontos" data-final></div>
@@ -60,6 +65,8 @@ const el = {
   toast: q('[data-toast]'),
   menu: q('[data-menu]'),
   over: q('[data-over]'),
+  pausa: q('[data-pausa]'),
+  continuar: q<HTMLButtonElement>('[data-continuar]'),
   final: q('[data-final]'),
   finalBest: q('[data-final-best]'),
   finalBestBox: q('[data-final-best-box]'),
@@ -70,7 +77,9 @@ const el = {
 // ---------- Estado ----------
 type Mode = 'loading' | 'menu' | 'play' | 'over';
 let mode: Mode = 'loading';
-let paused = false;
+let paused = false; // pausa pedida pelo hub
+let pausaMouse = false; // computador: a pessoa soltou o mouse (Esc) no meio da partida
+const parado = () => paused || pausaMouse;
 let avatar: AvatarConfig = DEFAULT_AVATAR;
 const portraits = new Map<Expression, HTMLCanvasElement>();
 let portraitTimer = 0;
@@ -127,6 +136,8 @@ function newRun(): void {
   tower = new Tower((Math.random() * 2 ** 31) | 0);
   ball = newBall();
   rotation = 0;
+  pausaMouse = false;
+  el.pausa.classList.remove('on');
   nextFloor = 0;
   score = 0;
   phase = 0;
@@ -232,8 +243,8 @@ function frame(now: number): void {
   const real = (now - last) / 1000;
   const dt = Math.min(0.05, real); // trava para não "pular" depois de aba em segundo plano
   last = now;
-  if (!paused) world.medirQuadro(real); // aparelho fraco: baixa a resolução sozinho
-  if (!paused) {
+  if (!parado()) world.medirQuadro(real); // aparelho fraco: baixa a resolução sozinho
+  if (!parado()) {
     if (mode === 'play') simulate(dt);
     world.setRotation(rotation);
     world.setBall(ball.y, mode === 'play' && ball.streak >= FEVER_STREAK, ball.shield, mode === 'play' && ball.streak > 0);
@@ -260,7 +271,7 @@ canvas.addEventListener('pointerdown', (e) => {
 });
 canvas.addEventListener('pointermove', (e) => {
   if (e.pointerType === 'mouse') return; // mouse gira sem clicar (abaixo); arrastar é só para o toque
-  if (dragX === null || mode !== 'play' || paused) return;
+  if (dragX === null || mode !== 'play' || parado()) return;
   rotation += ((e.clientX - dragX) / canvas.clientWidth) * Math.PI * 2 * DRAG_TURNS_PER_WIDTH;
   dragX = e.clientX;
 });
@@ -278,12 +289,43 @@ function travarMouse(): void {
   const pedido = canvas.requestPointerLock?.() as unknown as Promise<void> | undefined;
   pedido?.catch?.(() => {}); // sem trava: segue com o cursor escondido
 }
+let soltandoPeloJogo = false; // o próprio jogo soltou (fim de jogo): não é pausa
 function soltarMouse(): void {
   document.body.classList.remove('jogando');
-  if (document.pointerLockElement) document.exitPointerLock();
+  if (document.pointerLockElement) {
+    soltandoPeloJogo = true;
+    document.exitPointerLock();
+  }
 }
+// Liberar o mouse: Esc (o navegador solta a trava) pausa a partida e mostra o cursor; "Continuar" volta a prender.
+function pausarPeloMouse(): void {
+  if (mode !== 'play' || pausaMouse) return;
+  pausaMouse = true;
+  document.body.classList.remove('jogando');
+  el.pausa.classList.add('on');
+}
+function continuarPeloMouse(): void {
+  pausaMouse = false;
+  el.pausa.classList.remove('on');
+  travarMouse();
+}
+document.addEventListener('pointerlockchange', () => {
+  if (document.pointerLockElement) return;
+  if (soltandoPeloJogo) soltandoPeloJogo = false;
+  else pausarPeloMouse();
+});
+// sem trava (navegador não deu): Esc também pausa; com a pausa aberta, Esc ou Espaço continuam
+window.addEventListener('keydown', (e) => {
+  if (!comMouse || mode !== 'play') return;
+  if (pausaMouse && (e.key === 'Escape' || e.key === ' ')) continuarPeloMouse();
+  else if (e.key === 'Escape') {
+    // com a trava, o navegador costuma soltar sozinho (e a pausa vem pelo pointerlockchange); se não soltar, solta aqui
+    if (document.pointerLockElement) document.exitPointerLock();
+    else pausarPeloMouse();
+  }
+});
 document.addEventListener('mousemove', (e) => {
-  if (!comMouse || mode !== 'play' || paused) return;
+  if (!comMouse || mode !== 'play' || parado()) return;
   rotation += (e.movementX / canvas.clientWidth) * Math.PI * 2 * DRAG_TURNS_PER_WIDTH;
 });
 
@@ -292,11 +334,12 @@ const keys = new Set<string>();
 window.addEventListener('keydown', (e) => keys.add(e.key));
 window.addEventListener('keyup', (e) => keys.delete(e.key));
 setInterval(() => {
-  if (mode !== 'play' || paused) return;
+  if (mode !== 'play' || parado()) return;
   if (keys.has('ArrowLeft')) rotation -= 0.07;
   if (keys.has('ArrowRight')) rotation += 0.07;
 }, 1000 / 60);
 
+el.continuar.addEventListener('click', continuarPeloMouse);
 el.start.addEventListener('click', () => {
   unlockAudio();
   if (mode === 'menu') travarMouse();

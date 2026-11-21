@@ -2,11 +2,11 @@ import * as THREE from 'three';
 import type { Palette } from './theme';
 
 /**
- * Fundo preso à câmera e bem longe: a arte da equipe de cada fase (ou, sem arte, céu em degradê com o bairro de ground.ts). Na troca de cenário, o novo
+ * Fundo preso à câmera e bem longe: a arte da equipe de cada fase (fase sem arte: céu em degradê). Na troca de cenário, o novo
  * aparece por cima do antigo aos poucos.
  */
 
-const DIST = 350; // mais longe que qualquer parte do chão (ground.ts), para nunca tampá-lo
+const DIST = 350; // bem atrás da torre e dos andares de baixo, para nunca tampá-los
 const FADE_S = 1.2;
 /**
  * Movimento da arte de fundo (ela é uma imagem parada; quem dá vida é este movimento):
