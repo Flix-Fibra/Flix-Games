@@ -9,10 +9,13 @@ export interface PersonagemFlix {
   motor: 'flix';
   corpo: string;
   visual: string;
+  /** tom de pele (id do catálogo); ausente = tom padrão, a arte original */
+  pele?: string;
 }
 
 interface Corpo { id: string; nome: string; padrao: string }
-interface Visual { id: string; nome: string; corpo: string; categoria?: string; foto?: string; rosto?: [number, number, number] }
+interface Visual { id: string; nome: string; corpo: string; categoria?: string; foto?: string; rosto?: [number, number, number]; peles?: string[] }
+export interface TomDePele { id: string; nome: string; cor: string }
 interface Categoria { id: string; nome: string }
 export interface Catalogo {
   v: 2;
@@ -21,6 +24,7 @@ export interface Catalogo {
   olhos: [number, number];
   corpos: Corpo[];
   categorias?: Categoria[];
+  peles?: { padrao: string; tons: TomDePele[] } | null;
   visuais: Visual[];
 }
 
@@ -87,10 +91,17 @@ export function urlDaFoto(v: Visual): string | null {
   return v.foto ? `${BASE}${v.foto}?v=${encodeURIComponent(versao)}` : null;
 }
 
+/** O visual tem esse tom de pele? (o padrão, todo visual tem; os outros, só quem tem a arte daquele tom) */
+export function temTom(cat: Catalogo, v: Visual | undefined, tom: string | undefined): boolean {
+  return !tom || tom === cat.peles?.padrao || !!v?.peles?.includes(tom);
+}
+
 /** Desenha o personagem no tamanho original do catálogo (1 pixel da arte = 1 pixel), fundo transparente. */
 export async function desenhar(ctx: CanvasRenderingContext2D, p: PersonagemFlix, cat: Catalogo): Promise<void> {
   const v = cat.visuais.find((x) => x.id === p.visual && x.corpo === p.corpo);
-  const img = await imagem(`${v?.id ?? 'careca'}-${v?.corpo ?? p.corpo}.png`);
+  // tom sem arte para este visual: mostra o padrão
+  const tom = p.pele && p.pele !== cat.peles?.padrao && v?.peles?.includes(p.pele) ? `-${p.pele}` : '';
+  const img = await imagem(`${v?.id ?? 'careca'}-${v?.corpo ?? p.corpo}${tom}.png`);
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   ctx.imageSmoothingEnabled = false;
   if (img) ctx.drawImage(img, 0, 0);

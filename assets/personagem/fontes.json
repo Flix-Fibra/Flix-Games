@@ -10,6 +10,32 @@
       "careca": "careca-feminino.png"
     }
   },
+  "_peles": "Tons de pele do editor (não valem para Desenvolvedores nem secretos). O padrão é a própria arte original; os outros tons são arquivos feitos pela equipe, <id>-<tom>.png na mesma pasta do original (careca: careca-m-<tom>.png / careca-f-<tom>.png). 'cor' é só a bolinha do seletor.",
+  "peles": {
+    "padrao": "media",
+    "tons": [
+      {
+        "id": "clara",
+        "nome": "Clara",
+        "cor": "#F6D3B3"
+      },
+      {
+        "id": "media",
+        "nome": "Média",
+        "cor": "#F1A36C"
+      },
+      {
+        "id": "morena",
+        "nome": "Morena",
+        "cor": "#B9794E"
+      },
+      {
+        "id": "escura",
+        "nome": "Escura",
+        "cor": "#6E4128"
+      }
+    ]
+  },
   "visuais": [
     {
       "id": "ondulado",

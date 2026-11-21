@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { servico } from '../../dados/servico';
 import type { Perfil } from '../../dados/tipos';
 import {
-  abaDe, carregarCatalogo, desenhar, ehPersonagemFlix, fotoDoRosto, padrao, urlDaFoto, visualDe, visuaisDaCategoria, visuaisDoCorpo,
+  abaDe, carregarCatalogo, desenhar, ehPersonagemFlix, fotoDoRosto, padrao, temTom, urlDaFoto, visualDe, visuaisDaCategoria, visuaisDoCorpo,
   type Catalogo, type PersonagemFlix,
 } from '../../personagem/flix';
 import { useAviso } from '../Aviso';
@@ -88,7 +88,10 @@ export function EditorPersonagem({ perfil, onSalvo, onFechar }: Props) {
   function aleatorio() {
     if (!cat) return;
     const corpo = sortear(cat.corpos).id;
-    setP({ v: 4, motor: 'flix', corpo, visual: sortear(visuaisDoCorpo(cat, corpo)).id });
+    const v = sortear(visuaisDoCorpo(cat, corpo));
+    const tons = (cat.peles?.tons ?? []).filter((t) => temTom(cat, v, t.id));
+    const pele = tons.length ? sortear(tons).id : undefined;
+    setP({ v: 4, motor: 'flix', corpo, visual: v.id, ...(pele && pele !== cat.peles?.padrao ? { pele } : {}) });
     setSem(false);
     setAba(corpo);
   }
@@ -148,13 +151,33 @@ export function EditorPersonagem({ perfil, onSalvo, onFechar }: Props) {
                     onClick={() => setAba(c.id)}>{c.nome}</button>
                 ))}
               </div>
+              {cat.peles && cat.corpos.some((c) => c.id === aba) && (
+                <>
+                  <h4>Tom de pele</h4>
+                  <div className="pf-tons" role="radiogroup" aria-label="Tom de pele">
+                    {cat.peles.tons.map((t) => {
+                      const atual = (p.pele ?? cat.peles!.padrao) === t.id;
+                      const disponivel = temTom(cat, visualDe(cat, p), t.id) || abaDe(cat, p) !== aba;
+                      return (
+                        <button key={t.id} type="button" role="radio" aria-checked={atual} aria-label={t.nome} title={t.nome}
+                          className={'pf-tom' + (atual ? ' ativo' : '')} style={{ background: t.cor }} disabled={!disponivel}
+                          onClick={() => { setP({ ...p, pele: t.id === cat.peles!.padrao ? undefined : t.id }); setSem(false); }}>
+                          <span>{t.nome}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
               <h4>Visual</h4>
               <div className="pf-grade">
                 <button type="button" className={'pf-op' + (sem ? ' ativo' : '')} aria-pressed={sem} onClick={() => setSem(true)}>
                   <span className="pf-mini-vazio pf-mini-sem"><Pessoa /></span><span>Sem avatar</span>
                 </button>
                 {(cat.corpos.some((c) => c.id === aba) ? visuaisDoCorpo(cat, aba ?? p.corpo) : visuaisDaCategoria(cat, aba ?? '')).map((v) => {
-                  const op: PersonagemFlix = { v: 4, motor: 'flix', corpo: v.corpo, visual: v.id };
+                  // nas abas de corpo, as opções já aparecem no tom escolhido (se o visual tiver esse tom)
+                  const pele = !v.categoria && p.pele && temTom(cat, v, p.pele) ? p.pele : undefined;
+                  const op: PersonagemFlix = { v: 4, motor: 'flix', corpo: v.corpo, visual: v.id, ...(pele ? { pele } : {}) };
                   const ativo = !sem && p.visual === v.id && p.corpo === v.corpo;
                   return (
                     <button key={`${v.corpo}-${v.id}`} type="button" className={'pf-op' + (ativo ? ' ativo' : '')} aria-pressed={ativo}

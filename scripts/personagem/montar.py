@@ -65,13 +65,22 @@ def reduzir(a: np.ndarray, p: float, px: float, py: float) -> np.ndarray:
     return o
 
 
-def padronizar(arq: Path) -> np.ndarray:
-    """Personagem no quadro comum: mesmo tamanho (olhos→pés) e olhos no mesmo ponto."""
+def padronizar(arq: Path, geo: "tuple | None" = None) -> "tuple[np.ndarray, tuple]":
+    """
+    Personagem no quadro comum: mesmo tamanho (olhos→pés) e olhos no mesmo ponto. Devolve também a geometria usada:
+    as versões de tom de pele de um visual reaproveitam a do original (é o mesmo desenho; procurar os olhos de novo
+    numa pele clara poderia confundir o brilho da pele com o branco do olho).
+    """
     a = np.array(Image.open(arq).convert("RGBA")).astype(int)
     a[a[..., 3] <= 128] = 0
-    ox, oy = olhos(a)
-    pe = np.where((a[..., 3] > 0).any(1))[0].max()
-    p = (pe - oy) / OLHO_PE  # pixels da imagem por pixel da arte
+    if geo is None:
+        ox, oy = olhos(a)
+        pe = np.where((a[..., 3] > 0).any(1))[0].max()
+        p = (pe - oy) / OLHO_PE  # pixels da imagem por pixel da arte
+        geo = (ox, oy, p, a.shape[:2])
+    ox, oy, p, tam = geo
+    if a.shape[:2] != tam:
+        raise SystemExit(f"{arq.name}: tamanho diferente do original ({a.shape[1]}x{a.shape[0]})")
     # grade alinhada para os olhos caírem no meio de um pixel
     px, py = (ox - p / 2) % p, oy % p
     sm = reduzir(a, p, px, py)
@@ -85,7 +94,24 @@ def padronizar(arq: Path) -> np.ndarray:
     cortado = int((sm[..., 3] > 0).sum() - ok.sum())
     if cortado:
         print(f"  aviso: {arq.name} ficou com {cortado} pixels fora do quadro")
-    return out
+    return out, geo
+
+
+def gravar_tons(cfg: dict, arquivo: str, nomes: "list[str]", geo: tuple, saida: str) -> "list[str]":
+    """
+    Versões de tom de pele do visual, feitas pela equipe: <nome>-<tom>.png na mesma pasta do original (nomes: os jeitos
+    de chamar o visual, ex.: "black-power-m" ou "ondulado"). O tom padrão é o próprio original. Devolve os tons achados.
+    """
+    achados = []
+    pasta = (FONTES / "fontes" / arquivo).parent
+    for t in cfg.get("peles", {}).get("tons", []):
+        if t["id"] == cfg["peles"]["padrao"]:
+            continue
+        arq = next((pasta / f"{n}-{t['id']}.png" for n in nomes if (pasta / f"{n}-{t['id']}.png").exists()), None)
+        if arq:
+            Image.fromarray(padronizar(arq, geo)[0]).save(SAIDA / f"{saida}-{t['id']}.png", optimize=True)
+            achados.append(t["id"])
+    return achados
 
 
 def main() -> None:
@@ -95,9 +121,12 @@ def main() -> None:
         velho.unlink()
 
     corpos, visuais = [], []
+    tons_careca = {}
     for cid, c in cfg["corpos"].items():
-        Image.fromarray(padronizar(FONTES / "fontes" / c["careca"])).save(SAIDA / f"careca-{cid}.png", optimize=True)
+        arte, geo = padronizar(FONTES / "fontes" / c["careca"])
+        Image.fromarray(arte).save(SAIDA / f"careca-{cid}.png", optimize=True)
         corpos.append({"id": cid, "nome": c["nome"]})
+        tons_careca[cid] = gravar_tons(cfg, c["careca"], [f"careca-{cid}"], geo, f"careca-{cid}")
         print(f"ok  careca {cid}")
     vistos = set()
     for v in cfg["visuais"]:
@@ -105,12 +134,17 @@ def main() -> None:
             raise SystemExit(f"id inválido ou repetido: {v['id']}")
         vistos.add((v["id"], v["corpo"]))
         nome = f"{v['id']}-{v['corpo']}.png"
-        Image.fromarray(padronizar(FONTES / "fontes" / v["arquivo"])).save(SAIDA / nome, optimize=True)
+        arte, geo = padronizar(FONTES / "fontes" / v["arquivo"])
+        Image.fromarray(arte).save(SAIDA / nome, optimize=True)
         item = {"id": v["id"], "nome": v["nome"], "corpo": v["corpo"]}
         if v.get("categoria"):
             if v["categoria"] not in cfg.get("categorias", {}):
                 raise SystemExit(f"categoria sem nome em 'categorias': {v['categoria']}")
             item["categoria"] = v["categoria"]
+        else:  # Desenvolvedores retratam pessoas reais: sem troca de tom de pele
+            tons = gravar_tons(cfg, v["arquivo"], [f"{v['id']}-{v['corpo']}", v["id"]], geo, f"{v['id']}-{v['corpo']}")
+            if tons:
+                item["peles"] = tons
         visuais.append(item)
         print(f"ok  {v['corpo']} {v['id']}")
 
@@ -146,7 +180,11 @@ def main() -> None:
         # abas extras do editor (ex.: Desenvolvedores); os visuais delas dizem a categoria
         "categorias": [{"id": k, "nome": c["nome"]} for k, c in cfg.get("categorias", {}).items()],
         # "careca" existe nos dois corpos; os demais visuais são de um corpo só
-        "visuais": [{"id": "careca", "nome": "Careca", "corpo": c["id"]} for c in corpos] + visuais,
+        # tons de pele do editor; cada visual diz quais tons tem além do padrão (arquivo <id>-<corpo>-<tom>.png)
+        "peles": {"padrao": cfg["peles"]["padrao"], "tons": [{"id": t["id"], "nome": t["nome"], "cor": t["cor"]}
+                                                             for t in cfg["peles"]["tons"]]} if cfg.get("peles") else None,
+        "visuais": [{"id": "careca", "nome": "Careca", "corpo": c["id"],
+                     **({"peles": tons_careca[c["id"]]} if tons_careca[c["id"]] else {})} for c in corpos] + visuais,
     }
     (SAIDA / "catalogo.json").write_text(json.dumps(catalogo, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"catálogo: {len(corpos)} corpos, {len(visuais)} visuais -> {SAIDA.relative_to(RAIZ)}")

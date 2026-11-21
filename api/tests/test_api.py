@@ -338,6 +338,22 @@ def test_salva_personagem_flix(app_ativo):
     assert r.json()["personagem"] == FLIX_OK
 
 
+def test_personagem_flix_com_tom_de_pele(app_ativo):
+    c, pid = com_perfil(app_ativo, "Tonalizado")
+    escura = {**FLIX_OK, "pele": "escura"}
+    r = c.put(f"/api/perfis/{pid}/personagem", json=escura)
+    assert r.status_code == 200, r.text
+    assert c.get("/api/sessao").json()["perfis"][0]["personagem"] == escura
+    ruins = [
+        {**FLIX_OK, "pele": "#000000"},           # cor livre
+        {**FLIX_OK, "pele": "azul"},              # tom que não existe
+        {**FLIX_OK, "pele": "media"},             # o padrão não se guarda (pele ausente)
+        {"v": 4, "motor": "flix", "corpo": "m", "visual": "arthur", "pele": "escura"},  # Desenvolvedores: sem troca
+    ]
+    for corpo in ruins:
+        assert c.put(f"/api/perfis/{pid}/personagem", json=corpo).status_code == 422, corpo
+
+
 def test_personagem_flix_so_aceita_visual_do_catalogo(app_ativo):
     c, pid = com_perfil(app_ativo, "Recusado")
     ruins = [

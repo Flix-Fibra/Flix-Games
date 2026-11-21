@@ -914,6 +914,14 @@ button.gx-cartao-capa{width:100%;border:0;padding:0;cursor:pointer}
 .pf-sem{display:grid;place-items:center;width:220px;max-width:100%;aspect-ratio:1;border-radius:32px;background:rgba(127,127,127,.12);color:var(--muted)}
 .pf-sem svg{width:42%;height:42%}
 .pf-op:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+/* Tom de pele: bolinhas de 44px (toque confortável no celular); o nome fica para leitor de tela e no title */
+.pf-tons{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:4px}
+.pf-tom{width:44px;height:44px;border-radius:50%;border:2px solid var(--line);cursor:pointer;padding:0;transition:box-shadow .2s,transform .2s}
+.pf-tom span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.pf-tom.ativo{border-color:var(--card);box-shadow:0 0 0 3px var(--red)}
+.pf-tom:hover:not(:disabled){transform:scale(1.08)}
+.pf-tom:disabled{opacity:.3;cursor:not-allowed}
+.pf-tom:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
 .gx-av-cor.pf-natural{background:conic-gradient(#2a2224,#6b3f24,#c8361b,#e0b45a,#2a2224)}
 .gx-hero-retrato .pf-previa{filter:drop-shadow(0 12px 24px rgba(0,0,0,.35))}
 
