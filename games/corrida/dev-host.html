@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Simulador do hub (desenvolvimento)</title>
+    <style>
+      body { margin: 0; font: 14px/1.4 system-ui, sans-serif; background: #f1f1f3; color: #1d1d1f; }
+      .wrap { display: flex; flex-wrap: wrap; gap: 16px; padding: 16px; align-items: flex-start; }
+      .frame { position: relative; width: 360px; max-width: 100%; height: 640px; background: #000; border-radius: 12px; overflow: hidden; }
+      iframe { width: 100%; height: 100%; border: 0; display: block; }
+      .overlay { position: absolute; inset: 0; background: rgba(0,0,0,.82); color: #fff; display: none; flex-direction: column;
+                 align-items: center; justify-content: center; gap: 12px; text-align: center; padding: 24px; }
+      .overlay.on { display: flex; }
+      .panel { flex: 1; min-width: 280px; max-width: 520px; }
+      button { font: inherit; padding: 8px 14px; border-radius: 8px; border: 0; background: #d4142c; color: #fff; cursor: pointer; margin: 2px; }
+      button.sec { background: #3a3d42; }
+      label { display: block; margin: 6px 0; }
+      pre { background: #fff; padding: 10px; border-radius: 8px; height: 260px; overflow: auto; font-size: 12px; }
+      h1 { font-size: 16px; margin: 0 0 8px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="frame">
+        <iframe id="game" title="jogo"></iframe>
+        <div id="over" class="overlay">
+          <strong>Fim da partida</strong>
+          <div id="overText"></div>
+          <div>(sem anúncio por enquanto)</div>
+          <button id="restart">Jogar de novo</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h1>Simulador do hub — só para desenvolvimento</h1>
+        <label><input type="checkbox" id="sendInit" checked /> Responder com <code>init</code> (desmarque para testar o limite de 1,5 s)</label>
+        <label>Personagem de teste:
+          <select id="avatar">
+            <option value="default">Padrão (null)</option>
+            <option value="blue">Camiseta azul, cabelo longo</option>
+            <option value="tech">Uniforme técnico Flix</option>
+            <option value="bad">Inválido (IDs desconhecidos)</option>
+          </select>
+        </label>
+        <label><input type="checkbox" id="muted" /> Mudo</label>
+        <div>
+          <button class="sec" id="pause">pause</button>
+          <button class="sec" id="resume">resume</button>
+          <button class="sec" id="reload">Recarregar jogo</button>
+        </div>
+        <pre id="log"></pre>
+      </div>
+    </div>
+    <script>
+      const origin = location.origin;
+      const frame = document.getElementById('game');
+      const logEl = document.getElementById('log');
+      const over = document.getElementById('over');
+      const AVATARS = {
+        default: null,
+        blue: { v: 1, body: { type: 'b01', skinTone: 'sk03' }, face: { eyes: 'e01', mouth: 'm01' },
+                hair: { style: 'h02_long', color: 'hc04' }, top: { item: 't01_tee', primary: 'c02' },
+                bottom: null, shoes: null, hat: null, accessories: [], skinPreset: null },
+        tech: { v: 1, body: { type: 'b01', skinTone: 'sk02' }, face: { eyes: 'e01', mouth: 'm01' },
+                hair: { style: 'h01_short', color: 'hc03' }, top: null, bottom: null, shoes: null, hat: null,
+                accessories: [], skinPreset: 'flix_tech' },
+        bad: { v: 1, body: { type: 'xxx', skinTone: '#ff00ff' }, hair: { style: 'zzz', color: 'rosa' } },
+      };
+      const log = (dir, msg) => {
+        logEl.textContent += `${new Date().toLocaleTimeString()} ${dir} ${JSON.stringify(msg)}\n`;
+        logEl.scrollTop = logEl.scrollHeight;
+      };
+      const send = (msg) => {
+        const full = { source: 'flix-hub', v: 2, ...msg };
+        frame.contentWindow.postMessage(full, origin);
+        log('→', full);
+      };
+      const load = () => {
+        over.classList.remove('on');
+        frame.src = 'index.html?hubOrigin=' + encodeURIComponent(origin) + '&t=' + Date.now();
+      };
+      window.addEventListener('message', (ev) => {
+        if (ev.origin !== origin || ev.source !== frame.contentWindow) return;
+        const m = ev.data;
+        if (!m || m.source !== 'flix-game' || m.v !== 2) return;
+        log('←', m);
+        if (m.type === 'ready' && document.getElementById('sendInit').checked) {
+          send({ type: 'init', avatar: AVATARS[document.getElementById('avatar').value],
+                 muted: document.getElementById('muted').checked, locale: 'pt-BR' });
+        }
+        if (m.type === 'started') over.classList.remove('on');
+        if (m.type === 'gameover') {
+          // Valida o que o hub real também validaria.
+          const ok = Number.isInteger(m.score) && m.score >= 0 && typeof m.runId === 'string' && m.durationMs >= 0;
+          document.getElementById('overText').textContent =
+            `Pontos: ${m.score} · duração: ${Math.round(m.durationMs / 1000)} s` + (ok ? '' : ' · PONTUAÇÃO INVÁLIDA');
+          setTimeout(() => over.classList.add('on'), 900);
+        }
+      });
+      document.getElementById('restart').onclick = () => { over.classList.remove('on'); send({ type: 'restart' }); };
+      document.getElementById('pause').onclick = () => send({ type: 'pause' });
+      document.getElementById('resume').onclick = () => send({ type: 'resume' });
+      document.getElementById('muted').onchange = (e) => send({ type: 'mute', muted: e.target.checked });
+      document.getElementById('reload').onclick = load;
+      load();
+    </script>
+  </body>
+</html>

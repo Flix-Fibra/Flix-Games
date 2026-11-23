@@ -1,0 +1,9 @@
+{
+  "id": "corrida",
+  "name": "Corrida Flix",
+  "_nome_de_trabalho": "G12. Validar o nome com o marketing e o jurídico antes de publicar. Sem a chave \"catalogo\" até o jogo estar jogável: assim `npm run catalogo` ainda não o põe no hub.",
+  "avatarTier": "B",
+  "avatarViews": ["portrait"],
+  "rankingMetric": "lap_time",
+  "sdkVersion": "0.1.0"
+}
