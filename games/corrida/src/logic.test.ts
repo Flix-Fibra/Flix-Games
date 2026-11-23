@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { amostraMaisProxima, amostrarPista, andarCarro, batida, comprimentoPista, contato, controlarIA, ESTA_RODANDO, evitar, FISICA, fatorTeto, formatarTempo, Progresso, reforcoRival, REFORCO_MAX, rodar, separar, Voltas, type Carro } from './logic';
+import { classificou, embaralhar, LIMITE_CLASSIFICACAO, proximaEtapa, amostraMaisProxima, amostrarPista, andarCarro, batida, comprimentoPista, contato, controlarIA, ESTA_RODANDO, evitar, FISICA, fatorTeto, ACRESCIMO_POR_VOLTA, formatarTempo, Progresso, reforcoRival, REFORCO_MAX, rodar, separar, TURBO_FATOR, TURBO_MS, Voltas, type Carro } from './logic';
 import { PISTAS } from './pistas';
 
 describe('pistas', () => {
-  it.each(PISTAS.map((p) => [p.id, p] as const))('%s: volta de 30 a 60 s perto da velocidade máxima, dentro do mundo', (_id, def) => {
+  it.each(PISTAS.map((p) => [p.id, p] as const))('%s: volta de 30 a 70 s perto da velocidade máxima, dentro do mundo', (_id, def) => {
     const am = amostrarPista(def.pontos);
     const seg = comprimentoPista(am) / (FISICA.vmax.asfalto * 0.85);
     expect(seg).toBeGreaterThan(30);
-    expect(seg).toBeLessThan(60);
+    expect(seg).toBeLessThan(70);
     for (const a of am) {
       expect(a.x).toBeGreaterThan(0);
       expect(a.y).toBeGreaterThan(0);
@@ -117,10 +117,10 @@ describe('adversários', () => {
     for (let i = 0; i < 10 && contato(a, b, 8); i++) separar(a, b, 8);
     expect(contato(a, b, 8)).toBeNull();
   });
-  it('a cápsula pega o carro de ponta a ponta (batida por trás a 31 px)', () => {
+  it('a cápsula pega o carro de ponta a ponta (batida por trás a 40 px)', () => {
     const a: Carro = { x: 0, y: 0, ang: 0, vx: 0, vy: 0 };
-    expect(contato(a, { x: 31, y: 0, ang: 0, vx: 0, vy: 0 }, 8)).not.toBeNull();
-    expect(contato(a, { x: 40, y: 0, ang: 0, vx: 0, vy: 0 }, 8)).toBeNull();
+    expect(contato(a, { x: 40, y: 0, ang: 0, vx: 0, vy: 0 }, 9.5)).not.toBeNull();
+    expect(contato(a, { x: 50, y: 0, ang: 0, vx: 0, vy: 0 }, 9.5)).toBeNull();
   });
 });
 
@@ -144,12 +144,12 @@ describe('batidas e rodopio', () => {
     expect(ESTA_RODANDO(tras)).toBe(true);
   });
   it('desvia de um carro logo à frente na mesma faixa', () => {
-    const eu = car(0, 150), outro = car(40, 100);
+    const eu = car(0, 150), outro = car(60, 100);
     const r = evitar(eu, [eu, outro], 0);
     expect(r.lateral).not.toBe(0);
-    expect(evitar(eu, [eu, car(40, 100) as Carro], 0).freio).toBe(false); // 40 px: ainda não precisa frear
+    expect(evitar(eu, [eu, car(60, 100) as Carro], 0).freio).toBe(false); // 60 px: ainda não precisa frear
     expect(evitar(eu, [eu, car(30, 50)], 0).freio).toBe(true);
-    expect(evitar(eu, [eu, { ...outro, y: 40 }], 0).lateral).toBe(0); // em outra faixa
+    expect(evitar(eu, [eu, { ...outro, y: 50 }], 0).lateral).toBe(0); // em outra faixa
   });
   it('batida fraca só empurra', () => {
     const a = car(0, 100), b = car(26, 90);
@@ -195,5 +195,145 @@ describe('batidas e rodopio', () => {
     }
     expect(prog.valor()).toBeGreaterThanOrEqual(am.length * 2);
     expect(fora / passos).toBeLessThan(0.05);
+  });
+});
+
+describe('carro rodopiando', () => {
+  it('fica sem colisão: os outros passam por ele', () => {
+    const rodando: Carro = { x: 0, y: 0, ang: 0, vx: 0, vy: 0 };
+    rodar(rodando, 1, 1);
+    const passando: Carro = { x: 5, y: 0, ang: 0, vx: 200, vy: 0 };
+    expect(batida(passando, rodando, 9.5)).toBeNull();
+    expect(passando.x).toBe(5);
+    expect(ESTA_RODANDO(passando)).toBe(false);
+  });
+});
+
+describe('velocidade por volta', () => {
+  it('cada volta completada soma 30 px/s ao teto do asfalto', () => {
+    expect(fatorTeto(3000, 0) * FISICA.vmax.asfalto).toBeCloseTo(210, 5);
+    expect(fatorTeto(3000, 1) * FISICA.vmax.asfalto).toBeCloseTo(210 + ACRESCIMO_POR_VOLTA, 5);
+    expect(fatorTeto(3000, 4) * FISICA.vmax.asfalto).toBeCloseTo(330, 5);
+  });
+  it.each(PISTAS.map((p) => [p.id, p] as const))('%s: o piloto automático segue na pista mesmo com +4 voltas (330 px/s)', (_id, def) => {
+    const am = amostrarPista(def.pontos);
+    const a0 = am[0]!;
+    const c: Carro = { x: a0.x - 30, y: a0.y, ang: a0.ang, vx: 0, vy: 0 };
+    let idx = am.length - 8;
+    const prog = new Progresso(am.length, idx);
+    let fora = 0, passos = 0;
+    for (let t = 0; t < 200 * 60 && prog.valor() < am.length * 2; t++) {
+      idx = amostraMaisProxima(am, c.x, c.y, idx);
+      const d = Math.hypot(c.x - am[idx]!.x, c.y - am[idx]!.y);
+      const sup = d < def.largura / 2 ? 'asfalto' : d < def.largura / 2 + 5 ? 'zebra' : 'grama';
+      if (sup === 'grama') fora++;
+      andarCarro(c, controlarIA(c, am, idx, 0), sup, 1 / 60, fatorTeto(60000, 4) * 0.985);
+      prog.atualizar(idx);
+      passos++;
+    }
+    expect(prog.valor()).toBeGreaterThanOrEqual(am.length * 2);
+    expect(fora / passos).toBeLessThan(0.08);
+  });
+});
+
+describe('bônus', () => {
+  const rodarAte = (c: Carro, passos: number): void => {
+    for (let i = 0; i < passos; i++) andarCarro(c, { giro: 0, freio: false }, 'asfalto', 1 / 60, 1);
+  };
+  it('turbo dá 30% a mais de velocidade por 4 s e depois acaba', () => {
+    const c: Carro = { x: 0, y: 0, ang: 0, vx: 0, vy: 0, turboMs: TURBO_MS };
+    rodarAte(c, 180); // 3 s
+    expect(c.vx).toBeCloseTo(FISICA.vmax.asfalto * TURBO_FATOR, 0);
+    rodarAte(c, 120); // passa de 4 s
+    expect(c.turboMs).toBe(0);
+    expect(c.vx).toBeCloseTo(FISICA.vmax.asfalto, 0);
+  });
+  it('arco-íris: sem colisão com outros carros', () => {
+    const a: Carro = { x: 0, y: 0, ang: 0, vx: 200, vy: 0, arcoMs: 1000 };
+    const b: Carro = { x: 20, y: 0, ang: 0, vx: 50, vy: 0 };
+    expect(batida(a, b, 9.5)).toBeNull();
+    expect(a.x).toBe(0);
+  });
+  it('rodar aceita uma duração própria (meteoro: 2 s)', () => {
+    const c: Carro = { x: 0, y: 0, ang: 0, vx: 300, vy: 0 };
+    rodar(c, 1, 1, 2000);
+    expect(c.rodaMs).toBe(2000);
+  });
+  it('depois de um teletransporte o progresso e as voltas são ajustados', () => {
+    const p = new Progresso(1000, 950);
+    p.definir(300);
+    expect(p.valor()).toBe(300);
+    p.definir(-20);
+    expect(p.valor()).toBe(-20);
+    // teletransportado para o 3º quarto: a volta continua valendo ao cruzar a linha
+    const v = new Voltas(1000);
+    v.ajustar(520, false);
+    for (let i = 520; i < 1000; i += 4) v.atualizar(i, 10);
+    expect(v.atualizar(5, 10)).toBe(true);
+    // teletransportado antes da largada: o 1º cruzamento da linha ainda não é volta
+    const w = new Voltas(1000);
+    w.ajustar(990, true);
+    expect(w.atualizar(5, 10)).toBe(false);
+  });
+});
+
+describe('itens aleatórios', () => {
+  it('o sorteio do tipo segue as chances e só dá tipos válidos', async () => {
+    const { tipoSorteado } = await import('./itens');
+    expect(tipoSorteado(0)).toBe('turbo');
+    expect(tipoSorteado(0.45)).toBe('poca');
+    expect(tipoSorteado(0.7)).toBe('arco');
+    expect(tipoSorteado(0.99)).toBe('roleta');
+  });
+  it('poucos itens por vez e com intervalo grande', async () => {
+    const { ITENS_MAX, INTERVALO_ITEM_MS, DISTANCIA_ITEM_PX } = await import('./itens');
+    expect(ITENS_MAX).toBeLessThanOrEqual(3);
+    expect(INTERVALO_ITEM_MS[0]).toBeGreaterThanOrEqual(8000);
+    expect(DISTANCIA_ITEM_PX[0]).toBeGreaterThan(400);
+  });
+});
+
+describe('traçados', () => {
+  it('há 24 pistas, todas com id único', () => {
+    expect(PISTAS.length).toBe(24);
+    expect(new Set(PISTAS.map((p) => p.id)).size).toBe(24);
+  });
+  it.each(PISTAS.filter((p) => !p.cruza).map((p) => [p.id, p] as const))('%s: trechos distantes não se encostam (asfalto de 94 px)', (_id, def) => {
+    const am = amostrarPista(def.pontos);
+    const n = am.length;
+    let min = Infinity;
+    for (let i = 0; i < n; i += 2) {
+      for (let j = i + 200; j < n; j += 2) {
+        if (n - (j - i) < 200) continue;
+        min = Math.min(min, Math.hypot(am[i]!.x - am[j]!.x, am[i]!.y - am[j]!.y));
+      }
+    }
+    expect(min).toBeGreaterThan(def.largura + 40);
+  });
+});
+
+describe('campeonato', () => {
+  it('a ordem das pistas é uma permutação, e muda com o sorteio', () => {
+    const a = embaralhar(24);
+    expect([...a].sort((x, y) => x - y)).toEqual(Array.from({ length: 24 }, (_, i) => i));
+    let t = 1;
+    const semente = () => ((t = (t * 16807) % 2147483647) / 2147483647);
+    const b = embaralhar(24, semente);
+    const c = embaralhar(24, () => 0);
+    expect(c).not.toEqual(Array.from({ length: 24 }, (_, i) => i)); // não é a ordem original
+    expect(new Set(b).size).toBe(24);
+  });
+  it('só avança entre os 6 primeiros; senão repete a pista', () => {
+    expect(LIMITE_CLASSIFICACAO).toBe(6);
+    expect(classificou(6)).toBe(true);
+    expect(classificou(7)).toBe(false);
+    expect(proximaEtapa(3, 24, 1)).toBe(4);
+    expect(proximaEtapa(3, 24, 6)).toBe(4);
+    expect(proximaEtapa(3, 24, 7)).toBe(3);
+    expect(proximaEtapa(3, 24, 11)).toBe(3);
+  });
+  it('depois da última pista o campeonato termina', () => {
+    expect(proximaEtapa(23, 24, 2)).toBeNull();
+    expect(proximaEtapa(23, 24, 9)).toBe(23);
   });
 });

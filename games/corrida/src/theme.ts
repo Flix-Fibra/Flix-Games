@@ -1,10 +1,18 @@
 /**
  * Identidade visual do G12. Pixel art desenhada por código (sem arquivos de terceiros): o carro é um modelo de
  * fatias empilhadas (`carro.ts`) e as pistas são pintadas a partir de uma linha central (`pistas.ts`).
- * A tela interna é pequena (480 x 270) e o navegador amplia sem suavizar: 1 pixel do jogo = vários da tela.
+ * A tela interna tem o tamanho real da janela e o mundo é visto com zoom inteiro.
  */
-export const GAME_W = 480;
-export const GAME_H = 270;
+/**
+ * Resolução: a tela interna tem o tamanho real da janela (em pixels do aparelho), sem ampliação do navegador. O mundo é
+ * visto com um zoom INTEIRO (cada pixel da arte vira N x N pixels da tela), então a arte fica pixelada porém nítida.
+ * `ALTURA_ARTE` é quantos pixels de arte aparecem na altura da tela, mais ou menos (define o zoom).
+ */
+export const ALTURA_ARTE = 240;
+/** Idem na largura (para telas estreitas, como celular em pé). */
+export const LARGURA_ARTE = 400;
+/** A interface foi desenhada para uma tela de 540 de altura; os tamanhos escalam com a altura real. */
+export const ALTURA_REFERENCIA_UI = 540;
 
 export const COLORS = {
   background: 0x0b0b0d,

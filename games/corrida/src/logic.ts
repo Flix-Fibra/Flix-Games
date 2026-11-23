@@ -98,10 +98,13 @@ export const VEL_INICIAL = 146;
 export const VEL_FINAL = 210;
 export const RAMPA_MS = 3000;
 
-/** Multiplicador do teto de velocidade (1 na largada, 210/146 depois de `RAMPA_MS`). */
-export function fatorTeto(tempoCorridaMs: number): number {
+/** A cada volta completada, o teto de velocidade de todos os carros sobe mais 30 px/s. */
+export const ACRESCIMO_POR_VOLTA = 30;
+
+/** Multiplicador do teto de velocidade: 1 na largada, 210/146 depois de `RAMPA_MS`, e +30 px/s por volta completada. */
+export function fatorTeto(tempoCorridaMs: number, voltasCompletas = 0): number {
   const t = Math.min(1, Math.max(0, tempoCorridaMs / RAMPA_MS));
-  return 1 + (VEL_FINAL / VEL_INICIAL - 1) * t;
+  return 1 + (VEL_FINAL / VEL_INICIAL - 1) * t + (Math.max(0, voltasCompletas) * ACRESCIMO_POR_VOLTA) / VEL_INICIAL;
 }
 
 export interface Carro {
@@ -115,15 +118,25 @@ export interface Carro {
   w?: number;
   /** Depois de rodar, fica ms sem poder rodar de novo (evita sequência de batidas). */
   imuneMs?: number;
+  /** Turbo: ms restantes (+30% de velocidade e arrancada forte). */
+  turboMs?: number;
+  /** Arco-íris: ms restantes (sem colisão com outros carros). */
+  arcoMs?: number;
+  /** Depois do rodopio, volta para a pista (meteoro). */
+  reaparecer?: boolean;
 }
+
+export const TURBO_FATOR = 1.3;
+export const TURBO_MS = 4000;
+export const ARCO_MS = 6000;
 
 export const ESTA_RODANDO = (c: Carro): boolean => (c.rodaMs ?? 0) > 0;
 
 /** Põe o carro para rodopiar e deslizar até quase parar. `intensidade` (0 a 1): giro mais violento e mais longo. */
-export function rodar(c: Carro, lado: number, intensidade: number): void {
+export function rodar(c: Carro, lado: number, intensidade: number, ms?: number): void {
   const k = Math.max(0, Math.min(1, intensidade));
   c.w = (lado >= 0 ? 1 : -1) * (6 + 6 * k);
-  c.rodaMs = 1300 + 1200 * k;
+  c.rodaMs = ms ?? 1300 + 1200 * k;
 }
 
 export interface Comando {
@@ -140,6 +153,9 @@ export function velocidade(c: Carro): number {
 /** Avança o carro `dt` segundos. */
 export function andarCarro(c: Carro, cmd: Comando, sup: Superficie, dt: number, teto = 1): void {
   if ((c.imuneMs ?? 0) > 0) c.imuneMs = Math.max(0, (c.imuneMs ?? 0) - dt * 1000);
+  if ((c.turboMs ?? 0) > 0) c.turboMs = Math.max(0, (c.turboMs ?? 0) - dt * 1000);
+  if ((c.arcoMs ?? 0) > 0) c.arcoMs = Math.max(0, (c.arcoMs ?? 0) - dt * 1000);
+  const turbo = (c.turboMs ?? 0) > 0;
   if ((c.rodaMs ?? 0) > 0) {
     // rodopio: sem controle; o carro desliza na direção em que ia, perdendo velocidade (mais na grama e na areia)
     c.rodaMs = (c.rodaMs ?? 0) - dt * 1000;
@@ -163,10 +179,10 @@ export function andarCarro(c: Carro, cmd: Comando, sup: Superficie, dt: number, 
   let frente = c.vx * fx + c.vy * fy; // velocidade ao longo do carro
   let lado = -c.vx * fy + c.vy * fx; // velocidade de lado (derrapagem)
 
-  const vmax = FISICA.vmax[sup] * teto;
+  const vmax = FISICA.vmax[sup] * teto * (turbo ? TURBO_FATOR : 1);
   if (cmd.freio) frente = Math.max(0, frente - FISICA.freio * dt);
   else if (frente > vmax) frente = Math.max(vmax, frente - FISICA.arrasto * dt);
-  else frente = Math.min(vmax, frente + FISICA.acel * dt);
+  else frente = Math.min(vmax, frente + FISICA.acel * (turbo ? 2.5 : 1) * dt);
 
   lado *= Math.exp(-FISICA.aderencia[sup] * dt);
 
@@ -197,6 +213,12 @@ export class Voltas {
   ultimaVolta: number | null = null;
 
   constructor(private readonly total: number) {}
+
+  /** Depois de um teletransporte: recalcula em que quarto da pista o carro está (antes da largada = nenhum). */
+  ajustar(indice: number, antesDaLargada: boolean): void {
+    this.ultimo = indice;
+    this.quarto = antesDaLargada ? 0 : Math.min(3, Math.floor((indice / this.total) * 4));
+  }
 
   atualizar(indice: number, dtMs: number): boolean {
     this.tempo += dtMs;
@@ -249,7 +271,7 @@ export function controlarIA(c: Carro, am: readonly Amostra[], indice: number, la
 }
 
 /** O carro é uma cápsula: dois círculos (frente e traseira) a `CAPSULA` px do centro, no sentido em que aponta. */
-export const CAPSULA = 9;
+export const CAPSULA = 11;
 
 export interface Contato {
   /** Normal do choque, de `a` para `b`. */
@@ -321,6 +343,11 @@ export class Progresso {
   valor(): number {
     return this.voltas * this.total + this.ultimo;
   }
+  /** Põe o carro num progresso (em amostras) qualquer, por exemplo depois de um teletransporte. */
+  definir(valor: number): void {
+    this.voltas = Math.floor(valor / this.total);
+    this.ultimo = valor - this.voltas * this.total;
+  }
 }
 
 // ---- batidas e disputa ---------------------------------------------------------------------------------------------
@@ -341,6 +368,10 @@ export interface Batida {
  * de propósito, que o jogador sofre de vez em quando). Quem acabou de rodar fica imune por um tempo. Devolve a batida, ou null se não houve choque.
  */
 export function batida(a: Carro, b: Carro, raio: number, agressor?: Carro): Batida | null {
+  // carro rodopiando fica sem física de colisão: os outros passam por ele
+  if (ESTA_RODANDO(a) || ESTA_RODANDO(b)) return null;
+  // arco-íris: sem física entre carros
+  if ((a.arcoMs ?? 0) > 0 || (b.arcoMs ?? 0) > 0) return null;
   const ct = contato(a, b, raio);
   if (!ct) return null;
   const { nx, ny } = ct;
@@ -393,9 +424,34 @@ export function evitar(c: Carro, outros: readonly Carro[], lateralBase: number):
     const dx = o.x - c.x, dy = o.y - c.y;
     const fwd = dx * cs + dy * sn;
     const side = -dx * sn + dy * cs;
-    if (fwd > 0 && fwd < 75 && Math.abs(side) < 18 && (!perto || fwd < perto.fwd)) perto = { fwd, side, o };
+    if (fwd > 0 && fwd < 85 && Math.abs(side) < 22 && (!perto || fwd < perto.fwd)) perto = { fwd, side, o };
   }
   if (!perto) return { lateral: lateralBase, freio: false };
-  const lateral = Math.max(-22, Math.min(22, lateralBase + (perto.side > 0 ? -20 : 20)));
-  return { lateral, freio: perto.fwd < 40 && velocidade(c) > velocidade(perto.o) + 8 };
+  const lateral = Math.max(-30, Math.min(30, lateralBase + (perto.side > 0 ? -24 : 24)));
+  return { lateral, freio: perto.fwd < 50 && velocidade(c) > velocidade(perto.o) + 8 };
+}
+
+// ---- campeonato --------------------------------------------------------------------------------------------------
+
+/** O jogador só passa para a próxima pista ficando entre os primeiros. */
+export const LIMITE_CLASSIFICACAO = 6;
+export const classificou = (posicao: number): boolean => posicao <= LIMITE_CLASSIFICACAO;
+
+/** Ordem aleatória das pistas (embaralhamento de Fisher-Yates): devolve uma permutação de 0..n-1. */
+export function embaralhar(n: number, aleatorio: () => number = Math.random): number[] {
+  const v = Array.from({ length: n }, (_, i) => i);
+  for (let i = n - 1; i > 0; i--) {
+    const j = Math.floor(aleatorio() * (i + 1));
+    [v[i], v[j]] = [v[j]!, v[i]!];
+  }
+  return v;
+}
+
+/**
+ * Qual a próxima etapa: avança se o jogador se classificou, senão repete a mesma pista. Passando da última, o
+ * campeonato termina (devolve `null`).
+ */
+export function proximaEtapa(etapa: number, total: number, posicao: number): number | null {
+  if (!classificou(posicao)) return etapa;
+  return etapa + 1 < total ? etapa + 1 : null;
 }
