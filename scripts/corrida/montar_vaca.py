@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Prepara a vaca da Corrida Flix (G12) a partir da arte da equipe (assets/jogos/corrida/vaca/vaca-3-angulos.png: a mesma
+Prepara a vaca do Flix Grid (G12) a partir da arte da equipe (assets/jogos/corrida/vaca/vaca-3-angulos.png: a mesma
 vaca de lado, na diagonal e de frente, em fundo branco). Nada é redesenhado: tira o fundo branco (preenchendo a partir
 das bordas, o contorno escuro da vaca segura o branco do corpo), separa as 3 vacas e reduz todas na MESMA escala
 (cada bloco da arte vira 1 pixel, mediana do bloco), para a vaca de lado ter LADO_W px de comprimento.

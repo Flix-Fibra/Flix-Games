@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Prepara as 24 pistas da Corrida Flix (G12) a partir do pacote da equipe (assets/jogos/corrida/pistas/: um PNG de
+Prepara as 24 pistas do Flix Grid (G12) a partir do pacote da equipe (assets/jogos/corrida/pistas/: um PNG de
 1280 x 800 com o cenário inteiro e um JSON com a linha central, na mesma escala). Nada é redesenhado:
 
   - copia cada PNG para games/corrida/public/img/pistas/<id>.png (o jogo amplia ESCALA vezes, sem suavizar);

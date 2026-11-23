@@ -1,10 +1,10 @@
 {
   "id": "espiral",
   "catalogo": "g14",
-  "capa": "img/logo.png",
+  "capa": "img/capa-cheia.png",
   "previa": "img/previa.webp",
   "imagens": ["img/telas/tela-1.webp", "img/telas/tela-2.webp", "img/telas/tela-3.webp"],
-  "cores": ["#5B12D6", "#1C037C"],
+  "cores": ["#4717AA", "#2A0C78"],
   "name": "Signal Drop",
   "_nome_de_trabalho": "G14 (Descida em espiral). Validar o nome com o marketing antes de publicar.",
   "avatarTier": "B",

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Prepara os carros da Corrida Flix (G12) a partir da arte da equipe (assets/jogos/corrida/carros/, vista de cima,
+Prepara os carros do Flix Grid (G12) a partir da arte da equipe (assets/jogos/corrida/carros/, vista de cima,
 frente para a direita). Nada é redesenhado: cada carro é recortado e reduzido para o tamanho do carro no jogo
 (FATIA_W x FATIA_H de games/corrida/src/carro.ts), cada bloco da arte vira 1 pixel (mediana do bloco, sem misturar
 cores de pixels vizinhos).

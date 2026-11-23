@@ -1,4 +1,4 @@
-# G12 — Corrida Flix (em desenvolvimento)
+# G12 — Flix Grid (em desenvolvimento; antes "Corrida Flix")
 
 Corrida top-down em pixel art. Esta primeira entrega tem o **modelo do carro** (sprite stacking) e **2 pistas** , com um carro dirigível para conferir o visual e o tamanho. Há 10 adversários com IA (azul, amarelo, verde, laranja, roxo, ciano, rosa, branco, cinza e marrom) e classificação em tempo real. Ainda não há tela de menu nem envio de tempo ao hub; o jogo está no catálogo do hub como **g12** (`game.json` com `"catalogo"` e capa provisória `public/img/capa.png`, o carro visto de cima, gerada por `tools`-script fora do repositório a partir do mesmo modelo de fatias).
 
