@@ -626,6 +626,10 @@ header{padding-bottom:1px} /* a linha de 1 px (transparente no topo, visível ao
 .gx-capa-img{display:block;width:86%;height:86%;object-fit:contain;filter:drop-shadow(0 6px 14px rgba(0,0,0,.35));user-select:none}
 .gx-cartao-capa .gx-capa-img{width:84%;height:84%}
 .gx-mini .gx-capa-img{width:100%;height:100%;filter:none}
+/* Capa "cheia" (arquivo terminado em -cheia): arte quadrada que preenche o card inteiro, sem margem nem sombra */
+.gx-capa-img.gx-capa-cheia,.gx-cartao-capa .gx-capa-img.gx-capa-cheia,.gx-detalhe-capa .gx-capa-img.gx-capa-cheia,.gx-lanca-capa .gx-capa-img.gx-capa-cheia,
+.gx-mini .gx-capa-img.gx-capa-cheia,.gx-tile-arte .gx-capa-img.gx-capa-cheia{width:100%;height:100%;object-fit:cover;filter:none;border-radius:inherit}
+.gx-cartao-capa:has(.gx-capa-cheia),.gx-detalhe-capa:has(.gx-capa-cheia),.gx-mini:has(.gx-capa-cheia),.gx-tile-arte:has(.gx-capa-cheia){overflow:hidden}
 
 /* =====================================================================
    Tipografia do flixfibra.com.br (medida no site em 17/11/2026)
@@ -919,6 +923,14 @@ button.gx-cartao-capa{width:100%;border:0;padding:0;cursor:pointer}
 .pf-sem{display:grid;place-items:center;width:220px;max-width:100%;aspect-ratio:1;border-radius:32px;background:rgba(127,127,127,.12);color:var(--muted)}
 .pf-sem svg{width:42%;height:42%}
 .pf-op:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+/* Tom de pele: bolinhas de 44px (toque confortável no celular); o nome fica para leitor de tela e no title */
+.pf-tons{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:4px}
+.pf-tom{width:44px;height:44px;border-radius:50%;border:2px solid var(--line);cursor:pointer;padding:0;transition:box-shadow .2s,transform .2s}
+.pf-tom span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.pf-tom.ativo{border-color:var(--card);box-shadow:0 0 0 3px var(--red)}
+.pf-tom:hover:not(:disabled){transform:scale(1.08)}
+.pf-tom:disabled{opacity:.3;cursor:not-allowed}
+.pf-tom:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
 .gx-av-cor.pf-natural{background:conic-gradient(#2a2224,#6b3f24,#c8361b,#e0b45a,#2a2224)}
 .gx-hero-retrato .pf-previa{filter:drop-shadow(0 12px 24px rgba(0,0,0,.35))}
 

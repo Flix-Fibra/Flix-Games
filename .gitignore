@@ -20,3 +20,6 @@ web/public/personagem/piscina-*.webp
 
 # Originais da arte do G04 (Space Ping) enviados pelo gestor; o jogo usa as versões preparadas em games/blocos/public/img
 Space Ping Assets/
+
+# Originais da arte do G15 (Nest Shot) enviados pelo gestor; o jogo usa as versões preparadas em games/nestshoot/public/img
+Nest Shoot Assets/

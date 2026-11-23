@@ -13,14 +13,10 @@ export interface Palette {
   plateEdge: number; // borda clara da fatia
   pole: number; // suportes metálicos
   band: number; // trechos coloridos da treliça
-  // Fundo: céu em degradê (backdrop.ts) e bairro lá embaixo (ground.ts)
+  // Céu em degradê (backdrop.ts): só aparece numa fase sem arte de fundo; `horizon` também colore a neblina
   top: string; // céu no alto
   horizon: string; // céu embaixo
-  grass: number; // chão do bairro lá embaixo
-  light: number; // claridade do bairro (1 = dia; menor = fim de tarde/noite)
-  cloud: { color: number; opacity: number };
-  /** Arte da equipe para o fundo inteiro (céu e bairro numa imagem, em `public/img/`). Com ela, o bairro feito por
-   *  código (ground.ts) e o degradê do céu não aparecem. */
+  /** Arte da equipe para o fundo inteiro (céu e bairro numa imagem, em `public/img/`). */
   fundo?: string;
 }
 
@@ -28,28 +24,23 @@ export interface Palette {
 export const PALETTES: Palette[] = [
   {
     name: 'Fim de tarde', sky: 0x7a4a6e, plate: 0xe9e4f2, plateEdge: 0xffffff, pole: 0x8a8f9c, band: 0xd4142c,
-    top: '#292441', horizon: '#D39172', grass: 0x7d8f55, light: 0.75, fundo: 'img/fundos/fim-de-tarde.jpg',
-    cloud: { color: 0xffc2a8, opacity: 0.3 },
+    top: '#292441', horizon: '#D39172', fundo: 'img/fundos/fim-de-tarde.jpg',
   },
   {
     name: 'Noite na cidade', sky: 0x1a2550, plate: 0x7fa6ff, plateEdge: 0xc7d7ff, pole: 0x5b6274, band: 0xd4142c,
-    top: '#050a1c', horizon: '#26325e', grass: 0x2c3d3a, light: 0.4, fundo: 'img/fundos/noite-na-cidade.jpg',
-    cloud: { color: 0x5a6a9a, opacity: 0.35 },
+    top: '#050a1c', horizon: '#26325e', fundo: 'img/fundos/noite-na-cidade.jpg',
   },
   {
     name: 'Amanhecer', sky: 0xf2b58a, plate: 0x3a3550, plateEdge: 0x6b6385, pole: 0xc9c2b5, band: 0xd4142c,
-    top: '#6d8fd1', horizon: '#ffcf9e', grass: 0x8fae72, light: 0.9, fundo: 'img/fundos/amanhecer.jpg',
-    cloud: { color: 0xffffff, opacity: 0.7 },
+    top: '#6d8fd1', horizon: '#ffcf9e', fundo: 'img/fundos/amanhecer.jpg',
   },
   {
     name: 'Céu limpo', sky: 0x9ad6f5, plate: 0x1f2a44, plateEdge: 0x3c4c74, pole: 0xe8eef5, band: 0xd4142c,
-    top: '#2f8fd8', horizon: '#c4ecff', grass: 0x76c060, light: 1,
-    cloud: { color: 0xffffff, opacity: 0.9 },
+    top: '#2f8fd8', horizon: '#c4ecff', fundo: 'img/fundos/ceu-limpo.jpg',
   },
   {
     name: 'Tempestade', sky: 0x3a414c, plate: 0xb6f0d2, plateEdge: 0xeafff4, pole: 0x6f7780, band: 0xf5c04a,
-    top: '#14181e', horizon: '#4a525e', grass: 0x55635a, light: 0.55, fundo: 'img/fundos/tempestade.jpg',
-    cloud: { color: 0x3c434d, opacity: 0.85 },
+    top: '#14181e', horizon: '#4a525e', fundo: 'img/fundos/tempestade.jpg',
   },
 ];
 

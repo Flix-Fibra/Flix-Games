@@ -8,7 +8,15 @@ type P = [number, number];
 export const CELL_TEX = 128;
 const K = 2;
 
+/** Pedaço de cabo (um bloco da peça). */
 export const cellKey = (item: number): string => `cell_${item}`;
+/** Conector RJ45 apontando para a direita (o da esquerda é o mesmo, espelhado). */
+export const plugKey = (item: number): string => `plug_${item}`;
+/** Aparelhos que se ligam nas pontas de uma linha completa. */
+export const DEVICE_LEFT = 'dev_router';
+export const DEVICE_RIGHT = 'dev_pc';
+/** Proporção do conector (largura / altura). */
+export const PLUG_RATIO = 64 / 40;
 
 /** Pontos de uma elipse, com rotação em graus. */
 function ellipse(cx: number, cy: number, rx: number, ry: number, rotDeg = 0, from = 0, to = Math.PI * 2, n = 48): P[] {
@@ -33,14 +41,6 @@ const line = (g: G, w: number, color: number, pts: P[], alpha = 1): void => {
   strokePoly(g, pts);
 };
 
-/** Cartão colorido atrás do item: dá cor ao tipo e faz os grupos iguais "grudarem" visualmente. */
-function drawCard(g: G, item: number): void {
-  const it = ITEMS[item]!;
-  g.fillStyle(it.cardDark, 1).fillRoundedRect(2, 3, 60, 59, 11);
-  g.fillStyle(it.card, 1).fillRoundedRect(2, 2, 60, 56, 11);
-  g.fillStyle(0xffffff, 0.32).fillRoundedRect(7, 5, 50, 9, 5);
-  g.lineStyle(1.2, 0x000000, 0.18).strokeRoundedRect(2, 2, 60, 60, 11);
-}
 
 /** Roteador preto com quatro antenas e LEDs. */
 function drawRouter(g: G): void {
@@ -61,28 +61,6 @@ function drawRouter(g: G): void {
   g.fillStyle(0x23252e, 1).fillRect(13, 54, 6, 2).fillRect(45, 54, 6, 2);
 }
 
-/** Cabo de rede azul enrolado, com os conectores à vista. */
-function drawCable(g: G): void {
-  const rings: Array<[number, number]> = [[22, 16], [16, 11.5], [10, 7]];
-  const cx = 32;
-  const cy = 29;
-  for (const [rx, ry] of rings) line(g, 7.2, 0x103f80, ellipse(cx, cy, rx, ry, -8));
-  for (const [rx, ry] of rings) line(g, 5, 0x2b86ff, ellipse(cx, cy, rx, ry, -8));
-  for (const [rx, ry] of rings) line(g, 1.4, 0xa8d3ff, ellipse(cx, cy - 1.2, rx - 0.5, ry - 0.5, -8, Math.PI * 1.05, Math.PI * 1.75, 20), 0.9);
-  // faixas que prendem o rolo
-  g.fillStyle(0x103f80, 1).fillRoundedRect(29, 11, 6, 8, 2);
-  g.fillStyle(0xd9e6ff, 1).fillRoundedRect(29.6, 11.6, 4.8, 6.8, 1.6);
-  // cabos e conectores
-  line(g, 4.6, 0x103f80, [[14, 41], [14, 48]]);
-  line(g, 3, 0x2b86ff, [[14, 41], [14, 48]]);
-  line(g, 4.6, 0x103f80, [[50, 41], [50, 48]]);
-  line(g, 3, 0x2b86ff, [[50, 41], [50, 48]]);
-  for (const x of [14, 50]) {
-    g.fillStyle(0x7d8596, 1).fillRoundedRect(x - 6, 47, 12, 11, 2.2);
-    g.fillStyle(0xeaf0f8, 1).fillRoundedRect(x - 5.2, 47, 10.4, 8.6, 2);
-    for (let i = 0; i < 4; i++) g.fillStyle(0xe2a93a, 1).fillRect(x - 4 + i * 2.4, 54.6, 1.2, 3.4);
-  }
-}
 
 /** Monitor com paisagem na tela. */
 function drawMonitor(g: G): void {
@@ -111,71 +89,63 @@ function drawMonitor(g: G): void {
   g.fillStyle(0x35e07a, 1).fillCircle(50, 41, 0.9);
 }
 
-/** Furadeira a bateria amarela e preta. */
-function drawDrill(g: G): void {
-  // broca
-  line(g, 2.4, 0x9aa0ae, [[50, 23], [61, 23]]);
-  line(g, 1, 0x5a5f6c, [[52, 24], [60, 22.4]], 0.8);
-  // mandril
-  g.fillStyle(0x15161b, 1).fillRoundedRect(42, 16.5, 10, 13, 2.4);
-  g.fillStyle(0x3a3d48, 1).fillRect(45, 17.5, 1.2, 11).fillRect(48.4, 17.5, 1.2, 11);
-  // corpo
-  g.fillStyle(0xb98400, 1).fillRoundedRect(8, 14.5, 36, 17, 7);
-  g.fillStyle(0xffc40a, 1).fillRoundedRect(8, 13, 36, 15, 7);
-  g.fillStyle(0xffe27a, 1).fillRoundedRect(12, 14.2, 26, 3.6, 2);
-  g.fillStyle(0x15161b, 1).fillRoundedRect(5, 16.5, 7, 11, 3);
-  g.fillStyle(0x15161b, 1).fillRoundedRect(23, 21, 9, 3, 1.4);
-  // cabo (empunhadura)
-  g.fillStyle(0xe5ae00, 1);
-  fillPoly(g, [[19, 28], [34, 28], [32, 52], [21, 52]]);
-  g.fillStyle(0x15161b, 1);
-  fillPoly(g, [[20.2, 35], [33.2, 35], [32.2, 52], [21, 52]]);
-  for (let i = 0; i < 4; i++) line(g, 1, 0x3a3d48, [[21.6, 38 + i * 3.6], [32, 38 + i * 3.6]], 0.9);
-  // gatilho
-  g.fillStyle(0x15161b, 1).fillRoundedRect(34, 28, 5, 6, 1.6);
-  // bateria
-  g.fillStyle(0x15161b, 1).fillRoundedRect(14, 51, 26, 8, 2.4);
-  g.fillStyle(0xffc40a, 1).fillRect(14, 53.4, 26, 1.8);
+
+/**
+ * Bloco = pedaço de cabo de rede deitado, de ponta a ponta da célula (os vizinhos na mesma linha emendam).
+ * O fundo levemente colorido deixa ver o formato da peça.
+ */
+function drawCableCell(g: G, item: number): void {
+  const c = ITEMS[item]!;
+  g.fillStyle(c.card, 0.3).fillRoundedRect(1.5, 1.5, 61, 61, 8);
+  g.lineStyle(1.5, c.card, 0.5).strokeRoundedRect(1.5, 1.5, 61, 61, 8);
+  // tubo do cabo
+  g.fillStyle(0x000000, 0.35).fillRect(0, 24, 64, 22);
+  g.fillStyle(c.cardDark, 1).fillRect(0, 20, 64, 23);
+  g.fillStyle(c.card, 1).fillRect(0, 20, 64, 17);
+  g.fillStyle(0xffffff, 0.45).fillRect(0, 23, 64, 4);
+  g.fillStyle(0xffffff, 0.15).fillRect(0, 28, 64, 3);
+  // emenda nas pontas: mostra os pedaços
+  g.fillStyle(c.cardDark, 1).fillRect(0, 18.5, 3, 26).fillRect(61, 18.5, 3, 26);
+  g.fillStyle(0xffffff, 0.25).fillRect(3, 20, 1, 17).fillRect(60, 20, 1, 17);
 }
 
-/** Antena parabólica branca com o braço e o LNB. */
-function drawDish(g: G): void {
-  // suporte e base
-  line(g, 3.6, 0x8c94a3, [[40, 34], [44, 50]]);
-  line(g, 2.2, 0xe9edf3, [[40, 34], [44, 50]]);
-  g.fillStyle(0x8c94a3, 1).fillRoundedRect(37, 50, 14, 6, 2);
-  g.fillStyle(0xdfe4ec, 1).fillRoundedRect(37, 49.4, 14, 4.6, 2);
-  // braço com o LNB
-  const arm: P[] = [[31, 37], [26, 46], [18, 47], [12, 40], [11, 29]];
-  line(g, 4.4, 0x8c94a3, arm);
-  line(g, 2.8, 0xe9edf3, arm);
-  g.fillStyle(0x8c94a3, 1).fillRoundedRect(5, 20, 11, 11, 2.6);
-  g.fillStyle(0xf1f4f9, 1).fillRoundedRect(5.6, 20, 9.8, 9.4, 2.4);
-  g.fillStyle(0x6b7384, 1).fillRect(8, 31, 5, 3);
-  // prato
-  g.fillStyle(0x8c94a3, 1);
-  fillPoly(g, ellipse(38, 24, 21, 14.5, -38));
-  g.fillStyle(0xe4e8ef, 1);
-  fillPoly(g, ellipse(37.4, 23.4, 20.2, 13.7, -38));
-  g.fillStyle(0xf8f9fc, 1);
-  fillPoly(g, ellipse(36.4, 22.6, 17, 11, -38));
-  g.fillStyle(0xdde2ea, 1);
-  fillPoly(g, ellipse(39, 25, 12, 7.4, -38));
-  for (const [x, y] of [[33, 24], [37.5, 20], [41, 28.6], [44.6, 24.4]] as P[]) g.fillStyle(0x9aa2b2, 1).fillCircle(x, y, 1.1);
+/** Conector RJ45 visto de lado, com a ponta para a direita: capa colorida com nervuras, corpo transparente, pinos. */
+function drawPlug(g: G, item: number): void {
+  const c = ITEMS[item]!;
+  // capa (protege a emenda do cabo)
+  g.fillStyle(c.cardDark, 1).fillRoundedRect(0, 11, 24, 19, 3);
+  g.fillStyle(c.card, 1).fillRoundedRect(0, 10, 24, 16, 3);
+  for (let i = 0; i < 4; i++) g.fillStyle(c.cardDark, 0.9).fillRect(4 + i * 4.6, 11, 1.8, 17);
+  g.fillStyle(0xffffff, 0.35).fillRect(1, 12, 22, 2.5);
+  // corpo transparente
+  g.fillStyle(0x9fb0c0, 1).fillRoundedRect(22, 6, 40, 29, 3);
+  g.fillStyle(0xe4edf5, 1).fillRoundedRect(22, 6, 40, 26, 3);
+  // fios coloridos dentro
+  const wires = [0xf28c28, 0x3fbf5b, 0x2b86ff, 0x8a5a2b];
+  wires.forEach((w, i) => line(g, 1.6, w, [[24, 12 + i * 4.5], [50, 12 + i * 4.5]], 0.85));
+  g.fillStyle(0xffffff, 0.55).fillRect(24, 8, 36, 3);
+  // trava em cima
+  g.fillStyle(0xb7c6d3, 1);
+  fillPoly(g, [[30, 6], [52, 6], [48, 1.5], [33, 1.5]]);
+  // pinos dourados na ponta
+  for (let i = 0; i < 4; i++) g.fillStyle(0xe2a93a, 1).fillRect(52, 10 + i * 5.2, 8, 2.4);
+  g.lineStyle(1, 0x000000, 0.25).strokeRoundedRect(22, 6, 40, 29, 3);
 }
 
-const DRAWERS: Record<number, (g: G) => void> = { 1: drawRouter, 2: drawCable, 3: drawMonitor, 4: drawDrill, 5: drawDish };
-
-/** Cria uma textura lisa por item (cartão + desenho). Chamar uma vez, antes do menu. */
+/** Cria as texturas do jogo (cabos, conectores e aparelhos). Chamar uma vez, antes do menu. */
 export function buildItemTextures(scene: Phaser.Scene): void {
-  for (let item = 1; item <= 5; item++) {
-    const key = cellKey(item);
-    if (scene.textures.exists(key)) continue;
+  const make = (key: string, w: number, h: number, draw: (g: G) => void) => {
+    if (scene.textures.exists(key)) return;
     const g = scene.make.graphics({ x: 0, y: 0 }, false);
     g.scaleCanvas(K, K);
-    drawCard(g, item);
-    DRAWERS[item]!(g);
-    g.generateTexture(key, CELL_TEX, CELL_TEX);
+    draw(g);
+    g.generateTexture(key, w * K, h * K);
     g.destroy();
+  };
+  for (let item = 1; item <= 7; item++) {
+    make(cellKey(item), 64, 64, (g) => drawCableCell(g, item));
+    make(plugKey(item), 64, 40, (g) => drawPlug(g, item));
   }
+  make(DEVICE_LEFT, 64, 64, drawRouter);
+  make(DEVICE_RIGHT, 64, 64, drawMonitor);
 }

@@ -1,0 +1,221 @@
+{
+  "schemaVersion": 2,
+  "circuits": [
+    {
+      "id": "melbourne",
+      "order": 1,
+      "name": "Melbourne",
+      "country": "Austrália",
+      "art": "PNG/01-melbourne.png",
+      "track": "JSON/01-melbourne.json",
+      "proof": "PROVAS/01-melbourne-prova.png"
+    },
+    {
+      "id": "xangai",
+      "order": 2,
+      "name": "Xangai",
+      "country": "China",
+      "art": "PNG/02-xangai.png",
+      "track": "JSON/02-xangai.json",
+      "proof": "PROVAS/02-xangai-prova.png"
+    },
+    {
+      "id": "suzuka",
+      "order": 3,
+      "name": "Suzuka",
+      "country": "Japão",
+      "art": "PNG/03-suzuka.png",
+      "track": "JSON/03-suzuka.json",
+      "proof": "PROVAS/03-suzuka-prova.png"
+    },
+    {
+      "id": "sakhir",
+      "order": 4,
+      "name": "Sakhir",
+      "country": "Bahrein",
+      "art": "PNG/04-sakhir.png",
+      "track": "JSON/04-sakhir.json",
+      "proof": "PROVAS/04-sakhir-prova.png"
+    },
+    {
+      "id": "jeddah",
+      "order": 5,
+      "name": "Jeddah",
+      "country": "Arábia Saudita",
+      "art": "PNG/05-jeddah.png",
+      "track": "JSON/05-jeddah.json",
+      "proof": "PROVAS/05-jeddah-prova.png"
+    },
+    {
+      "id": "miami",
+      "order": 6,
+      "name": "Miami",
+      "country": "Estados Unidos",
+      "art": "PNG/06-miami.png",
+      "track": "JSON/06-miami.json",
+      "proof": "PROVAS/06-miami-prova.png"
+    },
+    {
+      "id": "montreal",
+      "order": 7,
+      "name": "Montreal",
+      "country": "Canadá",
+      "art": "PNG/07-montreal.png",
+      "track": "JSON/07-montreal.json",
+      "proof": "PROVAS/07-montreal-prova.png"
+    },
+    {
+      "id": "monte-carlo",
+      "order": 8,
+      "name": "Monte Carlo",
+      "country": "Mônaco",
+      "art": "PNG/08-monte-carlo.png",
+      "track": "JSON/08-monte-carlo.json",
+      "proof": "PROVAS/08-monte-carlo-prova.png"
+    },
+    {
+      "id": "barcelona",
+      "order": 9,
+      "name": "Barcelona",
+      "country": "Espanha",
+      "art": "PNG/09-barcelona.png",
+      "track": "JSON/09-barcelona.json",
+      "proof": "PROVAS/09-barcelona-prova.png"
+    },
+    {
+      "id": "spielberg",
+      "order": 10,
+      "name": "Red Bull Ring",
+      "country": "Áustria",
+      "art": "PNG/10-spielberg.png",
+      "track": "JSON/10-spielberg.json",
+      "proof": "PROVAS/10-spielberg-prova.png"
+    },
+    {
+      "id": "silverstone",
+      "order": 11,
+      "name": "Silverstone",
+      "country": "Reino Unido",
+      "art": "PNG/11-silverstone.png",
+      "track": "JSON/11-silverstone.json",
+      "proof": "PROVAS/11-silverstone-prova.png"
+    },
+    {
+      "id": "spa",
+      "order": 12,
+      "name": "Spa-Francorchamps",
+      "country": "Bélgica",
+      "art": "PNG/12-spa.png",
+      "track": "JSON/12-spa.json",
+      "proof": "PROVAS/12-spa-prova.png"
+    },
+    {
+      "id": "hungaroring",
+      "order": 13,
+      "name": "Hungaroring",
+      "country": "Hungria",
+      "art": "PNG/13-hungaroring.png",
+      "track": "JSON/13-hungaroring.json",
+      "proof": "PROVAS/13-hungaroring-prova.png"
+    },
+    {
+      "id": "zandvoort",
+      "order": 14,
+      "name": "Zandvoort",
+      "country": "Países Baixos",
+      "art": "PNG/14-zandvoort.png",
+      "track": "JSON/14-zandvoort.json",
+      "proof": "PROVAS/14-zandvoort-prova.png"
+    },
+    {
+      "id": "monza",
+      "order": 15,
+      "name": "Monza",
+      "country": "Itália",
+      "art": "PNG/15-monza.png",
+      "track": "JSON/15-monza.json",
+      "proof": "PROVAS/15-monza-prova.png"
+    },
+    {
+      "id": "madrid",
+      "order": 16,
+      "name": "Madrid",
+      "country": "Espanha",
+      "art": "PNG/16-madrid.png",
+      "track": "JSON/16-madrid.json",
+      "proof": "PROVAS/16-madrid-prova.png"
+    },
+    {
+      "id": "baku",
+      "order": 17,
+      "name": "Baku",
+      "country": "Azerbaijão",
+      "art": "PNG/17-baku.png",
+      "track": "JSON/17-baku.json",
+      "proof": "PROVAS/17-baku-prova.png"
+    },
+    {
+      "id": "marina-bay",
+      "order": 18,
+      "name": "Marina Bay",
+      "country": "Singapura",
+      "art": "PNG/18-marina-bay.png",
+      "track": "JSON/18-marina-bay.json",
+      "proof": "PROVAS/18-marina-bay-prova.png"
+    },
+    {
+      "id": "austin",
+      "order": 19,
+      "name": "Austin",
+      "country": "Estados Unidos",
+      "art": "PNG/19-austin.png",
+      "track": "JSON/19-austin.json",
+      "proof": "PROVAS/19-austin-prova.png"
+    },
+    {
+      "id": "cidade-do-mexico",
+      "order": 20,
+      "name": "Cidade do México",
+      "country": "México",
+      "art": "PNG/20-cidade-do-mexico.png",
+      "track": "JSON/20-cidade-do-mexico.json",
+      "proof": "PROVAS/20-cidade-do-mexico-prova.png"
+    },
+    {
+      "id": "interlagos",
+      "order": 21,
+      "name": "Interlagos",
+      "country": "Brasil",
+      "art": "PNG/21-interlagos.png",
+      "track": "JSON/21-interlagos.json",
+      "proof": "PROVAS/21-interlagos-prova.png"
+    },
+    {
+      "id": "las-vegas",
+      "order": 22,
+      "name": "Las Vegas",
+      "country": "Estados Unidos",
+      "art": "PNG/22-las-vegas.png",
+      "track": "JSON/22-las-vegas.json",
+      "proof": "PROVAS/22-las-vegas-prova.png"
+    },
+    {
+      "id": "lusail",
+      "order": 23,
+      "name": "Lusail",
+      "country": "Catar",
+      "art": "PNG/23-lusail.png",
+      "track": "JSON/23-lusail.json",
+      "proof": "PROVAS/23-lusail-prova.png"
+    },
+    {
+      "id": "yas-marina",
+      "order": 24,
+      "name": "Yas Marina",
+      "country": "Emirados Árabes Unidos",
+      "art": "PNG/24-yas-marina.png",
+      "track": "JSON/24-yas-marina.json",
+      "proof": "PROVAS/24-yas-marina-prova.png"
+    }
+  ]
+}

@@ -22,8 +22,7 @@ export class BootScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(COLORS.background);
     this.add
       .text(GAME_W / 2, GAME_H / 2, 'Carregando...', { fontFamily: FONT, fontSize: '14px', color: COLORS.textMuted })
-      .setOrigin(0.5)
-      .setResolution(2);
+      .setOrigin(0.5);
 
     const existing = this.registry.get('hubInit') as Extract<HubToGame, { type: 'init' }> | undefined;
     if (existing) {

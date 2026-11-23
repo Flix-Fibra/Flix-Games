@@ -65,7 +65,7 @@ export const NOVIDADES: Novidade[] = [
     imagemAlt: 'Editor de personagem com os visuais de cabelo e a opção Sem avatar',
   },
   { data: '2026-11-18', tipo: 'jogo', jogoId: 'g14', titulo: 'Signal Drop chegou' },
-  { data: '2026-11-18', tipo: 'jogo', jogoId: 'g01', titulo: 'Flix Runner chegou' },
+  { data: '2026-11-18', tipo: 'jogo', jogoId: 'g01', titulo: 'Network Runner chegou' },
   {
     data: '2026-11-18',
     tipo: 'plataforma',

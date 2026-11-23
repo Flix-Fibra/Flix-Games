@@ -30,6 +30,8 @@ def _catalogo() -> dict:
 CATALOGO = _catalogo()
 # Pares (corpo, visual) que existem: visual feminino só no corpo feminino e masculino só no masculino
 _VISUAIS = {(v["corpo"], v["id"]) for v in CATALOGO["visuais"]}
+# Tons de pele que cada visual tem além do padrão (a arte original); o padrão não se guarda (pele ausente)
+_PELES = {(v["corpo"], v["id"]): set(v.get("peles", [])) for v in CATALOGO["visuais"]}
 Id = Field(min_length=1, max_length=40)
 
 
@@ -39,12 +41,19 @@ class PersonagemFlix(BaseModel):
     motor: Literal["flix"]
     corpo: str = Id
     visual: str = Id
+    pele: str | None = Field(default=None, min_length=1, max_length=40)
 
     @model_validator(mode="after")
     def _no_catalogo(self) -> "PersonagemFlix":
         if (self.corpo, self.visual) not in _VISUAIS:
             raise ValueError("Personagem fora do catálogo.")
+        if self.pele is not None and self.pele not in _PELES[(self.corpo, self.visual)]:
+            raise ValueError("Tom de pele indisponível para este visual.")
         return self
+
+    def guardar(self) -> dict:
+        """Formato salvo/devolvido: sem a chave pele quando é o tom padrão."""
+        return self.model_dump(mode="json", exclude_none=True)
 
 
 def personagem_valido(bruto) -> dict | None:
@@ -52,7 +61,7 @@ def personagem_valido(bruto) -> dict | None:
     if bruto is None:
         return None
     try:
-        return PersonagemFlix.model_validate(bruto).model_dump(mode="json")
+        return PersonagemFlix.model_validate(bruto).guardar()
     except ValueError:
         return None
 
@@ -66,7 +75,7 @@ def salvar_personagem(perfil_id: UUID, personagem: PersonagemFlix, s: Sessao, c:
 
     r = c.execute(
         "UPDATE perfis SET personagem = %s WHERE id = %s AND conta_id = %s RETURNING id",
-        (Jsonb(personagem.model_dump(mode="json")), perfil_id, s["conta_id"]),
+        (Jsonb(personagem.guardar()), perfil_id, s["conta_id"]),
     ).fetchone()
     if not r:
         raise HTTPException(404, "Perfil não encontrado.")

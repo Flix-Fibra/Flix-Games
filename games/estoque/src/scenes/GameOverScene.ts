@@ -10,16 +10,15 @@ import { telaFimDeJogo } from '@flix/game-kit/src/phaserHud';
 
 interface GameOverData {
   score: number;
-  stored: number;
-  bestChain: number;
+  lines: number;
+  level: number;
   cause: Cause;
   previousBest: number;
   expression: Expression;
 }
 
 const CAUSE_TEXT: Record<Cause, string> = {
-  overflow: 'O ESTOQUE LOTOU!',
-  timeout: 'TEMPO ESGOTADO!',
+  overflow: 'CHEGOU AO TOPO!',
 };
 
 /**
@@ -51,7 +50,7 @@ export class GameOverScene extends Phaser.Scene {
       pontos: data.score,
       linhas: [
         { texto: CAUSE_TEXT[data.cause] },
-        { texto: `${data.stored} ${data.stored === 1 ? 'ITEM GUARDADO' : 'ITENS GUARDADOS'} · CADEIA x${data.bestChain}` },
+        { texto: `${data.lines} ${data.lines === 1 ? 'CONEXÃO' : 'CONEXÕES'} · NÍVEL ${data.level}` },
         newRecord ? { texto: 'NOVO RECORDE!', cor: 0xf5c04a } : { texto: `SEU MELHOR: ${best}`, cor: 0xb8c6e0 },
       ],
       px: { titulo: 3, pontos: 5, texto: 1, botao: 2 },
@@ -66,8 +65,7 @@ export class GameOverScene extends Phaser.Scene {
     } else {
       this.add
         .text(GAME_W / 2, GAME_H - 18, 'modo de desenvolvimento (sem hub)', { fontFamily: FONT, fontSize: '9px', color: COLORS.textMuted })
-        .setOrigin(0.5)
-        .setResolution(2);
+        .setOrigin(0.5);
     }
   }
 }

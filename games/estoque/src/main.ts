@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { createHubBridge, type HubToGame } from '@flix/game-sdk';
 import { setMuted } from './audio';
+import { ajustarCamera, RENDER } from './camera';
 import game_json from '../game.json';
 import { BootScene } from './scenes/BootScene';
 import { GameOverScene } from './scenes/GameOverScene';
@@ -15,11 +16,17 @@ const bridge = createHubBridge({
   avatarViews: game_json.avatarViews as Array<'portrait'>,
 });
 
+// Texto também é desenhado em resolução maior (senão a câmera amplia um texto pequeno e ele borra do mesmo jeito)
+const criarTexto = Phaser.GameObjects.GameObjectFactory.prototype.text;
+Phaser.GameObjects.GameObjectFactory.prototype.text = function (this: Phaser.GameObjects.GameObjectFactory, ...args: Parameters<typeof criarTexto>) {
+  return criarTexto.apply(this, args).setResolution(RENDER);
+};
+
 const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
-  width: GAME_W,
-  height: GAME_H,
+  width: GAME_W * RENDER,
+  height: GAME_H * RENDER,
   backgroundColor: COLORS.background,
   antialias: true,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
@@ -28,6 +35,14 @@ const game = new Phaser.Game({
 });
 
 game.registry.set('bridge', bridge);
+
+// Cada cena enxerga o mundo de GAME_W x GAME_H: câmera com zoom RENDER (vale também quando a cena reinicia)
+game.events.once(Phaser.Core.Events.READY, () => {
+  for (const cena of game.scene.scenes) {
+    cena.events.on(Phaser.Scenes.Events.START, () => ajustarCamera(cena));
+    cena.events.on(Phaser.Scenes.Events.CREATE, () => ajustarCamera(cena));
+  }
+});
 
 // Mensagens do hub. `restart` é tratado na tela de fim; as demais valem em qualquer momento.
 bridge.onHubMessage((msg: HubToGame) => {
