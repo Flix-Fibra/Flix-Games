@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
-import { quadroDoAngulo } from './carro';
-import { VACA_ANGULOS } from './itensArte';
+import type { Marcador } from './minimapa';
 import { ARCO_MS, ESTA_RODANDO, rodar, TURBO_MS, type Amostra, type Carro } from './logic';
 import type { PistaPronta } from './pistas';
 
@@ -91,6 +90,7 @@ interface Vaca {
   dy: number;
   restante: number;
   sprite: Phaser.GameObjects.Image;
+  sombra: Phaser.GameObjects.Image;
 }
 interface Meteoro {
   x: number;
@@ -116,10 +116,22 @@ export class Itens {
     private readonly aoEvento: (e: Evento, p: Piloto) => void,
   ) {}
 
+  /** Posições dos itens e perigos na pista, para o minimapa (só leitura). */
+  marcadores(): Marcador[] {
+    const out: Marcador[] = [
+      ...this.bonus.map((b) => ({ x: b.x, y: b.y, tipo: b.tipo })),
+      ...this.pocas.map((p) => ({ x: p.x, y: p.y, tipo: 'poca' as const })),
+    ];
+    if (this.vaca) out.push({ x: this.vaca.x, y: this.vaca.y, tipo: 'vaca' });
+    if (this.meteoro) out.push({ x: this.meteoro.x, y: this.meteoro.y, tipo: 'meteoro' });
+    return out;
+  }
+
   destruir(): void {
     this.bonus.forEach((b) => b.sprite.destroy());
     this.pocas.forEach((p) => p.sprite.destroy());
     this.vaca?.sprite.destroy();
+    this.vaca?.sombra.destroy();
     this.meteoro?.sombra.destroy();
     this.meteoro?.rocha.destroy();
     this.bonus = [];
@@ -237,27 +249,34 @@ export class Itens {
       const meio = this.pista.def.largura / 2 + 36;
       const x = a.x + nx * meio * lado, y = a.y + ny * meio * lado;
       const dx = -nx * lado, dy = -ny * lado;
-      const sprite = this.scene.add.image(Math.round(x), Math.round(y), 'vaca', quadroDoAngulo(Math.atan2(dy, dx), VACA_ANGULOS));
-      this.vaca = { x, y, dx, dy, restante: ((meio * 2) / VACA_VEL) * 1000, sprite };
+      const sprite = this.scene.add.image(Math.round(x), Math.round(y), 'vaca_lado');
+      const sombra = this.scene.add.image(Math.round(x), Math.round(y), 'vaca_lado').setTint(0x000000).setAlpha(0.3).setDepth(0.4);
+      this.vaca = { x, y, dx, dy, restante: ((meio * 2) / VACA_VEL) * 1000, sprite, sombra };
       return;
     }
     const v = this.vaca;
     v.x += v.dx * VACA_VEL * dt;
     v.y += v.dy * VACA_VEL * dt;
     v.restante -= delta;
-    v.sprite.setPosition(Math.round(v.x), Math.round(v.y)).setDepth(1 + Math.round(v.y)).setRotation(-this.rot).setFrame(quadroDoAngulo(Math.atan2(v.dy, v.dx) + this.rot, VACA_ANGULOS));
+    // arte da vaca em 3 ângulos (de lado, diagonal e de frente): escolhe pelo sentido em que ela anda na tela e espelha
+    // quando vai para a esquerda; indo para cima (não há vista de costas) usa a de lado
+    const { chave, espelha } = visualDaVaca(Math.atan2(v.dy, v.dx) + this.rot);
+    v.sprite.setTexture(chave).setFlipX(espelha).setPosition(Math.round(v.x), Math.round(v.y)).setDepth(1 + Math.round(v.y)).setRotation(-this.rot);
+    v.sombra.setTexture(chave).setFlipX(espelha).setRotation(-this.rot)
+      .setPosition(Math.round(v.x + 2 * Math.cos(this.rot) + 3 * Math.sin(this.rot)), Math.round(v.y + 3 * Math.cos(this.rot) - 2 * Math.sin(this.rot)));
     for (const p of pilotos) {
       const c = p.carro;
       if (ESTA_RODANDO(c) || (c.imuneMs ?? 0) > 0) continue;
       if (!pontosDoCarro(c).some(([x, y]) => Math.hypot(x - v.x, y - v.y) < VACA_RAIO + 9)) continue;
       // coice: joga o carro para o lado em que a vaca anda (para fora da pista) e ele rodopia
-      c.vx = v.dx * 300 + c.vx * 0.2;
-      c.vy = v.dy * 300 + c.vy * 0.2;
+      c.vx = v.dx * 450 + c.vx * 0.2; // era 300 (x1,5 com as velocidades)
+      c.vy = v.dy * 450 + c.vy * 0.2;
       rodar(c, Math.random() < 0.5 ? -1 : 1, 0.8);
       this.aoEvento('vaca', p);
     }
     if (v.restante <= 0) {
       v.sprite.destroy();
+      v.sombra.destroy();
       this.vaca = null;
       this.proximaVaca = aleat(20000, 42000);
     }
@@ -321,4 +340,14 @@ export class Itens {
     this.proximoMeteoro = aleat(33000, 53000);
     void tempo;
   }
+}
+
+/** Qual desenho da vaca usar para o sentido `ang` (radianos, na tela: 0 = direita, π/2 = para baixo). */
+export function visualDaVaca(ang: number): { chave: string; espelha: boolean } {
+  const g = ((((ang * 180) / Math.PI) % 360) + 540) % 360 - 180; // -180..180
+  const a = Math.abs(g);
+  if (g > 0 && a > 22.5 && a <= 67.5) return { chave: 'vaca_diagonal', espelha: false };
+  if (g > 0 && a > 67.5 && a <= 112.5) return { chave: 'vaca_frente', espelha: false };
+  if (g > 0 && a > 112.5 && a <= 157.5) return { chave: 'vaca_diagonal', espelha: true };
+  return { chave: 'vaca_lado', espelha: a > 90 };
 }

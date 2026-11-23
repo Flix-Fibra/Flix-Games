@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
-import { criarTexturaCarro, quadroDoAngulo } from '../carro';
+import { criarTexturaCarroDeImagem, quadroDoAngulo } from '../carro';
 import { andarCarro, amostraMaisProxima, apontar, batida, controlarIA, ESTA_RODANDO, evitar, classificou, embaralhar, fatorTeto, formatarTempo, LIMITE_CLASSIFICACAO, proximaEtapa, TURBO_MS, PASSO_AMOSTRA, Progresso, reforcoRival, velocidade, Voltas, type Carro } from '../logic';
 import { Itens, type Evento, type Piloto } from '../itens';
 import { criarArteItens } from '../itensArte';
-import { criarPista, PISTAS, type PistaPronta } from '../pistas';
-import { ALTURA_ARTE, ALTURA_REFERENCIA_UI, LARGURA_ARTE, CAR_COLORS, COLORS, FONT } from '../theme';
+import { chaveArte, criarPista, PISTAS, type PistaPronta } from '../pistas';
+import { MAPA_H, Minimapa, type PontoMapa } from '../minimapa';
+import { ALTURA_ARTE, ALTURA_REFERENCIA_UI, LARGURA_ARTE, COLORS, FONT } from '../theme';
 
 interface Rival {
   nome: string;
@@ -32,19 +33,38 @@ interface Rival {
   atento: boolean;
 }
 
-/** Cores dos adversários (o jogador é o vermelho Flix). A habilidade cai da frente para o fundo do grid. */
-const RIVAIS = (['azul', 'amarelo', 'verde', 'laranja', 'roxo', 'ciano', 'rosa', 'branco', 'cinza', 'marrom'] as const).map((nome, i) => ({
+/**
+ * Carros da equipe (public/img/carros, ver scripts/corrida/montar_carros.py). O jogador é o 01, vermelho com o
+ * patrocínio FLIX; os outros 10 são os adversários. A habilidade cai da frente para o fundo do grid.
+ */
+const CARRO_JOGADOR = 'vermelho-flix';
+/** A arte detalhada dos carros tem 8x o tamanho do carro no jogo (scripts/corrida/montar_carros.py, HD). */
+const ESCALA_HD = 1 / 8;
+/** Cor de cada carro no minimapa (a cor principal da pintura). */
+const COR_NO_MAPA: Record<string, string> = {
+  'vermelho-flix': '#e0182c', 'marrom-torq': '#9a5a2c', 'grafite-volt': '#b6f23a', 'prata-orbit': '#d6dbe4',
+  'turquesa-onda': '#22c7c7', 'rosa-pop': '#ff3fa0', 'roxo-nova': '#a45ce0', 'verde-serra': '#2f9a4f',
+  'laranja-brasa': '#ff7a1c', 'azul-mare': '#2f6fff', 'amarelo-zing': '#ffc21c',
+};
+const RIVAIS = (['marrom-torq', 'grafite-volt', 'prata-orbit', 'turquesa-onda', 'rosa-pop', 'roxo-nova', 'verde-serra', 'laranja-brasa', 'azul-mare', 'amarelo-zing'] as const).map((nome, i) => ({
   nome,
   chave: `carro_${nome}`,
-  cor: CAR_COLORS[nome],
   habilidade: 0.985 - 0.009 * i,
 }));
 /** Posição do jogador no grid de largada (6º de 11). */
 const SLOT_JOGADOR = 5;
 const FILA_PASSOS = 14; // amostras (x4 px) entre uma fileira e a seguinte
-/** Faixas dos rivais (px do centro da pista) e quanto cada um se desvia ao acaso do centro da sua faixa. */
+/**
+ * Faixas dos rivais (px do centro da pista) e quanto cada um se desvia ao acaso do centro da sua faixa, para o asfalto
+ * de referência (94 px); em pista mais estreita as duas medidas encolhem na mesma proporção (`ASFALTO_REF`).
+ */
 const FAIXA = 24;
 const DESVIO_MAX = 10;
+const ASFALTO_REF = 94;
+/** Pedal do acelerador na tela de toque: tamanho e posição (canto de baixo, à esquerda; o minimapa fica à direita). */
+const PEDAL = 104;
+const PEDAL_DX = 78;
+const PEDAL_DY = -78;
 /** A corrida termina quando o jogador completa esta quantidade de voltas. */
 const VOLTAS_TOTAIS = 10;
 /** A cada volta completada o zoom do mundo diminui 10% (o jogador fica mais rápido); a mudança leva ~1 s, suave. */
@@ -81,13 +101,24 @@ export class PlayScene extends Phaser.Scene {
   private pista!: PistaPronta;
   private carro!: Carro;
   private sprite!: Phaser.GameObjects.Image;
+  private sombras: Phaser.GameObjects.Image[] = [];
   private fundo?: Phaser.GameObjects.Image;
   private voltas!: Voltas;
   private indice = 0;
-  private keys!: Record<'left' | 'right' | 'a' | 'd' | 'down' | 's' | 'space' | 'enter' | 'n' | 'p', Phaser.Input.Keyboard.Key>;
+  private keys!: Record<'left' | 'right' | 'a' | 'd' | 'up' | 'w' | 'down' | 's' | 'space' | 'enter' | 'n' | 'p', Phaser.Input.Keyboard.Key>;
+  /** Pedal do acelerador na tela (só em aparelho de toque) e o dedo que está nele. */
+  private pedal?: Phaser.GameObjects.Image;
+  private dedoPedal: number | null = null;
+  /** Dedo que vira o carro (arrastar para os lados). */
+  private dedoGiro: number | null = null;
   private hud!: Phaser.GameObjects.Text;
   private hud2!: Phaser.GameObjects.Text;
   private pistaAtual = 0;
+  /** Arte da pista ainda baixando: o jogo espera (nada anda). */
+  private carregando = false;
+  private minimapa!: Minimapa;
+  /** Desvio máximo dos rivais nesta pista (DESVIO_MAX na proporção do asfalto). */
+  private desvioMax = DESVIO_MAX;
   private toqueX0: number | null = null;
   private giroToque = 0;
   private rivais: Rival[] = [];
@@ -141,9 +172,36 @@ export class PlayScene extends Phaser.Scene {
     super('Play');
   }
 
+  preload(): void {
+    for (const nome of [CARRO_JOGADOR, ...RIVAIS.map((r) => r.nome)]) {
+      this.load.image(`arte_${nome}`, `img/carros/${nome}.png`);
+      this.load.image(`hd_${nome}`, `img/carros/hd/${nome}.png`);
+    }
+    for (const v of ['lado', 'diagonal', 'frente']) this.load.image(`vaca_${v}`, `img/vaca/${v}.png`); // arte da equipe (montar_vaca.py)
+  }
+
   create(): void {
-    criarTexturaCarro(this, 'carro', CAR_COLORS.flix);
-    for (const r of RIVAIS) criarTexturaCarro(this, r.chave, r.cor);
+    criarTexturaCarroDeImagem(this, 'carro', `arte_${CARRO_JOGADOR}`);
+    for (const r of RIVAIS) criarTexturaCarroDeImagem(this, r.chave, `arte_${r.nome}`);
+    // arco-íris: versão clara e sem cor do carro, tingida em degradê durante o efeito
+    criarTexturaCarroDeImagem(this, 'carro_arco', `arte_${CARRO_JOGADOR}`, true);
+    // Carros na pista: arte detalhada (8x) desenhada no tamanho do carro e girada pela placa de vídeo, com suavização,
+    // para os nomes e números da pintura aparecerem (a versão 41 x 19 empilhada vira blocos com o zoom da câmera)
+    for (const nome of [CARRO_JOGADOR, ...RIVAIS.map((r) => r.nome)]) this.textures.get(`hd_${nome}`).setFilter(Phaser.Textures.FilterMode.LINEAR);
+    if (!this.textures.exists('hd_arco')) {
+      const fonte = this.textures.get(`hd_${CARRO_JOGADOR}`).getSourceImage() as HTMLImageElement;
+      const t = this.textures.createCanvas('hd_arco', fonte.width, fonte.height)!;
+      const g = t.getContext();
+      g.drawImage(fonte, 0, 0);
+      const d = g.getImageData(0, 0, fonte.width, fonte.height);
+      for (let i = 0; i < d.data.length; i += 4) {
+        const l = 0.3 * d.data[i]! + 0.59 * d.data[i + 1]! + 0.11 * d.data[i + 2]!;
+        d.data[i] = d.data[i + 1] = d.data[i + 2] = Math.min(255, 90 + l * 0.75);
+      }
+      g.putImageData(d, 0, 0);
+      t.refresh();
+      t.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    }
     criarArteItens(this);
     if (!this.textures.exists('marcador')) {
       // triângulo de 9 x 5 px apontando para baixo, amarelo com contorno escuro (pixel a pixel)
@@ -162,7 +220,7 @@ export class PlayScene extends Phaser.Scene {
     this.marcador = this.add.image(0, 0, 'marcador').setDepth(900);
     const kb = this.input.keyboard!;
     this.keys = kb.addKeys({
-      left: 'LEFT', right: 'RIGHT', a: 'A', d: 'D', down: 'DOWN', s: 'S', space: 'SPACE', enter: 'ENTER', n: 'N', p: 'P',
+      left: 'LEFT', right: 'RIGHT', a: 'A', d: 'D', up: 'UP', w: 'W', down: 'DOWN', s: 'S', space: 'SPACE', enter: 'ENTER', n: 'N', p: 'P',
     }) as typeof this.keys;
     kb.on('keydown-N', () => {
       if (this.livre) this.carregarPista((this.pistaAtual + 1) % PISTAS.length);
@@ -180,24 +238,68 @@ export class PlayScene extends Phaser.Scene {
     kb.on('keydown-M', () => this.modelo.forEach((m) => m.setVisible(!m.visible)));
     kb.on('keydown-R', () => this.carregarPista(this.pistaAtual));
 
-    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => (this.toqueX0 = p.x));
-    this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
-      if (p.isDown && this.toqueX0 !== null) this.giroToque = Phaser.Math.Clamp((p.x - this.toqueX0) / 40, -1, 1);
+    // Toque: um dedo no pedal (acelera) e outro arrastando para os lados (vira); toque rápido fora do pedal = turbo
+    this.input.addPointer(1);
+    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      if (this.pedal && this.dedoPedal === null && this.noPedal(p.x, p.y)) {
+        this.dedoPedal = p.id;
+        this.pedal.setAlpha(1);
+        return;
+      }
+      if (this.dedoGiro === null) {
+        this.dedoGiro = p.id;
+        this.toqueX0 = p.x;
+      }
     });
-    this.input.on('pointerup', (p: Phaser.Input.Pointer) => {
+    this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
+      if (p.isDown && p.id === this.dedoGiro && this.toqueX0 !== null) this.giroToque = Phaser.Math.Clamp((p.x - this.toqueX0) / 40, -1, 1);
+    });
+    const soltar = (p: Phaser.Input.Pointer) => {
+      if (p.id === this.dedoPedal) {
+        this.dedoPedal = null;
+        this.pedal?.setAlpha(0.55);
+        return;
+      }
+      if (p.id !== this.dedoGiro) return;
       if (this.fim && this.tempoCorrida - this.tempoFim > 1200) {
+        this.dedoGiro = null;
+        this.toqueX0 = null;
         this.continuar();
         return;
       }
       // toque rápido, sem arrastar: ativa o turbo guardado
       if (this.toqueX0 !== null && Math.abs(p.x - this.toqueX0) < 10 && p.getDuration() < 300) this.ativarTurbo();
+      this.dedoGiro = null;
       this.toqueX0 = null;
       this.giroToque = 0;
-    });
+    };
+    this.input.on('pointerup', soltar);
+    this.input.on('pointerupoutside', soltar);
+    if (this.sys.game.device.input.touch) {
+      if (!this.textures.exists('pedal')) {
+        const t = this.textures.createCanvas('pedal', PEDAL, PEDAL)!;
+        const g = t.getContext();
+        const r = PEDAL / 2;
+        g.fillStyle = 'rgba(10,12,18,0.75)';
+        g.beginPath(); g.arc(r, r, r - 2, 0, Math.PI * 2); g.fill();
+        g.strokeStyle = '#ffffff'; g.lineWidth = 3;
+        g.beginPath(); g.arc(r, r, r - 4, 0, Math.PI * 2); g.stroke();
+        // seta para cima
+        g.fillStyle = '#ffffff';
+        g.beginPath(); g.moveTo(r, r - 28); g.lineTo(r + 20, r - 4); g.lineTo(r + 8, r - 4); g.lineTo(r + 8, r + 10); g.lineTo(r - 8, r + 10); g.lineTo(r - 8, r - 4); g.lineTo(r - 20, r - 4); g.closePath(); g.fill();
+        g.font = 'bold 12px sans-serif'; g.textAlign = 'center';
+        g.fillText('ACELERAR', r, r + 30);
+        t.refresh();
+      }
+      this.pedal = this.fixar(this.add.image(0, 0, 'pedal'), 0, 1, PEDAL_DX, PEDAL_DY, 1500).setAlpha(0.55);
+    }
 
     // interface: a câmera do mundo tem zoom; os textos ficam sem zoom (escala 1/zoom compensa), então saem nítidos.
     // Posição = fração da tela + deslocamento em pixels de uma tela de 540 de altura (escalado pela altura real).
     const fonte = { fontFamily: FONT, fontSize: '18px', color: COLORS.text, stroke: '#000', strokeThickness: 4 };
+    // minimapa no canto de baixo, à direita: ~24% da altura da tela
+    this.minimapa = new Minimapa(this);
+    this.fixar(this.add.image(0, 0, this.minimapa.chave).setOrigin(1, 1), 1, 1, -12, -12, 1500, (0.24 * ALTURA_REFERENCIA_UI) / MAPA_H);
     this.hud = this.fixar(this.add.text(0, 0, '', fonte), 0, 0, 12, 8, 1000, 1, { px: 18, stroke: 4 });
     this.hud2 = this.fixar(this.add.text(0, 0, '', { ...fonte, align: 'right' }).setOrigin(1, 0), 1, 0, -12, 8, 1000, 1, { px: 18, stroke: 4 });
     this.dicaTurbo = this.fixar(this.add.text(0, 0, '', { ...fonte, color: '#7FCAFF' }).setOrigin(0.5), 0.5, 1, 0, -56, 1000, 1, { px: 28, stroke: 5 });
@@ -222,11 +324,28 @@ export class PlayScene extends Phaser.Scene {
   }
 
   private carregarPista(i: number): void {
-    this.pistaAtual = i;
     const def = PISTAS[i]!;
+    // Arte da pista: só a da corrida atual fica na memória (as 24 juntas passariam de 90 MB de vídeo no celular).
+    if (def.arte && !this.textures.exists(chaveArte(def))) {
+      this.carregando = true;
+      this.load.image(chaveArte(def), def.arte);
+      this.load.once(Phaser.Loader.Events.COMPLETE, () => this.carregarPista(i));
+      this.load.start();
+      return;
+    }
+    const anterior = PISTAS[this.pistaAtual];
+    this.pistaAtual = i;
+    this.carregando = false;
     this.pista = criarPista(this, def, 'pista');
     this.fundo?.destroy();
-    this.fundo = this.add.image(0, 0, 'pista').setOrigin(0, 0).setDepth(0);
+    if (anterior?.arte && anterior !== def && this.textures.exists(chaveArte(anterior))) this.textures.remove(chaveArte(anterior));
+    this.fundo = (def.arte
+      ? this.add.image(0, 0, chaveArte(def)).setScale(def.escala ?? 1) // arte da equipe ampliada sem suavizar (pixelArt)
+      : this.add.image(0, 0, 'pista')).setOrigin(0, 0).setDepth(0);
+    this.minimapa?.usarPista(this.pista, def.arte ? chaveArte(def) : 'pista');
+    const prop = def.largura / ASFALTO_REF;
+    const faixa = Math.round(FAIXA * prop);
+    this.desvioMax = DESVIO_MAX * prop;
     const am = this.pista.amostras;
     const n = am.length;
     // grade de largada: 2 fileiras atrás da linha; o jogador sai na fileira da frente, à direita
@@ -235,7 +354,19 @@ export class PlayScene extends Phaser.Scene {
       return { x: a.x - Math.sin(a.ang) * lateral, y: a.y + Math.cos(a.ang) * lateral, ang: a.ang, vx: 0, vy: 0 };
     };
     // grade de largada: 2 carros por fileira; o jogador sai em 6º
-    const slot = (k: number) => ({ passos: 10 + FILA_PASSOS * Math.floor(k / 2) + (k % 2 === 0 ? 0 : 5), lateral: k % 2 === 0 ? -FAIXA : FAIXA });
+    const slotPadrao = (k: number) => ({ passos: 10 + FILA_PASSOS * Math.floor(k / 2) + (k % 2 === 0 ? 0 : 5), lateral: k % 2 === 0 ? -faixa : faixa });
+    // grid desenhado na arte: cada carro na sua marca (amostra mais próxima no fim da volta e distância ao centro)
+    const slotDaArte = (k: number) => {
+      const [gx, gy] = def.grade![k]!;
+      let melhor = n - 1, dm = Infinity;
+      for (let j = Math.floor(n * 0.75); j < n; j++) {
+        const d = (am[j]!.x - gx) ** 2 + (am[j]!.y - gy) ** 2;
+        if (d < dm) { dm = d; melhor = j; }
+      }
+      const a = am[melhor]!;
+      return { passos: n - melhor, lateral: -(gx - a.x) * Math.sin(a.ang) + (gy - a.y) * Math.cos(a.ang) };
+    };
+    const slot = (k: number) => (def.grade && def.grade.length > k ? slotDaArte(k) : slotPadrao(k));
     const meuSlot = slot(SLOT_JOGADOR);
     this.carro = posicao(meuSlot.passos, meuSlot.lateral);
     this.indice = n - meuSlot.passos;
@@ -246,15 +377,18 @@ export class PlayScene extends Phaser.Scene {
     this.ultimoGolpe = 0;
     this.posicaoAtual = 1;
     this.sprite?.destroy();
-    this.sprite = this.add.image(0, 0, 'carro', 0);
+    this.sprite = this.add.image(0, 0, `hd_${CARRO_JOGADOR}`).setScale(ESCALA_HD);
     this.rivais.forEach((r) => r.sprite.destroy());
+    this.sombras.forEach((s) => s.destroy());
+    // sombra de cada carro (a mesma imagem, escura e transparente, um pouco deslocada)
+    this.sombras = Array.from({ length: RIVAIS.length + 1 }, () => this.add.image(0, 0, `hd_${CARRO_JOGADOR}`).setScale(ESCALA_HD).setTint(0x000000).setAlpha(0.3));
     this.rivais = RIVAIS.map((r, i) => {
       const k = i < SLOT_JOGADOR ? i : i + 1; // pula o slot do jogador
       const { passos, lateral } = slot(k);
       return {
         nome: r.nome,
         carro: posicao(passos, lateral),
-        sprite: this.add.image(0, 0, r.chave, 0),
+        sprite: this.add.image(0, 0, `hd_${r.nome}`).setScale(ESCALA_HD),
         indice: n - passos,
         lateral,
         habilidade: r.habilidade,
@@ -290,11 +424,13 @@ export class PlayScene extends Phaser.Scene {
   }
 
   update(_t: number, delta: number): void {
+    if (this.carregando || !this.pista) return;
     const dt = Math.min(delta, 50) / 1000;
     const k = this.keys;
     let giro = (k.right.isDown || k.d.isDown ? 1 : 0) - (k.left.isDown || k.a.isDown ? 1 : 0);
     if (giro === 0) giro = this.giroToque;
     const freio = this.fim || k.down.isDown || k.s.isDown;
+    const acelera = !this.fim && (k.up.isDown || k.w.isDown || this.dedoPedal !== null);
     if (this.fim) giro = 0;
     if (!this.fim && Phaser.Input.Keyboard.JustDown(k.space)) this.ativarTurbo();
 
@@ -319,7 +455,7 @@ export class PlayScene extends Phaser.Scene {
       if (atras) atras.ataqueMs = DURACAO_ATAQUE_MS;
     }
 
-    andarCarro(c, { giro, freio }, this.pista.superficie(c.x, c.y), dt, teto);
+    andarCarro(c, { giro, freio, acelera }, this.pista.superficie(c.x, c.y), dt, teto);
 
     for (const r of this.rivais) {
       r.indice = amostraMaisProxima(this.pista.amostras, r.carro.x, r.carro.y, r.indice);
@@ -335,7 +471,7 @@ export class PlayScene extends Phaser.Scene {
         // não anda sempre reto: sorteia um desvio de até ±10 px do centro da faixa e vai até ele aos poucos
         r.trocaMs -= delta;
         if (r.trocaMs <= 0) {
-          r.alvoDesvio = (Math.random() * 2 - 1) * DESVIO_MAX;
+          r.alvoDesvio = (Math.random() * 2 - 1) * this.desvioMax;
           r.trocaMs = 900 + Math.random() * 1600;
         }
         r.desvioAtual += (r.alvoDesvio - r.desvioAtual) * Math.min(1, dt * 1.6);
@@ -385,6 +521,7 @@ export class PlayScene extends Phaser.Scene {
     const meu = this.progJogador.atualizar(this.indice);
     const posicao = 1 + this.rivais.filter((r) => r.prog.valor() > meu).length;
     this.posicaoAtual = posicao;
+    this.atualizarMinimapa(delta, meu);
     if (!this.fim && this.voltas.voltas >= VOLTAS_TOTAIS) this.terminar(posicao);
 
     // quando o rodopio acaba, o carro volta a apontar na direção da pista
@@ -414,33 +551,32 @@ export class PlayScene extends Phaser.Scene {
     this.camRot = rot;
 
     // posição em pixels inteiros; ordenação pelo ponto de contato com o chão (y do carro)
-    const visuais = [{ car: c, spr: this.sprite, chave: 'carro' }, ...this.rivais.map((r) => ({ car: r.carro, spr: r.sprite, chave: r.chave }))];
-    visuais.forEach(({ car, spr, chave }, i) => {
+    const visuais = [{ car: c, spr: this.sprite, nome: CARRO_JOGADOR }, ...this.rivais.map((r) => ({ car: r.carro, spr: r.sprite, nome: r.nome }))];
+    visuais.forEach(({ car, spr, nome }, i) => {
+      const chave = `hd_${nome}`;
       const arco = (car.arcoMs ?? 0) > 0;
-      const chaveAtual = arco ? 'carro_branco' : chave;
+      if (spr.scale !== ESCALA_HD) spr.setScale(ESCALA_HD);
+      this.sombras[i]?.setVisible(true);
+      const chaveAtual = arco ? 'hd_arco' : chave;
       if (spr.texture.key !== chaveAtual) spr.setTexture(chaveAtual);
       // arco-íris: o carro (versão branca) muda de cor em degradê
       if (arco) spr.setTint(Phaser.Display.Color.HSVToRGB(((this.tempoCorrida / 700) + i * 0.09) % 1, 0.9, 1).color);
       else spr.clearTint();
-      spr.setPosition(Math.round(car.x), Math.round(car.y));
-      spr.setFrame(quadroDoAngulo(car.ang + rot));
-      spr.setRotation(-rot);
+      // posição sem arredondar (a arte detalhada desliza suave; a de pixels precisava de pixels inteiros)
+      spr.setPosition(car.x, car.y);
+      spr.setRotation(car.ang);
       spr.setDepth(1 + Math.round(car.y));
+      const sombra = this.sombras[i];
+      if (sombra) {
+        if (sombra.texture.key !== chaveAtual) sombra.setTexture(chaveAtual);
+        // sombra para baixo e à direita na tela, também com a câmera girando
+        sombra.setPosition(car.x + 2 * Math.cos(rot) + 3 * Math.sin(rot), car.y + 3 * Math.cos(rot) - 2 * Math.sin(rot)).setRotation(car.ang).setDepth(0.5);
+      }
       // pisca enquanto está sendo jogado para fora (vai reaparecer na pista)
       const piscaMeteoro = car.reaparecer && ESTA_RODANDO(car);
       const piscaRoleta = i === 0 && this.roletaMs > 0;
       spr.setAlpha((piscaMeteoro || piscaRoleta) && Math.floor(this.tempoCorrida / 90) % 2 ? 0.35 : 1);
-      // turbo: chama azul saindo pela traseira
-      const chama = this.chamas[i]!;
-      const ligado = (car.turboMs ?? 0) > 0 && !ESTA_RODANDO(car);
-      chama.setVisible(ligado);
-      if (ligado) {
-        chama
-          .setTexture(`chama${Math.floor(this.tempoCorrida / 60) % 2}`)
-          .setPosition(Math.round(car.x - Math.cos(car.ang) * 20), Math.round(car.y - Math.sin(car.ang) * 20) - 4)
-          .setRotation(car.ang)
-          .setDepth(spr.depth + 0.1);
-      }
+      this.mostrarChama(i, car, spr.depth);
     });
 
     // marcador sempre acima do carro do jogador, com leve sobe e desce (pixels inteiros)
@@ -496,7 +632,7 @@ Volta ${Math.min(v.voltas + 1, VOLTAS_TOTAIS)}/${VOLTAS_TOTAIS}   ${formatarTemp
 Posição ${posicao}/${this.rivais.length + 1}`);
     this.hud2.setText(`${Math.round(velocidade(c))} px/s
 Melhor ${v.melhor === null ? '--' : formatarTempo(v.melhor)}${fechou ? '  NOVA VOLTA' : ''}
-${this.livre ? '[N] [P] pista  ' : ''}[R] reiniciar  ↓ freia`);
+${this.livre ? '[N] [P] pista  ' : ''}[R] reiniciar  ↑ acelera  ↓ freia`);
   }
 
   private mostrarAviso(texto: string): void {
@@ -625,7 +761,9 @@ ${this.livre ? '[N] [P] pista  ' : ''}[R] reiniciar  ↓ freia`);
 
   /** Zoom inteiro conforme a altura da janela (arte nítida) e tamanho da interface proporcional. Roda no início e ao redimensionar. */
   private recalcular(): void {
-    const base = Math.max(1, Math.round(Math.min(this.H / ALTURA_ARTE, this.W / LARGURA_ARTE)));
+    // zoom quebrado (não arredonda): o inteiro afastava a câmera em medidas bem diferentes conforme a tela, e o zoom já
+    // fica quebrado a partir da 2ª volta (ZOOM_POR_VOLTA); a pista da equipe e os carros detalhados aguentam bem
+    const base = Math.max(1, Math.min(this.H / ALTURA_ARTE, this.W / LARGURA_ARTE));
     this.zoomBase = base;
     this.zoomAtual = this.zoomDe = this.zoomPara = base * ZOOM_POR_VOLTA ** this.voltasDoZoom;
     this.zoomT = ZOOM_TRANSICAO_MS;
@@ -655,6 +793,35 @@ ${this.livre ? '[N] [P] pista  ' : ''}[R] reiniciar  ↓ freia`);
       obj.setScale((obj instanceof Phaser.GameObjects.Image ? mult * k : mult) / z).setRotation(-rot);
       obj.setPosition(this.W / 2 + px * cos - py * sin, this.H / 2 + px * sin + py * cos);
     }
+  }
+
+  /** Turbo: chama azul saindo pela traseira do carro `i`. */
+  private mostrarChama(i: number, car: Carro, depth: number): void {
+    const chama = this.chamas[i]!;
+    const ligado = (car.turboMs ?? 0) > 0 && !ESTA_RODANDO(car);
+    chama.setVisible(ligado);
+    if (ligado) {
+      chama
+        .setTexture(`chama${Math.floor(this.tempoCorrida / 60) % 2}`)
+        .setPosition(Math.round(car.x - Math.cos(car.ang) * 20), Math.round(car.y - Math.sin(car.ang) * 20) - 4)
+        .setRotation(car.ang)
+        .setDepth(depth + 0.1);
+    }
+  }
+
+  /** O ponto (x, y) da tela está sobre o pedal? (área um pouco maior que o desenho, para acertar fácil) */
+  private noPedal(x: number, y: number): boolean {
+    const k = this.H / ALTURA_REFERENCIA_UI;
+    return Math.hypot(x - PEDAL_DX * k, y - (this.H + PEDAL_DY * k)) < PEDAL * 0.6 * k;
+  }
+
+  /** Minimapa: carros (jogador com seta, líder com anel) e itens na pista. */
+  private atualizarMinimapa(delta: number, meuProgresso: number): void {
+    let lider: Rival | null = null;
+    for (const r of this.rivais) if (r.prog.valor() > meuProgresso && (!lider || r.prog.valor() > lider.prog.valor())) lider = r;
+    const pontos: PontoMapa[] = this.rivais.map((r) => ({ x: r.carro.x, y: r.carro.y, ang: r.carro.ang, cor: COR_NO_MAPA[r.nome] ?? '#ffffff', lider: r === lider }));
+    pontos.push({ x: this.carro.x, y: this.carro.y, ang: this.carro.ang, cor: COR_NO_MAPA[CARRO_JOGADOR]!, jogador: true, lider: lider === null });
+    this.minimapa.atualizar(delta, pontos, this.itens?.marcadores() ?? []);
   }
 
   /** Limites da câmera: só na vista fixa (a vista girando pode mostrar além da borda da pista). */

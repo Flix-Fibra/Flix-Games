@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
 import { amostrarPista, type Amostra, type Pt, type Superficie } from './logic';
+import { PISTAS_ARTE } from './pistasDados';
 
 /**
  * Pistas. Cada uma é só uma linha central fechada (pontos de controle); o resto sai dela:
@@ -11,7 +12,8 @@ export type Tema = 'gramado' | 'pneus' | 'obra' | 'cidade' | 'lago';
 export interface PistaDef {
   id: string;
   nome: string;
-  tema: Tema;
+  /** Tema do cenário pintado por código (pista sem arte). */
+  tema?: Tema;
   w: number;
   h: number;
   /** Largura do asfalto (px). O carro tem 41 px de comprimento (a pista tem 2,3 carros de largura). */
@@ -19,9 +21,18 @@ export interface PistaDef {
   pontos: readonly Pt[];
   /** A pista cruza com ela mesma (como o oito de Suzuka). */
   cruza?: boolean;
+  /**
+   * Arte da equipe (cenário inteiro num PNG, carregado no preload com a chave `pista_<id>`): o jogo só amplia a imagem
+   * `escala` vezes, sem suavizar. Sem arte, a pista é pintada por código a partir do `tema`.
+   */
+  arte?: string;
+  escala?: number;
+  /** Grid de largada desenhado na arte: posição de cada carro (1º ao 11º). Sem ele, o jogo monta o grid sozinho. */
+  grade?: readonly Pt[];
 }
 
-const PISTAS_BASE: readonly PistaDef[] = [
+/** Pistas antigas, pintadas por código (fora do jogo desde as pistas da equipe; ficam como referência de tema). */
+export const PISTAS_PINTADAS: readonly PistaDef[] = [
   {
     id: 'melbourne',
     nome: 'Melbourne',
@@ -241,14 +252,14 @@ const PISTAS_BASE: readonly PistaDef[] = [
   },
 ];
 
-/** Os traçados abaixo são desenhados numa caixa de 1000 x 625 e ampliados para o mundo (2800 x 1750), com a largura do asfalto fixa em 94 px. Assim as curvas ficam abertas e a volta, longa. */
-const ESCALA = 2.8;
-export const PISTAS: readonly PistaDef[] = PISTAS_BASE.map((p) => ({
-  ...p,
-  w: Math.round(p.w * ESCALA),
-  h: Math.round(p.h * ESCALA),
-  pontos: p.pontos.map(([x, y]) => [Math.round(x * ESCALA), Math.round(y * ESCALA)] as const),
-}));
+/**
+ * As 24 pistas do jogo: arte e traçado da equipe (assets/jogos/corrida/pistas), na ordem do pôster, preparados por
+ * scripts/corrida/montar_pistas.py (linha central, largura e mundo já ampliados 4x).
+ */
+export const PISTAS: readonly PistaDef[] = PISTAS_ARTE;
+
+/** Chave da textura da arte da pista. */
+export const chaveArte = (def: PistaDef): string => `pista_${def.id}`;
 
 const ZEBRA = 5; // largura da zebra de cada lado
 const AREIA = 16; // largura da faixa de areia depois da zebra
@@ -350,8 +361,56 @@ function disco(g: CanvasRenderingContext2D, cx: number, cy: number, r: number, c
   }
 }
 
-/** Pinta a pista na textura `chave` e devolve a geometria e o mapa de superfície. */
+/**
+ * Pista com arte da equipe: a imagem já está carregada (`chaveArte`); aqui só sai o mapa de superfície, da geometria
+ * (linha central e largura), na resolução da imagem (1 célula = `escala` px do mundo): asfalto, zebra, areia, grama.
+ */
+function criarPistaDeArte(def: PistaDef): PistaPronta {
+  const am = amostrarPista(def.pontos);
+  const k = def.escala ?? 1;
+  const mw = Math.ceil(def.w / k), mh = Math.ceil(def.h / k);
+  const cv = document.createElement('canvas');
+  cv.width = mw;
+  cv.height = mh;
+  const g = cv.getContext('2d', { willReadFrequently: true })!;
+  g.fillStyle = '#000';
+  g.fillRect(0, 0, mw, mh);
+  g.lineJoin = 'round';
+  g.lineCap = 'round';
+  const tracar = (largura: number, cor: string) => {
+    g.beginPath();
+    am.forEach((a, i) => (i ? g.lineTo(a.x / k, a.y / k) : g.moveTo(a.x / k, a.y / k)));
+    g.closePath();
+    g.strokeStyle = cor;
+    g.lineWidth = largura / k;
+    g.stroke();
+  };
+  const L = def.largura;
+  tracar(L + 2 * (ZEBRA + AREIA), '#0000ff'); // areia
+  tracar(L + 2 * ZEBRA, '#00ff00'); // zebra
+  tracar(L, '#ff0000'); // asfalto
+  const d = g.getImageData(0, 0, mw, mh).data;
+  const mapa = new Uint8Array(mw * mh); // 0 grama, 1 asfalto, 2 zebra, 3 areia (a cor mais forte da célula vence)
+  for (let i = 0; i < mw * mh; i++) {
+    const r = d[i * 4]!, gg = d[i * 4 + 1]!, b = d[i * 4 + 2]!;
+    const m = Math.max(r, gg, b);
+    mapa[i] = m < 100 ? 0 : m === r ? 1 : m === gg ? 2 : 3;
+  }
+  const sup: Superficie[] = ['grama', 'asfalto', 'zebra', 'areia'];
+  return {
+    def,
+    amostras: am,
+    superficie: (x, y) => {
+      const xx = Math.floor(x / k), yy = Math.floor(y / k);
+      if (xx < 0 || yy < 0 || xx >= mw || yy >= mh) return 'grama';
+      return sup[mapa[yy * mw + xx]!]!;
+    },
+  };
+}
+
+/** Pinta a pista na textura `chave` e devolve a geometria e o mapa de superfície (pista com arte: só o mapa). */
 export function criarPista(scene: Phaser.Scene, def: PistaDef, chave: string): PistaPronta {
+  if (def.arte) return criarPistaDeArte(def);
   const am = amostrarPista(def.pontos);
   const cv = document.createElement('canvas');
   cv.width = def.w;
@@ -360,7 +419,8 @@ export function criarPista(scene: Phaser.Scene, def: PistaDef, chave: string): P
   const rand = rng(def.id.length * 7919 + def.w);
 
   // grama com manchas
-  const T = TEMAS[def.tema];
+  const tema = def.tema ?? 'gramado';
+  const T = TEMAS[tema];
   g.fillStyle = rgb(T.chao[0]);
   g.fillRect(0, 0, def.w, def.h);
   for (let i = 0; i < (def.w * def.h) / 70; i++) {
@@ -476,7 +536,7 @@ export function criarPista(scene: Phaser.Scene, def: PistaDef, chave: string): P
     g.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
   };
   const distBorda = L / 2 + ZEBRA + AREIA + 4;
-  if (def.tema === 'cidade') {
+  if (tema === 'cidade') {
     // quarteirões: prédios vistos de cima (telhado, sombra e caixas de ar), com algumas árvores pequenas nas calçadas
     const telhados: Cor[] = ['telhado', 'telhado2', 'telhadoVerm', 'telhadoAzul', 'telhado'];
     for (let i = 0; i < 420; i++) {
@@ -496,7 +556,7 @@ export function criarPista(scene: Phaser.Scene, def: PistaDef, chave: string): P
       const x = 12 + rand() * (def.w - 24), y = 12 + rand() * (def.h - 24);
       if (livre(x, y, 8)) arvore(x, y, 4);
     }
-  } else if (def.tema === 'obra') {
+  } else if (tema === 'obra') {
     // cones ao longo da pista e carretéis de cabo no canteiro
     for (let i = 0; i < am.length; i += 5) {
       const a = am[i]!;
@@ -524,7 +584,7 @@ export function criarPista(scene: Phaser.Scene, def: PistaDef, chave: string): P
         disco(g, x - 1, y - 1, 3, 'terra2');
       }
     }
-  } else if (def.tema === 'lago') {
+  } else if (tema === 'lago') {
     // lagos (água com margem de areia) e árvores
     for (let i = 0; i < 40; i++) {
       const rx = 30 + rand() * 50, ry = 20 + rand() * 30;
@@ -543,7 +603,7 @@ export function criarPista(scene: Phaser.Scene, def: PistaDef, chave: string): P
       const r = 5 + Math.floor(rand() * 4);
       if (livre(x, y, r + 5)) arvore(x, y, r);
     }
-  } else if (def.tema === 'gramado') {
+  } else if (tema === 'gramado') {
     for (let i = 0; i < 260; i++) {
       const x = 12 + rand() * (def.w - 24), y = 12 + rand() * (def.h - 24);
       const r = 5 + Math.floor(rand() * 4);
