@@ -621,6 +621,10 @@ header{padding-bottom:1px} /* a linha de 1 px (transparente no topo, visível ao
 .gx-capa-img{display:block;width:86%;height:86%;object-fit:contain;filter:drop-shadow(0 6px 14px rgba(0,0,0,.35));user-select:none}
 .gx-cartao-capa .gx-capa-img{width:84%;height:84%}
 .gx-mini .gx-capa-img{width:100%;height:100%;filter:none}
+/* Capa "cheia" (arquivo terminado em -cheia): arte quadrada que preenche o card inteiro, sem margem nem sombra */
+.gx-capa-img.gx-capa-cheia,.gx-cartao-capa .gx-capa-img.gx-capa-cheia,.gx-detalhe-capa .gx-capa-img.gx-capa-cheia,.gx-lanca-capa .gx-capa-img.gx-capa-cheia,
+.gx-mini .gx-capa-img.gx-capa-cheia,.gx-tile-arte .gx-capa-img.gx-capa-cheia{width:100%;height:100%;object-fit:cover;filter:none;border-radius:inherit}
+.gx-cartao-capa:has(.gx-capa-cheia),.gx-detalhe-capa:has(.gx-capa-cheia),.gx-mini:has(.gx-capa-cheia),.gx-tile-arte:has(.gx-capa-cheia){overflow:hidden}
 
 /* =====================================================================
    Tipografia do flixfibra.com.br (medida no site em 17/11/2026)

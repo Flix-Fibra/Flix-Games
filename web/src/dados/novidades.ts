@@ -48,7 +48,7 @@ export const NOVIDADES: Novidade[] = [
     texto: 'Visuais desenhados pela equipe Flix: 37 combinações de corpo e cabelo para montar o seu personagem.',
   },
   { data: '2026-11-18', tipo: 'jogo', jogoId: 'g14', titulo: 'Signal Drop chegou' },
-  { data: '2026-11-18', tipo: 'jogo', jogoId: 'g01', titulo: 'Flix Runner chegou' },
+  { data: '2026-11-18', tipo: 'jogo', jogoId: 'g01', titulo: 'Network Runner chegou' },
   {
     data: '2026-11-18',
     tipo: 'plataforma',

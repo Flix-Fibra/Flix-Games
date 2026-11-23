@@ -24,6 +24,12 @@ interface Rival {
   desvioAtual: number;
   alvoDesvio: number;
   trocaMs: number;
+  /** Faixa (px do centro da pista) em que o rival está andando agora; vai até o alvo aos poucos. */
+  faixaAtual: number;
+  /** Colado atrás do jogador (na faixa dele). */
+  seguindo: boolean;
+  /** Atento: freia se o jogador freia na frente dele (não cai no break check). Sorteado cada vez que ele passa a seguir. */
+  atento: boolean;
 }
 
 /** Cores dos adversários (o jogador é o vermelho Flix). A habilidade cai da frente para o fundo do grid. */
@@ -48,6 +54,14 @@ const ZOOM_TRANSICAO_MS = 1000;
 const VISTA_A_FRENTE_PX = 55;
 /** A rotação da câmera acompanha o carro com atraso (constante de tempo, s): as curvas ficam suaves e o carro inclina um pouco nelas. */
 const VISTA_SUAVIDADE_S = 0.25;
+/**
+ * Break check: um rival que fica logo atrás do jogador passa a seguir a faixa dele (colado) e, se não estiver atento, não
+ * freia quando o jogador freia na frente: ele bate por trás e quem bate por trás rodopia.
+ */
+const SEGUIR_MIN_PX = 20;
+const SEGUIR_MAX_PX = 150;
+const SEGUIR_LATERAL_PX = 45;
+const CHANCE_ATENTO = 0.3;
 const RAIO_CARRO = 9.5;
 /** Tempo (ms) que a roleta gira antes de mostrar o resultado, e que o resultado fica na tela. */
 const ROLETA_GIRO_MS = 2000;
@@ -251,6 +265,9 @@ export class PlayScene extends Phaser.Scene {
         desvioAtual: 0,
         alvoDesvio: 0,
         trocaMs: Math.random() * 2000,
+        faixaAtual: lateral,
+        seguindo: false,
+        atento: false,
       };
     });
     this.itens?.destruir();
@@ -322,9 +339,21 @@ export class PlayScene extends Phaser.Scene {
           r.trocaMs = 900 + Math.random() * 1600;
         }
         r.desvioAtual += (r.alvoDesvio - r.desvioAtual) * Math.min(1, dt * 1.6);
-        const desvio = evitar(r.carro, this.rivais.map((o) => o.carro), r.lateral + r.desvioAtual);
+        // colado atrás do jogador: segue a faixa dele (é assim que dá para fazer break check)
+        const ref = this.pista.amostras[r.indice]!;
+        const latJogador = Phaser.Math.Clamp((c.x - ref.x) * -Math.sin(ref.ang) + (c.y - ref.y) * Math.cos(ref.ang), -32, 32);
+        const atras = (meuProg - r.prog.valor()) * PASSO_AMOSTRA;
+        const seguir = !this.fim && !ESTA_RODANDO(c) && atras > SEGUIR_MIN_PX && atras < SEGUIR_MAX_PX && Math.abs(latJogador - r.faixaAtual) < SEGUIR_LATERAL_PX;
+        if (seguir && !r.seguindo) r.atento = Math.random() < CHANCE_ATENTO;
+        r.seguindo = seguir;
+        const alvoFaixa = seguir ? latJogador : r.lateral + r.desvioAtual;
+        r.faixaAtual += (alvoFaixa - r.faixaAtual) * Math.min(1, dt * 3);
+        const desvio = evitar(r.carro, this.rivais.map((o) => o.carro), r.faixaAtual);
         const cmd = controlarIA(r.carro, this.pista.amostras, r.indice, desvio.lateral);
-        andarCarro(r.carro, { giro: cmd.giro, freio: cmd.freio || desvio.freio }, sup, dt, teto * r.habilidade * reforco);
+        // rival atento freia quando está chegando rápido demais no jogador
+        const fechando = velocidade(r.carro) - velocidade(c);
+        const freiaPeloJogador = r.seguindo && r.atento && atras < 70 && fechando > 25;
+        andarCarro(r.carro, { giro: cmd.giro, freio: cmd.freio || desvio.freio || freiaPeloJogador }, sup, dt, teto * r.habilidade * reforco);
       }
       r.prog.atualizar(r.indice);
     }
@@ -341,6 +370,8 @@ export class PlayScene extends Phaser.Scene {
         const agressor = A.rival && A.rival.ataqueMs > 0 && B.car === c ? A.car : B.rival && B.rival.ataqueMs > 0 && A.car === c ? B.car : undefined;
         const bt = batida(A.car, B.car, RAIO_CARRO, agressor);
         if (bt && (A.car === c || B.car === c)) this.jogadorBateu = bt.atacante === c && !agressor;
+        // o jogador freou na frente de um rival e ele bateu por trás e rodou: break check
+        if (bt && !agressor && bt.vitima === c && ESTA_RODANDO(bt.atacante) && (k.down.isDown || k.s.isDown)) this.mostrarAviso('BREAK CHECK!');
         if (bt && agressor) (agressor === A.car ? A : B).rival!.ataqueMs = 0;
       }
     }

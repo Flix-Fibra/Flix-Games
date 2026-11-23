@@ -46,7 +46,9 @@ export function urlDaPrevia(jogo: Jogo): string | null {
 /** Capa do jogo (imagem que vem do próprio jogo); sem capa, o ícone desenhado. */
 export function CapaJogo({ jogo }: { jogo: Jogo }) {
   const url = urlDaCapa(jogo);
-  return url ? <img className="gx-capa-img" src={url} alt="" loading="lazy" decoding="async" draggable={false} /> : <IconeJogo id={jogo.id} />;
+  // capa cujo arquivo termina em "-cheia" (ex.: capa-cheia.png) preenche o quadrado todo, em vez de ficar com margem
+  const cheia = /-cheia\.[a-z]+$/.test(jogo.capa ?? '');
+  return url ? <img className={'gx-capa-img' + (cheia ? ' gx-capa-cheia' : '')} src={url} alt="" loading="lazy" decoding="async" draggable={false} /> : <IconeJogo id={jogo.id} />;
 }
 
 /** Quadradinho colorido com a capa do jogo */

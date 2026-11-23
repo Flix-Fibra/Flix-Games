@@ -1,6 +1,6 @@
 # G12 — Corrida Flix (em desenvolvimento)
 
-Corrida top-down em pixel art. Esta primeira entrega tem o **modelo do carro** (sprite stacking) e **2 pistas** , com um carro dirigível para conferir o visual e o tamanho. Há 10 adversários com IA (azul, amarelo, verde, laranja, roxo, ciano, rosa, branco, cinza e marrom) e classificação em tempo real. Ainda não há tela de menu nem envio de tempo ao hub; o jogo não está no catálogo (`game.json` sem `"catalogo"`).
+Corrida top-down em pixel art. Esta primeira entrega tem o **modelo do carro** (sprite stacking) e **2 pistas** , com um carro dirigível para conferir o visual e o tamanho. Há 10 adversários com IA (azul, amarelo, verde, laranja, roxo, ciano, rosa, branco, cinza e marrom) e classificação em tempo real. Ainda não há tela de menu nem envio de tempo ao hub; o jogo está no catálogo do hub como **g12** (`game.json` com `"catalogo"` e capa provisória `public/img/capa.png`, o carro visto de cima, gerada por `tools`-script fora do repositório a partir do mesmo modelo de fatias).
 
 ```bash
 npm run dev:corrida     # abra http://localhost:5173/ (porta que o Vite mostrar)
@@ -45,3 +45,7 @@ Desativada por padrão (a visão padrão é fixa, de cima; a tecla **V** liga es
 ## Campeonato
 
 No começo do jogo a **ordem das 24 pistas é sorteada**. O jogador só passa para a próxima pista se terminar a corrida **entre os 6 primeiros** (`LIMITE_CLASSIFICACAO`); fora disso, repete a mesma pista. Depois da 24ª, o campeonato recomeça com nova ordem. O HUD mostra "pista X/24". Lógica pura em `logic.ts` (`embaralhar`, `classificou`, `proximaEtapa`), testada. [H] Enquanto não houver integração com o hub, a ordem e o progresso valem só na sessão (recarregar a página sorteia de novo e volta à pista 1).
+
+## Break check
+
+Frear na frente de um rival faz ele bater por trás e rodar (a regra de "quem bate por trás desliza"). Para isso o rival que fica logo atrás do jogador (de 20 a 150 px) **passa a seguir a faixa dele, colado**; se ele estiver desatento não freia quando você freia. 30% dos rivais, sorteados cada vez que passam a seguir, são **atentos** e freiam junto (não caem). Quando um rival rola assim aparece "BREAK CHECK!" na tela. Parâmetros no topo de `PlayScene.ts` (`SEGUIR_*`, `CHANCE_ATENTO`).

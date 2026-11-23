@@ -1,9 +1,13 @@
 {
   "id": "corrida",
+  "catalogo": "g12",
   "name": "Corrida Flix",
-  "_nome_de_trabalho": "G12. Validar o nome com o marketing e o jurídico antes de publicar. Sem a chave \"catalogo\" até o jogo estar jogável: assim `npm run catalogo` ainda não o põe no hub.",
+  "capa": "img/capa.png",
+  "_nome_de_trabalho": "G12. Nome de trabalho: validar com o marketing e o jurídico antes de publicar (os circuitos e cidades vêm do pôster da temporada 2026). Ícone provisório: o carro visto de cima.",
   "avatarTier": "B",
-  "avatarViews": ["portrait"],
+  "avatarViews": [
+    "portrait"
+  ],
   "rankingMetric": "lap_time",
   "sdkVersion": "0.1.0"
 }

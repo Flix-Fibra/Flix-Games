@@ -12,7 +12,8 @@
  * Campos do game.json usados:
  *   "catalogo": "g03"            id do jogo no catálogo (obrigatório para sincronizar)
  *   "name":     "Network Snake"  nome mostrado na plataforma
- *   "capa":     "img/logo.png"   imagem dentro da pasta do jogo (em public/ ou na raiz), quadrada de preferência
+ *   "capa":     "img/logo.png"   imagem dentro da pasta do jogo (em public/ ou na raiz), quadrada de preferência.
+ *                                Se o nome do arquivo terminar em "-cheia" (ex.: img/capa-cheia.png), a capa preenche o card todo (arte opaca e quadrada)
  *   "cores":    ["#5B12D6", "#1C037C"]  opcional: cor do card (degradê de cima para baixo), em #rrggbb
  *   "previa":   "img/previa.webp"  opcional: animação curta (WebP ou GIF, sem som) do jogo em ação, na galeria da página "Ver"
  *   "imagens":  ["img/telas/tela-1.webp", ...]  opcional: até 8 telas do jogo (png, jpg ou webp), na mesma galeria
