@@ -6,7 +6,8 @@ import { useEffect, useRef } from 'react';
  * com intensidade baixa, forte no alto e sumindo para o meio da tela. Sem textura nem faixas de brilho.
  *
  * Cuidados de desempenho: desenha em 1/4 da resolução CSS e a 30 quadros/s; pausa com a aba em segundo plano, com o
- * topo fora da tela, com um jogo aberto (`pausado`) e no tema claro; respeita "reduzir movimento" (um quadro parado).
+ * topo fora da tela e no tema claro; com um jogo aberto (`pausado`), o laço para de vez (nem pede quadro) e volta ao
+ * fechar; respeita "reduzir movimento" (um quadro parado).
  * Sem WebGL, o CSS mantém as manchas animadas (classe "plasma" só entra quando o WebGL funciona).
  *
  * Sem `filter: blur()` no canvas (medido em 18/11/2026 num Mac Intel HD 630, tela Retina): o desfoque CSS de 36 px
@@ -67,6 +68,9 @@ export function FundoPlasma({ pausado }: { pausado: boolean }) {
   const caixa = useRef<HTMLDivElement>(null);
   const pausa = useRef(pausado);
   pausa.current = pausado;
+  // Religa o laço de desenho ao fechar o jogo (com o jogo aberto ele para de vez, sem acordar a cada quadro)
+  const retomar = useRef<(() => void) | null>(null);
+  useEffect(() => { if (!pausado) retomar.current?.(); }, [pausado]);
 
   useEffect(() => {
     const div = caixa.current;
@@ -150,8 +154,9 @@ export function FundoPlasma({ pausado }: { pausado: boolean }) {
     let tempo = 7; // começa já "misturado"
     let proximaLeitura = 0;
     const desenhar = (agora: number) => {
+      if (pausa.current) { quadro = 0; return; } // jogo aberto: não pede o próximo quadro (custo zero até retomar)
       quadro = requestAnimationFrame(desenhar);
-      if (pausa.current || document.hidden || !visivel || document.documentElement.getAttribute('data-theme') !== 'dark') { ultimo = agora; return; }
+      if (document.hidden || !visivel || document.documentElement.getAttribute('data-theme') !== 'dark') { ultimo = agora; return; }
       if (agora - ultimo < INTERVALO_MS - 2) return; // limite de 30 quadros/s (folga de 2 ms para a variação do vsync)
       const dt = Math.min(0.1, (agora - ultimo) / 1000);
       ultimo = agora;
@@ -167,7 +172,9 @@ export function FundoPlasma({ pausado }: { pausado: boolean }) {
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     };
     quadro = requestAnimationFrame(desenhar);
+    retomar.current = () => { if (!quadro) { ultimo = performance.now(); quadro = requestAnimationFrame(desenhar); } };
     return () => {
+      retomar.current = null;
       cancelAnimationFrame(quadro);
       io.disconnect();
       ro.disconnect();

@@ -16,12 +16,21 @@ O jogo roda em um **iframe** do hub e eles conversam por `postMessage`. O jogo *
 ## Hub → jogo
 
 ```ts
-{ source: 'flix-hub', v: 2, type: 'init', avatar: AvatarConfig | null, muted: boolean, locale?: string }
+{ source: 'flix-hub', v: 2, type: 'init', avatar: AvatarConfig | null, personagem?: { retrato: string, corpo: string | null } | null, muted: boolean, locale?: string }
 { source: 'flix-hub', v: 2, type: 'restart' }
 { source: 'flix-hub', v: 2, type: 'pause' }
 { source: 'flix-hub', v: 2, type: 'resume' }
 { source: 'flix-hub', v: 2, type: 'mute', muted: boolean }
 ```
+
+### Personagem do jogador no `init` (SDK 0.2.0, 19/11/2026)
+
+`personagem` é o personagem que o jogador criou no editor da plataforma, **já desenhado pelo hub**: `retrato` (a cabeça, quadrada) e `corpo` (o personagem inteiro, de frente), em PNG como data URL, pixel art (desenhar sem suavizar). `null` ou ausente = o jogador não criou personagem ou escolheu "Sem avatar"; aí o jogo usa o `avatar` (modelo antigo) ou o padrão.
+
+- **Por que imagem pronta, e não a configuração:** o jogo não precisa carregar a arte de todos os visuais nem acompanhar o catálogo do editor; o editor evolui sem mexer nos jogos.
+- **O jogo não busca o personagem na API:** ele roda num iframe isolado, sem acesso à conta, de propósito. O hub entrega; o jogo só desenha.
+- **Expressões:** a arte nova tem uma expressão só. Jogo que troca de expressão (G03: feliz, triste) usa a mesma imagem em todas enquanto houver personagem (decisão do solicitante, 19/11/2026).
+- Campo novo e opcional: jogo que não conhece `personagem` simplesmente o ignora (contrato continua na versão 2).
 
 ## Fluxo
 
@@ -37,6 +46,7 @@ O jogo roda em um **iframe** do hub e eles conversam por `postMessage`. O jogo *
 - O jogo só aceita mensagens com `event.origin` igual ao `hubOrigin` configurado (`?hubOrigin=` na URL) e vindas de `window.parent`. Nunca usa `'*'` como destino.
 - Mensagens sem `source` e `v` esperados são ignoradas.
 - O `AvatarConfig` é validado contra o catálogo; ID desconhecido vira o item padrão.
+- O `personagem` só vale como PNG em data URL de até 300 mil caracteres (`lerPersonagem`, no SDK): endereço externo, outro formato ou imagem grande demais viram `null`.
 - O hub deve tratar a pontuação como **não confiável**: limite de requisições, faixa plausível por jogo e por `durationMs`, e rejeitar `runId` repetido.
 
 ## Testar sem o hub

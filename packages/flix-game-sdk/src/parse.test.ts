@@ -1,11 +1,30 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_AVATAR } from '@flix/avatar';
-import { normalizeScore, parseHubMessage } from './parse';
+import { lerPersonagem, normalizeScore, parseHubMessage } from './parse';
 
 const HUB = 'https://hub.exemplo.test';
 const parent = { id: 'parent' };
 const ev = (data: unknown, origin = HUB, source: unknown = parent) => ({ origin, source, data });
 const base = { source: 'flix-hub', v: 2 };
+
+const PNG = 'data:image/png;base64,iVBORw0KGgo=';
+
+describe('personagem no init (SDK 0.2.0)', () => {
+  it('aceita retrato e corpo em PNG; sem personagem, vem null', () => {
+    const m = parseHubMessage(ev({ ...base, type: 'init', avatar: null, muted: false, personagem: { retrato: PNG, corpo: PNG } }), HUB, parent);
+    expect(m && m.type === 'init' && m.personagem).toEqual({ retrato: PNG, corpo: PNG });
+    const sem = parseHubMessage(ev({ ...base, type: 'init', avatar: null, muted: false }), HUB, parent);
+    expect(sem && sem.type === 'init' && sem.personagem).toBeNull();
+  });
+
+  it('recusa endereço externo, outro formato, imagem grande demais e retrato ausente', () => {
+    expect(lerPersonagem({ retrato: 'https://x.test/a.png' })).toBeNull();
+    expect(lerPersonagem({ retrato: 'data:image/svg+xml;base64,PHN2Zz4=' })).toBeNull();
+    expect(lerPersonagem({ retrato: 'data:image/png;base64,' + 'A'.repeat(300_001) })).toBeNull();
+    expect(lerPersonagem({ corpo: PNG })).toBeNull();
+    expect(lerPersonagem({ retrato: PNG, corpo: 'javascript:alert(1)' })).toEqual({ retrato: PNG, corpo: null });
+  });
+});
 
 describe('parseHubMessage', () => {
   it('aceita mensagens válidas da origem esperada', () => {

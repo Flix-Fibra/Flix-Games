@@ -9,5 +9,5 @@
   "avatarTier": "B",
   "avatarViews": ["portrait"],
   "rankingMetric": "score_timed_120s",
-  "sdkVersion": "0.1.0"
+  "sdkVersion": "0.2.0"
 }

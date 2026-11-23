@@ -1,5 +1,19 @@
 import { sanitizeAvatar } from '@flix/avatar';
-import type { HubToGame } from './types';
+import type { HubToGame, PersonagemImagens } from './types';
+
+// Só PNG em data URL (nada de endereço externo, que vazaria a existência do jogador para outro servidor) e com
+// tamanho limitado: o retrato e o corpo do personagem têm poucos KB.
+const RE_PNG = /^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/;
+const MAX_IMAGEM = 300_000;
+const imagemValida = (v: unknown): v is string => typeof v === 'string' && v.length <= MAX_IMAGEM && RE_PNG.test(v);
+
+/** Personagem do `init`: retrato obrigatório para valer; corpo opcional. Qualquer coisa fora do formato vira null. */
+export function lerPersonagem(v: unknown): PersonagemImagens | null {
+  if (typeof v !== 'object' || v === null) return null;
+  const p = v as Record<string, unknown>;
+  if (!imagemValida(p.retrato)) return null;
+  return { retrato: p.retrato, corpo: imagemValida(p.corpo) ? p.corpo : null };
+}
 
 export interface RawMessageEvent {
   origin: string;
@@ -28,6 +42,7 @@ export function parseHubMessage(
       return {
         type: 'init',
         avatar: sanitizeAvatar(m.avatar),
+        personagem: lerPersonagem(m.personagem),
         muted: m.muted === true,
         locale: typeof m.locale === 'string' ? m.locale : undefined,
       };

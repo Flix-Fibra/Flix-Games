@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ProvedorAviso, useAviso } from './componentes/Aviso';
+import { Congelada } from './componentes/Congelada';
 import { Creditos } from './componentes/Creditos';
 import { Inicio } from './componentes/Inicio';
 import { FundoPlasma } from './componentes/FundoPlasma';
@@ -31,6 +32,11 @@ function Portal() {
   const [jogando, setJogando] = useState<Jogo | null>(null);
   const [lancando, setLancando] = useState<Jogo | null>(null); // animação de abertura do jogo
   const [editorAberto, setEditorAberto] = useState(false); // editor de personagem aberto pelo atalho do Início
+  // Jogo aberto: a plataforma por trás congela (ver componentes/Congelada.ts); a classe pausa as animações de CSS
+  useEffect(() => {
+    document.documentElement.classList.toggle('jogo-aberto', !!jogando);
+    return () => document.documentElement.classList.remove('jogo-aberto');
+  }, [jogando]);
 
   // Abertura: sessão deste aparelho + catálogo. Links diretos: #perfis abre a escolha;
   // #inicio, #ranking e #perfil abrem a aba (se já houver perfil escolhido neste aparelho).
@@ -155,7 +161,9 @@ function Portal() {
     <>
       <FundoPlasma pausado={!!jogando} />
       {perfil && (
-        <>
+        <Congelada.Provider value={!!jogando}>
+        {/* display: contents (não muda o layout); inert: sem foco, clique ou teclado enquanto o jogo está aberto */}
+        <div className="gx-plataforma" inert={!!jogando}>
           <Topo aba={aba} perfil={perfil} onAba={irPara} onTrocarPerfil={() => setQuemAberto(true)} />
           <main>
             {aba === 'inicio' && (
@@ -176,10 +184,11 @@ function Portal() {
           <p className="gx-aviso-prototipo">
             <a href="#creditos">Créditos e Licenças</a> {import.meta.env.DEV && ' · desenvolvimento: conta de teste e dados fictícios'}
           </p>
-        </>
+        </div>
+        </Congelada.Provider>
       )}
       {editorAberto && perfil && <EditorPersonagem perfil={perfil} onSalvo={trocarPerfil} onFechar={() => setEditorAberto(false)} />}
-      {jogando && perfil && <Jogando entrando={!!lancando} jogo={jogando} avatar={perfil.avatar} onFechar={fecharJogo} />}
+      {jogando && perfil && <Jogando entrando={!!lancando} jogo={jogando} avatar={perfil.avatar} personagem={perfil.personagem} onFechar={fecharJogo} />}
       {lancando && <Lancamento jogo={lancando} onFim={() => setLancando(null)} />}
       {(quemAberto || !perfil) && (
         <QuemVaiJogar perfis={perfis} maxPerfis={maxPerfis} cores={cores} atualId={perfilId} onEntrar={entrar} onCriar={criar} onEditar={editarPerfil} onExcluir={excluir} />

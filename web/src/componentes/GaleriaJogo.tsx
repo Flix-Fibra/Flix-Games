@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Jogo } from '../dados/tipos';
+import { usePlataformaCongelada } from './Congelada';
 import { urlDaPrevia, urlNoJogo } from './Icones';
 
 interface Item { src: string; alt: string; animacao: boolean }
@@ -10,6 +11,7 @@ interface Item { src: string; alt: string; animacao: boolean }
  * Com "reduzir movimento", a animação dá lugar à primeira tela parada.
  */
 export function GaleriaJogo({ jogo }: { jogo: Jogo }) {
+  const congelada = usePlataformaCongelada();
   const previa = urlDaPrevia(jogo);
   const telas = (jogo.imagens ?? []).map((c, i) => ({ src: urlNoJogo(jogo, c), alt: `Tela ${i + 1} de ${jogo.nome}`, animacao: false }));
   const itens: Item[] = [...(previa ? [{ src: previa, alt: `${jogo.nome} em ação`, animacao: true }] : []), ...telas];
@@ -46,6 +48,8 @@ export function GaleriaJogo({ jogo }: { jogo: Jogo }) {
     el.scrollBy({ left: dir * passo, behavior: 'smooth' });
   };
   const parada = telas[0]?.src;
+  // Jogo aberto por cima: a animação vira a primeira tela parada (uma imagem WebP animada não pausa por CSS)
+  const srcAnimacao = (src: string) => (congelada && parada ? parada : src);
 
   return (
     <div className="gx-galeria" aria-label={`Imagens de ${jogo.nome}`} role="region">
@@ -55,7 +59,7 @@ export function GaleriaJogo({ jogo }: { jogo: Jogo }) {
             {it.animacao ? (
               <picture>
                 {parada && <source srcSet={parada} media="(prefers-reduced-motion: reduce)" />}
-                <img src={it.src} alt={it.alt} draggable={false} decoding="async" />
+                <img src={srcAnimacao(it.src)} alt={it.alt} draggable={false} decoding="async" />
               </picture>
             ) : (
               <img src={it.src} alt={it.alt} draggable={false} decoding="async" loading="lazy" />
