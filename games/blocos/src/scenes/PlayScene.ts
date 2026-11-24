@@ -153,6 +153,7 @@ export class PlayScene extends Phaser.Scene {
 
     this.makeHud();
 
+    this.input.mouse?.requestPointerLock(); // TESTE
     this.input.on('pointerdown', this.onPointer, this);
     this.input.on('pointermove', this.onPointer, this);
     this.input.on('pointerup', this.onUp, this);
@@ -275,12 +276,17 @@ export class PlayScene extends Phaser.Scene {
   // ---- entrada --------------------------------------------------------------------------------------------------------
 
   private onPointer(p: Phaser.Input.Pointer): void {
-    // segue o mouse mesmo sem clicar (no celular, o dedo arrastando)
+    // TESTE: mouse travado dentro do jogo (pointer lock); movimento relativo
+    if (this.input.mouse?.locked) {
+      this.targetX = Phaser.Math.Clamp(this.targetX + p.movementX / this.scale.displayScale.x, FIELD_L, FIELD_R);
+      return;
+    }
+    if (!p.wasTouch) this.input.mouse?.requestPointerLock();
     this.targetX = p.worldX;
   }
 
   private onUp(p: Phaser.Input.Pointer): void {
-    this.targetX = p.worldX;
+    if (!this.input.mouse?.locked) this.targetX = p.worldX;
     this.launch();
   }
 
