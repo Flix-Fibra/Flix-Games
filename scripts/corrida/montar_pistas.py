@@ -21,7 +21,9 @@ RAIZ = Path(__file__).resolve().parents[2]
 FONTE = RAIZ / "assets" / "jogos" / "corrida" / "pistas"
 # Arte no tamanho do jogo (1 px da imagem = 1 px do mundo, sem ampliar): 4000 x 2500 com asfalto de 190 px (pedido em
 # 23/11/2026 para caberem os 11 carros lado a lado). Quando uma pista existe aqui, ela substitui a do pacote antigo.
-FONTE_V2 = RAIZ / "assets" / "jogos" / "corrida" / "pistas-190"
+# pistas-130 = as de pistas-190 com o asfalto estreitado por scripts/corrida/estreitar_pistas.py (Suzuka, com viaduto, segue em 190).
+# Para voltar à largura original, aponte para "pistas-190".
+FONTE_V2 = RAIZ / "assets" / "jogos" / "corrida" / "pistas-130"
 JOGO = RAIZ / "games" / "corrida"
 ESCALA = 3  # só para o pacote antigo
 
