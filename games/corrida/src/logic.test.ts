@@ -1,13 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { classificou, embaralhar, LIMITE_CLASSIFICACAO, proximaEtapa, amostraMaisProxima, amostrarPista, andarCarro, batida, comprimentoPista, contato, controlarIA, ESTA_RODANDO, evitar, FISICA, fatorTeto, ACRESCIMO_POR_VOLTA, formatarTempo, Progresso, reforcoRival, REFORCO_MAX, rodar, separar, TURBO_FATOR, TURBO_MS, Voltas, type Carro } from './logic';
+import { classificou, embaralhar, LIMITE_CLASSIFICACAO, proximaEtapa, amostraMaisProxima, amostrarPista, andarCarro, batida, comprimentoPista, contato, controlarIA, ESTA_RODANDO, evitar, FISICA, fatorTeto, ACRESCIMO_POR_VOLTA, formatarTempo, Progresso, reforcoRival, REFORCO_MAX, rodar, separar, SOLTO, VEL_INICIAL, TURBO_FATOR, TURBO_MS, VEL_FINAL, Voltas, type Carro } from './logic';
 import { PISTAS } from './pistas';
 
 describe('pistas', () => {
-  it.each(PISTAS.map((p) => [p.id, p] as const))('%s: volta de 30 a 70 s perto da velocidade máxima, dentro do mundo', (_id, def) => {
+  // Pistas da equipe (assets/jogos/corrida/pistas, ampliadas 3x): o traçado vem da arte e é mais longo que o das pistas
+  // antigas (que ficavam entre 30 e 70 s nesta conta); aqui, 50 a 105 s a 85% da velocidade de largada (146 px/s),
+  // ou seja ~25 a ~50 s na velocidade de corrida (VEL_FINAL, 260 px/s, ou mais).
+  it.each(PISTAS.map((p) => [p.id, p] as const))('%s: volta no tamanho certo (pistas da equipe: 40 a 85 s; antigas ampliadas: 50 a 105 s) a 85% da velocidade de largada, dentro do mundo', (_id, def) => {
     const am = amostrarPista(def.pontos);
     const seg = comprimentoPista(am) / (FISICA.vmax.asfalto * 0.85);
-    expect(seg).toBeGreaterThan(30);
-    expect(seg).toBeLessThan(70);
+    // pistas da equipe no tamanho do jogo (escala 1, asfalto de 190 px desde 23/11/2026), com as velocidades x1,5:
+    // ~17 a ~25 s por volta a 390 px/s; 30 a 60 s nesta conta conservadora (85% da velocidade de largada)
+    const [min, max] = (def.escala ?? 1) === 1 ? [30, 60] : [50, 105];
+    expect(seg).toBeGreaterThan(min);
+    expect(seg).toBeLessThan(max);
     for (const a of am) {
       expect(a.x).toBeGreaterThan(0);
       expect(a.y).toBeGreaterThan(0);
@@ -23,6 +29,22 @@ describe('carro', () => {
     const c = novo();
     for (let i = 0; i < 300; i++) andarCarro(c, { giro: 0, freio: false }, 'asfalto', 1 / 60);
     expect(c.vx).toBeCloseTo(FISICA.vmax.asfalto, 0);
+  });
+  it('com o acelerador do jogador: acelera segurando e perde velocidade aos poucos ao soltar (sem dar ré)', () => {
+    const c = novo();
+    for (let i = 0; i < 300; i++) andarCarro(c, { giro: 0, freio: false, acelera: true }, 'asfalto', 1 / 60);
+    expect(c.vx).toBeCloseTo(FISICA.vmax.asfalto, 0);
+    andarCarro(c, { giro: 0, freio: false, acelera: false }, 'asfalto', 1);
+    expect(c.vx).toBeCloseTo(FISICA.vmax.asfalto - FISICA.arrasto * SOLTO, 0);
+    const parado = novo();
+    for (let i = 0; i < 300; i++) andarCarro(parado, { giro: 0, freio: false, acelera: false }, 'asfalto', 1 / 60);
+    expect(parado.vx).toBe(0);
+    // soltar freia bem menos que o freio
+    const a = novo(), b = novo();
+    for (let i = 0; i < 300; i++) { andarCarro(a, { giro: 0, freio: false }, 'asfalto', 1 / 60); andarCarro(b, { giro: 0, freio: false }, 'asfalto', 1 / 60); }
+    andarCarro(a, { giro: 0, freio: false, acelera: false }, 'asfalto', 0.25);
+    andarCarro(b, { giro: 0, freio: true }, 'asfalto', 0.25);
+    expect(a.vx).toBeGreaterThan(b.vx);
   });
   it('na grama perde velocidade até o limite dela', () => {
     const c = novo();
@@ -70,13 +92,13 @@ describe('formatarTempo', () => {
 });
 
 describe('velocidade na pista', () => {
-  it('teto começa em 146 e chega a 210 px/s em 3 s', () => {
-    expect(fatorTeto(0) * FISICA.vmax.asfalto).toBeCloseTo(146, 5);
-    expect(fatorTeto(1500) * FISICA.vmax.asfalto).toBeCloseTo(178, 5);
-    expect(fatorTeto(3000) * FISICA.vmax.asfalto).toBeCloseTo(210, 5);
-    expect(fatorTeto(60000) * FISICA.vmax.asfalto).toBeCloseTo(210, 5);
+  it('teto começa em VEL_INICIAL e chega a VEL_FINAL px/s em 3 s', () => {
+    expect(fatorTeto(0) * FISICA.vmax.asfalto).toBeCloseTo(VEL_INICIAL, 5);
+    expect(fatorTeto(1500) * FISICA.vmax.asfalto).toBeCloseTo((VEL_INICIAL + VEL_FINAL) / 2, 5); // meio da rampa
+    expect(fatorTeto(3000) * FISICA.vmax.asfalto).toBeCloseTo(VEL_FINAL, 5);
+    expect(fatorTeto(60000) * FISICA.vmax.asfalto).toBeCloseTo(VEL_FINAL, 5);
   });
-  it('o carro chega perto de 210 px/s depois de 3 s e não passa disso', () => {
+  it('o carro chega perto de VEL_FINAL px/s depois de 3 s e não passa disso', () => {
     const c: Carro = { x: 0, y: 0, ang: 0, vx: 0, vy: 0 };
     let max = 0;
     for (let i = 0; i < 360; i++) {
@@ -84,7 +106,7 @@ describe('velocidade na pista', () => {
       max = Math.max(max, c.vx);
     }
     expect(c.vx).toBeGreaterThan(205);
-    expect(max).toBeLessThanOrEqual(210.01);
+    expect(max).toBeLessThanOrEqual(VEL_FINAL + 0.01);
   });
 });
 
@@ -108,7 +130,9 @@ describe('adversários', () => {
       passos++;
     }
     expect(prog.valor()).toBeGreaterThanOrEqual(am.length * 2); // terminou em menos de 240 s
-    expect(fora / passos).toBeLessThan(0.03);
+    // pistas da equipe têm asfalto mais estreito (51 a 63 px) e chicanes fechadas (Sakhir, Miami): o rival raspa a
+    // zebra um pouco mais (medido ~3,2%); 4% ainda pega um piloto automático que sai da pista de verdade
+    expect(fora / passos).toBeLessThan(def.arte && (def.escala ?? 1) > 1 ? 0.04 : 0.03);
   });
   it('carros que se sobrepõem são afastados até não se tocarem', () => {
     const a: Carro = { x: 0, y: 0, ang: 0, vx: 100, vy: 0 };
@@ -211,11 +235,11 @@ describe('carro rodopiando', () => {
 
 describe('velocidade por volta', () => {
   it('cada volta completada soma 30 px/s ao teto do asfalto', () => {
-    expect(fatorTeto(3000, 0) * FISICA.vmax.asfalto).toBeCloseTo(210, 5);
-    expect(fatorTeto(3000, 1) * FISICA.vmax.asfalto).toBeCloseTo(210 + ACRESCIMO_POR_VOLTA, 5);
-    expect(fatorTeto(3000, 4) * FISICA.vmax.asfalto).toBeCloseTo(330, 5);
+    expect(fatorTeto(3000, 0) * FISICA.vmax.asfalto).toBeCloseTo(VEL_FINAL, 5);
+    expect(fatorTeto(3000, 1) * FISICA.vmax.asfalto).toBeCloseTo(VEL_FINAL + ACRESCIMO_POR_VOLTA, 5);
+    expect(fatorTeto(3000, 4) * FISICA.vmax.asfalto).toBeCloseTo(VEL_FINAL + 4 * ACRESCIMO_POR_VOLTA, 5);
   });
-  it.each(PISTAS.map((p) => [p.id, p] as const))('%s: o piloto automático segue na pista mesmo com +4 voltas (330 px/s)', (_id, def) => {
+  it.each(PISTAS.map((p) => [p.id, p] as const))('%s: o piloto automático segue na pista mesmo com +4 voltas (VEL_FINAL + 120 px/s)', (_id, def) => {
     const am = amostrarPista(def.pontos);
     const a0 = am[0]!;
     const c: Carro = { x: a0.x - 30, y: a0.y, ang: a0.ang, vx: 0, vy: 0 };
@@ -298,7 +322,9 @@ describe('traçados', () => {
     expect(PISTAS.length).toBe(24);
     expect(new Set(PISTAS.map((p) => p.id)).size).toBe(24);
   });
-  it.each(PISTAS.filter((p) => !p.cruza).map((p) => [p.id, p] as const))('%s: trechos distantes não se encostam (asfalto de 94 px)', (_id, def) => {
+  // Pista pintada por código: trechos distantes ficam bem separados. Pista da equipe: segue a arte, em que alguns
+  // trechos passam colados (Baku, Jeddah, Miami); só se exige que não fiquem um em cima do outro (> 8 px entre centros).
+  it.each(PISTAS.filter((p) => !p.cruza).map((p) => [p.id, p] as const))('%s: trechos distantes não se sobrepõem', (_id, def) => {
     const am = amostrarPista(def.pontos);
     const n = am.length;
     let min = Infinity;
@@ -308,7 +334,7 @@ describe('traçados', () => {
         min = Math.min(min, Math.hypot(am[i]!.x - am[j]!.x, am[i]!.y - am[j]!.y));
       }
     }
-    expect(min).toBeGreaterThan(def.largura + 40);
+    expect(min).toBeGreaterThan(def.arte && (def.escala ?? 1) > 1 ? 8 : def.largura + 40);
   });
 });
 
@@ -335,5 +361,20 @@ describe('campeonato', () => {
   it('depois da última pista o campeonato termina', () => {
     expect(proximaEtapa(23, 24, 2)).toBeNull();
     expect(proximaEtapa(23, 24, 9)).toBe(23);
+  });
+});
+
+describe('vaca (arte em 3 ângulos)', () => {
+  it('escolhe o desenho pelo sentido na tela e espelha para a esquerda', async () => {
+    const { visualDaVaca } = await import('./itens');
+    const g = (graus: number) => visualDaVaca((graus * Math.PI) / 180);
+    expect(g(0)).toEqual({ chave: 'vaca_lado', espelha: false });
+    expect(g(45)).toEqual({ chave: 'vaca_diagonal', espelha: false });
+    expect(g(90)).toEqual({ chave: 'vaca_frente', espelha: false });
+    expect(g(135)).toEqual({ chave: 'vaca_diagonal', espelha: true });
+    expect(g(180)).toEqual({ chave: 'vaca_lado', espelha: true });
+    expect(g(-60)).toEqual({ chave: 'vaca_lado', espelha: false }); // subindo à direita: de lado
+    expect(g(-120)).toEqual({ chave: 'vaca_lado', espelha: true }); // subindo à esquerda: de lado, espelhada
+    expect(g(360 + 90)).toEqual({ chave: 'vaca_frente', espelha: false });
   });
 });

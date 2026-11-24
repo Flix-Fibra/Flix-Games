@@ -3,6 +3,7 @@ import { formatarPontos } from '../dados/formatar';
 import { ErroApi, servico } from '../dados/servico';
 import type { AvatarConfig, Jogo, ResultadoPartida } from '../dados/tipos';
 import { Fechar, Som, TelaCheia, Trofeu } from './Icones';
+import { fotoDoCorpo, fotoDoRosto, type PersonagemFlix } from '../personagem/flix';
 
 /**
  * Lado do HUB do contrato com os jogos (docs/prompt-inicio-minigames-flix.md, seção 6).
@@ -27,6 +28,8 @@ type Fase =
 interface Props {
   jogo: Jogo;
   avatar: AvatarConfig | null;
+  /** Personagem novo do jogador (editor da plataforma); vai desenhado para o jogo no `init`. null = sem avatar. */
+  personagem: PersonagemFlix | null;
   onFechar: (houvePartida: boolean) => void;
   /** Aberto pela animação de lançamento: o jogo aparece junto com a capa se desfazendo. */
   entrando?: boolean;
@@ -60,7 +63,7 @@ const ehComputador = () => window.matchMedia('(hover: hover) and (pointer: fine)
 
 const AVISO_MS = 4500; // tempo do aviso de ranking no topo
 
-export function Jogando({ jogo, avatar, onFechar, entrando = false }: Props) {
+export function Jogando({ jogo, avatar, personagem, onFechar, entrando = false }: Props) {
   const [comEntrada] = useState(entrando); // fixo desde a abertura (não reanima ao terminar o lançamento)
   const raiz = useRef<HTMLDivElement>(null);
   const [computador] = useState(ehComputador);
@@ -72,6 +75,15 @@ export function Jogando({ jogo, avatar, onFechar, entrando = false }: Props) {
   const runAtual = useRef<string | null>(null);   // partida aberta (registrada no "started")
   const inicioOk = useRef<Promise<unknown> | null>(null);
   const houvePartida = useRef(false);
+  // Imagens do personagem para o jogo (retrato e corpo inteiro, PNG), preparadas já na abertura: quando o jogo
+  // mandar `ready`, ficam prontas a tempo (ele espera o `init` só 1,5 s). Ficam em cache por personagem.
+  const chavePersonagem = personagem ? JSON.stringify(personagem) : '';
+  const imagens = useRef<Promise<{ retrato: string; corpo: string | null } | null>>(Promise.resolve(null));
+  useEffect(() => {
+    imagens.current = personagem
+      ? Promise.all([fotoDoRosto(personagem), fotoDoCorpo(personagem)]).then(([retrato, corpo]) => (retrato ? { retrato, corpo } : null))
+      : Promise.resolve(null);
+  }, [chavePersonagem]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const enviar = useCallback((m: Record<string, unknown>) => {
     // Iframe isolado tem origem "null": não dá para usar a origem como alvo. O destino é a janela
@@ -86,7 +98,8 @@ export function Jogando({ jogo, avatar, onFechar, entrando = false }: Props) {
       const m = lerMensagem(e.data);
       if (!m) return;
       if (m.type === 'ready') {
-        enviar({ type: 'init', avatar, muted: mudo, locale: 'pt-BR' }); // null = jogo usa o personagem padrão
+        // avatar null = jogo usa o personagem padrão; personagem null = o jogador não criou (ou "Sem avatar")
+        void imagens.current.catch(() => null).then((p) => enviar({ type: 'init', avatar, personagem: p, muted: mudo, locale: 'pt-BR' }));
         setFase((f) => (f.tipo === 'carregando' ? { tipo: 'jogando' } : f));
       } else if (m.type === 'started') {
         runAtual.current = m.runId;

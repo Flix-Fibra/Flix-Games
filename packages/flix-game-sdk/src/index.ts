@@ -1,4 +1,4 @@
 export { createHubBridge } from './bridge';
-export { normalizeScore, parseHubMessage } from './parse';
+export { lerPersonagem, normalizeScore, parseHubMessage } from './parse';
 export type { RawMessageEvent } from './parse';
-export type { BridgeOptions, GameOverPayload, GameToHub, HubBridge, HubToGame } from './types';
+export type { BridgeOptions, GameOverPayload, GameToHub, HubBridge, HubToGame, PersonagemImagens } from './types';

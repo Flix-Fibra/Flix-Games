@@ -8,6 +8,7 @@ import { useAviso } from './Aviso';
 import { Barras, CapaJogo, Coracao, Megafone, Mini, Pessoa, Play, Trofeu } from './Icones';
 import { BotaoFavoritar } from './BotaoFavoritar';
 import { CartaoJogo } from './CartaoJogo';
+import { usePlataformaCongelada } from './Congelada';
 import { DetalheJogo } from './DetalheJogo';
 import { Linha, SemRanking, useRanking } from './ListaRanking';
 import { RetratoPersonagem } from './personagem/EditorPersonagem';
@@ -46,6 +47,7 @@ const CARD_FAVORITOS = { t1: '#E8416F', t2: '#6E1035' };
 
 export function Inicio({ jogos, perfil, onFavoritar, onVerRanking, onJogar, onCriarPersonagem, onAvaliado, onExplorar }: Props) {
   const avisar = useAviso();
+  const congelada = usePlataformaCongelada(); // jogo aberto por cima: teclado e controle não mexem na fileira
   const doHub = new Map(jogos.map((j) => [j.id, j]));
   const recentes = (perfil.recentes ?? []).flatMap((id) => { const j = doHub.get(id); return j ? [j] : []; }).slice(0, RECENTES_NO_INICIO);
   const itens: Item[] = [
@@ -96,17 +98,19 @@ export function Inicio({ jogos, perfil, onFavoritar, onVerRanking, onJogar, onCr
   useEffect(() => {
     const tecla = (e: KeyboardEvent) => {
       const alvo = e.target as HTMLElement | null;
-      if (aberto) return; // página do jogo aberta por cima da fileira
+      if (aberto || congelada) return; // página do jogo (ou o próprio jogo) aberta por cima da fileira
       if (alvo?.closest('.gx-acoes, .gx-cont, input, .gx-av')) return; // .gx-av: editor de personagem aberto
       if (e.key === 'ArrowRight') { selecionar(sel + 1, true); e.preventDefault(); }
       if (e.key === 'ArrowLeft') { selecionar(sel - 1, true); e.preventDefault(); }
     };
     document.addEventListener('keydown', tecla);
     return () => document.removeEventListener('keydown', tecla);
-  }, [sel, selecionar, aberto]);
+  }, [sel, selecionar, aberto, congelada]);
 
-  // Controle: direcional troca, botão A joga (ou abre o personagem)
+  // Controle: direcional troca, botão A joga (ou abre o personagem). Com o jogo aberto, o laço nem roda: o botão A
+  // do jogo não pode apertar "Jogar" na fileira escondida.
   useEffect(() => {
+    if (congelada) return;
     let rodando = false, quadro = 0;
     const antes: Record<number, boolean> = {};
     const ler = () => {
@@ -122,7 +126,7 @@ export function Inicio({ jogos, perfil, onFavoritar, onVerRanking, onJogar, onCr
     window.addEventListener('gamepadconnected', conectou);
     if (Array.from(navigator.getGamepads?.() ?? []).some(Boolean)) { rodando = true; quadro = requestAnimationFrame(ler); }
     return () => { window.removeEventListener('gamepadconnected', conectou); cancelAnimationFrame(quadro); };
-  }, [sel, selecionar, jogar, avisar]);
+  }, [sel, selecionar, jogar, avisar, congelada]);
 
   const temPersonagem = !!perfil.personagem;
 
@@ -265,21 +269,26 @@ function HeroNovidades({ jogos, perfil, lideres, onVerRanking, onSelecionar }: H
         <p className="gx-hero-desc">O que mudou na plataforma, os jogos que acabaram de chegar e quem lidera cada ranking.</p>
       </div>
 
+      {/* Como antes: atualizações à esquerda (agora um card para cada, um embaixo do outro, com imagem quando ela
+          ajuda a entender) e, à direita, jogos novos e líderes do ranking */}
       <div className="gx-faixas gx-novidades">
-        <section className="card">
-          <h2 className="card-titulo">Atualizações</h2>
-          <ol className="gx-nov-lista">
-            {plataforma.map((n) => (
-              <li key={n.data + n.titulo} className="gx-nov-item">
+      <section className="gx-nov-secao" aria-labelledby="nov-atualizacoes">
+        <h2 id="nov-atualizacoes" className="gx-nov-secao-titulo">Atualizações</h2>
+        <div className="gx-nov-grade">
+          {plataforma.map((n) => (
+            <article key={n.data + n.titulo} className={'card gx-nov-card' + (n.imagem ? ' com-imagem' : '')}>
+              {n.imagem && <img className="gx-nov-imagem" src={n.imagem} alt={n.imagemAlt ?? ''} loading="lazy" decoding="async" />}
+              <div className="gx-nov-corpo">
                 <span className="gx-nov-data">{dataDaNovidade(n.data)}</span>
-                <strong>{n.titulo}</strong>
+                <h3>{n.titulo}</h3>
                 {n.texto && <p>{n.texto}</p>}
-              </li>
-            ))}
-          </ol>
-        </section>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
 
-        <div className="gx-nov-coluna">
+      <div className="gx-nov-coluna">
           {novosJogos.length > 0 && (
             <section className="card">
               <h2 className="card-titulo">Novos jogos</h2>
@@ -322,7 +331,7 @@ function HeroNovidades({ jogos, perfil, lideres, onVerRanking, onSelecionar }: H
               </div>
             </section>
           )}
-        </div>
+      </div>
       </div>
     </>
   );

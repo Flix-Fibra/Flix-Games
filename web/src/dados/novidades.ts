@@ -9,6 +9,9 @@
  *   não está no hub fica guardada aqui e aparece sozinha quando ele entrar); sem `texto`, usa a descrição do jogo.
  *   A data dela também põe o jogo no filtro "Novos" da aba Jogos por DIAS_DE_NOVO dias.
  *
+ * - `imagem` (opcional, quando ajuda a entender): caminho em web/public/novidades/ (WebP, 16:9, ~960 px de largura),
+ *   com `imagemAlt` descrevendo o que ela mostra. Sem dado pessoal real na imagem (use perfis de teste).
+ *
  * O "ranking" das novidades não vem daqui: são os líderes de cada jogo, lidos da API na hora (sem somar pontuações
  * de jogos diferentes, que medem coisas diferentes; ver Q20 em docs/andamento.md).
  */
@@ -20,20 +23,32 @@ export interface Novidade {
   titulo: string;
   texto?: string;
   jogoId?: string;
+  imagem?: string;
+  imagemAlt?: string;
 }
 
 export const NOVIDADES: Novidade[] = [
   {
     data: '2026-11-19',
     tipo: 'plataforma',
+    titulo: 'Seu personagem dentro dos jogos',
+    texto: 'O personagem que você cria aqui agora aparece nos jogos, começando pelo Network Snake. E, enquanto você joga, a plataforma por trás fica parada para o jogo rodar mais leve.',
+  },
+  {
+    data: '2026-11-19',
+    tipo: 'plataforma',
     titulo: 'Pesquisa e novos filtros em Jogos',
     texto: 'Procure um jogo pelo nome, veja os Novos e os Mais jogados e confira a nota de cada jogo em estrelas. O coração abaixo de cada jogo favorita sem precisar abrir.',
+    imagem: '/novidades/pesquisa-e-filtros.webp',
+    imagemAlt: 'Aba Jogos com o campo de pesquisa, os filtros Favoritos, Todos, Novos e Mais jogados e os jogos com a nota em estrelas',
   },
   {
     data: '2026-11-19',
     tipo: 'plataforma',
     titulo: 'Nickname único e nome no ranking',
-    texto: 'Cada jogador tem um nickname só seu, que ninguém mais pode usar. Quer ser reconhecido? No Perfil, preencha o seu nome e ligue “Mostrar meu nome no ranking”: ele aparece discretamente abaixo do nickname.',
+    texto: 'Cada jogador tem um nickname só seu, que ninguém mais pode usar. Ao criar o perfil, você escolhe a cor e informa nome e sobrenome; o nome só aparece no ranking, discretamente abaixo do nickname, se você ligar essa opção.',
+    imagem: '/novidades/nickname-e-nome.webp',
+    imagemAlt: 'Criação de perfil com a cor de fundo escolhida, nickname, nome, sobrenome e a opção de mostrar o nome no ranking',
   },
   {
     data: '2026-11-19',
@@ -45,7 +60,9 @@ export const NOVIDADES: Novidade[] = [
     data: '2026-11-18',
     tipo: 'plataforma',
     titulo: 'Editor de personagem novo',
-    texto: 'Visuais desenhados pela equipe Flix: 37 combinações de corpo e cabelo para montar o seu personagem.',
+    texto: 'Visuais desenhados pela equipe Flix: dezenas de combinações de corpo e cabelo para montar o seu personagem.',
+    imagem: '/novidades/editor-de-personagem.webp',
+    imagemAlt: 'Editor de personagem com os visuais de cabelo e a opção Sem avatar',
   },
   { data: '2026-11-18', tipo: 'jogo', jogoId: 'g14', titulo: 'Signal Drop chegou' },
   { data: '2026-11-18', tipo: 'jogo', jogoId: 'g01', titulo: 'Network Runner chegou' },

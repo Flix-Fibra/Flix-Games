@@ -80,28 +80,30 @@ export type Superficie = 'asfalto' | 'zebra' | 'areia' | 'grama';
 
 export const FISICA = {
   /** Velocidade máxima (px/s) em cada superfície. */
-  vmax: { asfalto: 146, zebra: 130, areia: 68, grama: 57 } as Record<Superficie, number>,
+  // 23/11/2026: velocidades x1,5 para todos (pista de 190 px e câmera afastada deixaram o jogo lento na tela);
+  // antes: asfalto 146, zebra 130, areia 68, grama 57, acel 150, freio 247, arrasto 156, vGiro 65
+  vmax: { asfalto: 219, zebra: 195, areia: 102, grama: 86 } as Record<Superficie, number>,
   /** Aceleração (px/s²). */
-  acel: 124,
-  freio: 247,
+  acel: 225,
+  freio: 370,
   /** Resistência quando solta o acelerador ou passa do limite da superfície (px/s²). */
-  arrasto: 156,
+  arrasto: 234,
   /** Giro máximo (rad/s), alcançado a partir de `vGiro` px/s. */
-  giroMax: 2.7,
-  vGiro: 65,
+  giroMax: 3.4, // era 2.7 (subiu com a velocidade de corrida, 210 -> 260 px/s, para a curva não ficar pesada)
+  vGiro: 98,
   /** Quão rápido a velocidade lateral some (1/s): menor = derrapa mais. */
-  aderencia: { asfalto: 7, zebra: 6, areia: 2.6, grama: 2.2 } as Record<Superficie, number>,
+  aderencia: { asfalto: 8.5, zebra: 7, areia: 2.6, grama: 2.2 } as Record<Superficie, number>,
 };
 
-/** O teto de velocidade no asfalto começa em 146 px/s e sobe em linha reta até 210 px/s em 3 s de corrida. */
-export const VEL_INICIAL = 146;
-export const VEL_FINAL = 210;
+/** O teto de velocidade no asfalto começa em VEL_INICIAL e sobe em linha reta até VEL_FINAL em 3 s de corrida. */
+export const VEL_INICIAL = 219; // = FISICA.vmax.asfalto
+export const VEL_FINAL = 390; // era 260 (x1,5 em 23/11/2026)
 export const RAMPA_MS = 3000;
 
-/** A cada volta completada, o teto de velocidade de todos os carros sobe mais 30 px/s. */
-export const ACRESCIMO_POR_VOLTA = 30;
+/** A cada volta completada, o teto de velocidade de todos os carros sobe mais 45 px/s (era 30). */
+export const ACRESCIMO_POR_VOLTA = 45;
 
-/** Multiplicador do teto de velocidade: 1 na largada, 210/146 depois de `RAMPA_MS`, e +30 px/s por volta completada. */
+/** Multiplicador do teto de velocidade: 1 na largada, VEL_FINAL/VEL_INICIAL depois de `RAMPA_MS`, e +ACRESCIMO_POR_VOLTA px/s por volta completada. */
 export function fatorTeto(tempoCorridaMs: number, voltasCompletas = 0): number {
   const t = Math.min(1, Math.max(0, tempoCorridaMs / RAMPA_MS));
   return 1 + (VEL_FINAL / VEL_INICIAL - 1) * t + (Math.max(0, voltasCompletas) * ACRESCIMO_POR_VOLTA) / VEL_INICIAL;
@@ -142,9 +144,17 @@ export function rodar(c: Carro, lado: number, intensidade: number, ms?: number):
 export interface Comando {
   /** -1 (esquerda) a 1 (direita). */
   giro: number;
-  /** true = freia. A aceleração é sempre automática. */
+  /** true = freia. */
   freio: boolean;
+  /**
+   * Acelerador do jogador (↑/W ou pedal na tela). Solto (false), o carro perde velocidade aos poucos (`SOLTO`).
+   * Ausente = acelera sozinho (rivais e piloto automático).
+   */
+  acelera?: boolean;
 }
+
+/** Desaceleração com o acelerador solto, em fração do arrasto (bem mais suave que o freio). */
+export const SOLTO = 0.5;
 
 export function velocidade(c: Carro): number {
   return Math.hypot(c.vx, c.vy);
@@ -181,6 +191,7 @@ export function andarCarro(c: Carro, cmd: Comando, sup: Superficie, dt: number, 
 
   const vmax = FISICA.vmax[sup] * teto * (turbo ? TURBO_FATOR : 1);
   if (cmd.freio) frente = Math.max(0, frente - FISICA.freio * dt);
+  else if (cmd.acelera === false) frente = Math.max(0, frente - FISICA.arrasto * SOLTO * dt);
   else if (frente > vmax) frente = Math.max(vmax, frente - FISICA.arrasto * dt);
   else frente = Math.min(vmax, frente + FISICA.acel * (turbo ? 2.5 : 1) * dt);
 
@@ -266,7 +277,7 @@ export function controlarIA(c: Carro, am: readonly Amostra[], indice: number, la
   const adiante = Math.abs(volta(am[(indice + olhar * 3) % n]!.ang - am[indice]!.ang));
   return {
     giro: Math.max(-1, Math.min(1, diff * 2.5)),
-    freio: (Math.abs(diff) > 0.8 && v > 110) || (adiante > 1.1 && v > 175),
+    freio: (Math.abs(diff) > 0.8 && v > 165) || (adiante > 1.1 && v > 263), // eram 110 e 175 (x1,5 com as velocidades)
   };
 }
 
@@ -353,7 +364,7 @@ export class Progresso {
 // ---- batidas e disputa ---------------------------------------------------------------------------------------------
 
 /** Fechamento mínimo (px/s) para a batida por trás fazer o atacante deslizar. */
-export const LIMITE_BATIDA = 40;
+export const LIMITE_BATIDA = 60; // era 40 (x1,5 com as velocidades, 23/11/2026)
 
 export interface Batida {
   atacante: Carro;

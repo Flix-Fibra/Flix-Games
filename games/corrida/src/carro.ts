@@ -154,6 +154,41 @@ export function criarTexturaCarro(scene: Phaser.Scene, chave: string, cor: numbe
   criarTexturaStack(scene, chave, criarFatias(cor), QUADRO, ANGULOS);
 }
 
+/**
+ * Carro a partir da arte da equipe (imagem vista de cima, já no tamanho FATIA_W x FATIA_H, frente para a direita;
+ * preparada por scripts/corrida/montar_carros.py e carregada como `chaveImagem`). A arte fica no topo de uma pilha
+ * curta: duas camadas da silhueta escurecida embaixo dão a espessura (2 px) e a sombra continua igual à dos outros
+ * objetos empilhados. `branco`: versão clara e sem cor (para o arco-íris tingir).
+ */
+export function criarTexturaCarroDeImagem(scene: Phaser.Scene, chave: string, chaveImagem: string, branco = false): void {
+  if (scene.textures.exists(chave)) return;
+  const fonte = scene.textures.get(chaveImagem).getSourceImage() as HTMLImageElement;
+  const topo = document.createElement('canvas');
+  topo.width = FATIA_W;
+  topo.height = FATIA_H;
+  const tg = topo.getContext('2d', { willReadFrequently: true })!;
+  tg.imageSmoothingEnabled = false;
+  tg.drawImage(fonte, 0, 0, FATIA_W, FATIA_H);
+  if (branco) {
+    const d = tg.getImageData(0, 0, FATIA_W, FATIA_H);
+    for (let i = 0; i < d.data.length; i += 4) {
+      const l = 0.3 * d.data[i]! + 0.59 * d.data[i + 1]! + 0.11 * d.data[i + 2]!;
+      const v = Math.min(255, 90 + l * 0.75);
+      d.data[i] = d.data[i + 1] = d.data[i + 2] = v;
+    }
+    tg.putImageData(d, 0, 0);
+  }
+  const base = document.createElement('canvas');
+  base.width = FATIA_W;
+  base.height = FATIA_H;
+  const bg = base.getContext('2d')!;
+  bg.drawImage(topo, 0, 0);
+  bg.globalCompositeOperation = 'source-atop';
+  bg.fillStyle = 'rgba(0,0,0,0.55)';
+  bg.fillRect(0, 0, FATIA_W, FATIA_H);
+  criarTexturaStack(scene, chave, [base, base, topo], QUADRO, ANGULOS);
+}
+
 export function quadroDoAngulo(ang: number, n = ANGULOS): number {
   const t = ang / (Math.PI * 2);
   return ((Math.round((t - Math.floor(t)) * n) % n) + n) % n;

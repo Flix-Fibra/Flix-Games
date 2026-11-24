@@ -81,29 +81,48 @@ export class BootScene extends Phaser.Scene {
     this.makeNightSky();
     const existing = this.registry.get('hubInit') as Extract<HubToGame, { type: 'init' }> | undefined;
     if (existing) {
-      this.finish(existing.avatar, existing.muted);
+      this.finish(existing.avatar, existing.muted, existing.personagem?.retrato ?? null);
       return;
     }
 
     let done = false;
-    const complete = (avatar: AvatarConfig, muted: boolean) => {
+    const complete = (avatar: AvatarConfig, muted: boolean, retrato: string | null) => {
       if (done) return;
       done = true;
-      this.finish(avatar, muted);
+      this.finish(avatar, muted, retrato);
     };
-    this.game.events.once('hub-init', (msg: Extract<HubToGame, { type: 'init' }>) => complete(msg.avatar, msg.muted));
-    this.time.delayedCall(INIT_TIMEOUT_MS, () => complete(DEFAULT_AVATAR, false));
+    this.game.events.once('hub-init', (msg: Extract<HubToGame, { type: 'init' }>) => complete(msg.avatar, msg.muted, msg.personagem?.retrato ?? null));
+    this.time.delayedCall(INIT_TIMEOUT_MS, () => complete(DEFAULT_AVATAR, false, null));
   }
 
-  private finish(avatar: AvatarConfig, muted: boolean): void {
+  /**
+   * Retrato do placar. Com o personagem que o jogador criou na plataforma (`retrato`, já desenhado pelo hub), a mesma
+   * imagem vale para todas as expressões: por enquanto ele não muda de cara (decisão do solicitante, 19/11/2026).
+   * Sem personagem, o avatar antigo/padrão com as expressões (feliz, triste, assustado...).
+   */
+  private finish(avatar: AvatarConfig, muted: boolean, retrato: string | null): void {
     setMuted(muted);
     this.registry.set('avatar', avatar);
-    for (const expr of EXPRESSIONS) {
-      const key = portraitKey(expr);
-      if (this.textures.exists(key)) this.textures.remove(key);
-      const tex = this.textures.addCanvas(key, composePortrait(avatar, expr));
-      tex?.setFilter(Phaser.Textures.FilterMode.NEAREST); // o retrato do personagem continua nítido, sem borrar
-    }
-    this.scene.start('Menu');
+    const seguir = () => this.scene.start('Menu');
+    const usarAvatarAntigo = () => {
+      for (const expr of EXPRESSIONS) {
+        const key = portraitKey(expr);
+        if (this.textures.exists(key)) this.textures.remove(key);
+        const tex = this.textures.addCanvas(key, composePortrait(avatar, expr));
+        tex?.setFilter(Phaser.Textures.FilterMode.NEAREST); // o retrato do personagem continua nítido, sem borrar
+      }
+    };
+    if (!retrato) { usarAvatarAntigo(); seguir(); return; }
+    const img = new Image();
+    img.onload = () => {
+      for (const expr of EXPRESSIONS) {
+        const key = portraitKey(expr);
+        if (this.textures.exists(key)) this.textures.remove(key);
+        this.textures.addImage(key, img)?.setFilter(Phaser.Textures.FilterMode.NEAREST); // pixel art nítida
+      }
+      seguir();
+    };
+    img.onerror = () => { usarAvatarAntigo(); seguir(); }; // imagem com defeito: segue com o padrão
+    img.src = retrato;
   }
 }

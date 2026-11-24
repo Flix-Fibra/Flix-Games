@@ -127,6 +127,40 @@ export function fotoDoBusto(p: PersonagemFlix): Promise<string | null> {
   return foto(p, 'busto');
 }
 
+/**
+ * Personagem inteiro (data URL PNG, ampliado 2x sem suavizar), para os jogos (mensagem `init`, SDK 0.2.0).
+ * Com cache por personagem.
+ */
+export function fotoDoCorpo(p: PersonagemFlix): Promise<string | null> {
+  const chave = 'corpo' + JSON.stringify(p);
+  let f = fotos.get(chave);
+  if (!f) {
+    f = carregarCatalogo().then(async (cat) => {
+      const v = visualDe(cat, p);
+      if (v?.foto) { // secreto (foto): vai a própria imagem, redesenhada como PNG
+        const img = await imagem(v.foto);
+        if (!img) return null;
+        const out = document.createElement('canvas');
+        out.width = img.width; out.height = img.height;
+        out.getContext('2d')!.drawImage(img, 0, 0);
+        return out.toDataURL('image/png');
+      }
+      const [w, h] = cat.tamanho;
+      const tela = document.createElement('canvas');
+      tela.width = w; tela.height = h;
+      await desenhar(tela.getContext('2d')!, p, cat);
+      const out = document.createElement('canvas');
+      out.width = w * 2; out.height = h * 2;
+      const o = out.getContext('2d')!;
+      o.imageSmoothingEnabled = false;
+      o.drawImage(tela, 0, 0, w * 2, h * 2);
+      return out.toDataURL('image/png');
+    }).catch(() => null);
+    fotos.set(chave, f);
+  }
+  return f;
+}
+
 function foto(p: PersonagemFlix, enquadre: Enquadre): Promise<string | null> {
   const chave = enquadre + JSON.stringify(p);
   let f = fotos.get(chave);
@@ -149,7 +183,7 @@ function foto(p: PersonagemFlix, enquadre: Enquadre): Promise<string | null> {
           out.width = out.height = 160;
           out.getContext('2d')!.drawImage(img, cx * img.width - lado / 2, cy * img.height - lado / 2, lado, lado, 0, 0, 160, 160);
         }
-        return out.toDataURL('image/jpeg', 0.9);
+        return out.toDataURL('image/png'); // PNG: é o formato que os jogos aceitam no `init` (SDK 0.2.0)
       }
       const tela = document.createElement('canvas');
       [tela.width, tela.height] = cat.tamanho;

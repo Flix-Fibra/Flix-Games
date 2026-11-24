@@ -21,9 +21,23 @@ export type GameToHub =
       meta?: Record<string, number | string>;
     };
 
-/** Mensagens do hub para o jogo, já validadas. No `init`, o avatar já passou pelo catálogo (nunca é nulo). */
+/**
+ * Personagem que o jogador criou no editor da plataforma, já desenhado pelo hub (PNG em data URL, pixel art).
+ * `retrato`: a cabeça, quadrada (ex.: quadro do avatar no placar). `corpo`: o personagem inteiro, de frente.
+ * O jogo só desenha essas imagens; não guarda nem envia para lugar nenhum.
+ */
+export interface PersonagemImagens {
+  retrato: string;
+  corpo: string | null;
+}
+
+/**
+ * Mensagens do hub para o jogo, já validadas. No `init`, o avatar já passou pelo catálogo (nunca é nulo).
+ * `personagem` (desde o SDK 0.2.0): o personagem novo do jogador, ou null se ele não criou (ou escolheu "Sem avatar");
+ * nesse caso o jogo usa o avatar antigo/padrão.
+ */
 export type HubToGame =
-  | { type: 'init'; avatar: AvatarConfig; muted: boolean; locale?: string }
+  | { type: 'init'; avatar: AvatarConfig; personagem: PersonagemImagens | null; muted: boolean; locale?: string }
   | { type: 'restart' }
   | { type: 'pause' }
   | { type: 'resume' }
