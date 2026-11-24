@@ -65,6 +65,10 @@ const ASFALTO_REF = 94;
 const PEDAL = 104;
 const PEDAL_DX = 78;
 const PEDAL_DY = -78;
+/** Botão que alterna entre acelerar automático e acelerar manual (↑/W ou pedal): fica logo acima do pedal. */
+const AUTO_DY = PEDAL_DY - 82;
+const AUTO_W = 150;
+const AUTO_H = 34;
 /** A corrida termina quando o jogador completa esta quantidade de voltas. */
 const VOLTAS_TOTAIS = 10;
 /** A cada volta completada o zoom do mundo diminui 10% (o jogador fica mais rápido); a mudança leva ~1 s, suave. */
@@ -109,6 +113,9 @@ export class PlayScene extends Phaser.Scene {
   /** Pedal do acelerador na tela (só em aparelho de toque) e o dedo que está nele. */
   private pedal?: Phaser.GameObjects.Image;
   private dedoPedal: number | null = null;
+  /** Aceleração automática: o carro acelera sem segurar nada (tecla T ou botão na tela). Falso = ↑/W ou pedal. */
+  private autoAcelera = true;
+  private btnAuto!: Phaser.GameObjects.Text;
   /** Dedo que vira o carro (arrastar para os lados). */
   private dedoGiro: number | null = null;
   private hud!: Phaser.GameObjects.Text;
@@ -235,13 +242,18 @@ export class PlayScene extends Phaser.Scene {
       this.girar = !this.girar;
       this.aplicarLimites();
     });
+    kb.on('keydown-T', () => this.alternarAuto());
     kb.on('keydown-M', () => this.modelo.forEach((m) => m.setVisible(!m.visible)));
     kb.on('keydown-R', () => this.carregarPista(this.pistaAtual));
 
     // Toque: um dedo no pedal (acelera) e outro arrastando para os lados (vira); toque rápido fora do pedal = turbo
     this.input.addPointer(1);
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
-      if (this.pedal && this.dedoPedal === null && this.noPedal(p.x, p.y)) {
+      if (this.noBotaoAuto(p.x, p.y)) {
+        this.alternarAuto();
+        return;
+      }
+      if (this.pedal && this.pedal.visible && this.dedoPedal === null && this.noPedal(p.x, p.y)) {
         this.dedoPedal = p.id;
         this.pedal.setAlpha(1);
         return;
@@ -293,6 +305,11 @@ export class PlayScene extends Phaser.Scene {
       }
       this.pedal = this.fixar(this.add.image(0, 0, 'pedal'), 0, 1, PEDAL_DX, PEDAL_DY, 1500).setAlpha(0.55);
     }
+    this.btnAuto = this.fixar(
+      this.add.text(0, 0, '', { fontFamily: FONT, fontSize: '15px', color: '#ffffff', backgroundColor: 'rgba(10,12,18,0.75)', padding: { x: 10, y: 8 }, align: 'center' }).setOrigin(0.5),
+      0, 1, PEDAL_DX, AUTO_DY, 1500, 1, { px: 15, stroke: 0 },
+    );
+    this.atualizarBotaoAuto();
 
     // interface: a câmera do mundo tem zoom; os textos ficam sem zoom (escala 1/zoom compensa), então saem nítidos.
     // Posição = fração da tela + deslocamento em pixels de uma tela de 540 de altura (escalado pela altura real).
@@ -430,7 +447,7 @@ export class PlayScene extends Phaser.Scene {
     let giro = (k.right.isDown || k.d.isDown ? 1 : 0) - (k.left.isDown || k.a.isDown ? 1 : 0);
     if (giro === 0) giro = this.giroToque;
     const freio = this.fim || k.down.isDown || k.s.isDown;
-    const acelera = !this.fim && (k.up.isDown || k.w.isDown || this.dedoPedal !== null);
+    const acelera = !this.fim && (this.autoAcelera || k.up.isDown || k.w.isDown || this.dedoPedal !== null);
     if (this.fim) giro = 0;
     if (!this.fim && Phaser.Input.Keyboard.JustDown(k.space)) this.ativarTurbo();
 
@@ -632,7 +649,7 @@ Volta ${Math.min(v.voltas + 1, VOLTAS_TOTAIS)}/${VOLTAS_TOTAIS}   ${formatarTemp
 Posição ${posicao}/${this.rivais.length + 1}`);
     this.hud2.setText(`${Math.round(velocidade(c))} px/s
 Melhor ${v.melhor === null ? '--' : formatarTempo(v.melhor)}${fechou ? '  NOVA VOLTA' : ''}
-${this.livre ? '[N] [P] pista  ' : ''}[R] reiniciar  ↑ acelera  ↓ freia`);
+${this.livre ? '[N] [P] pista  ' : ''}[R] reiniciar  [T] acel. auto  ↑ acelera  ↓ freia`);
   }
 
   private mostrarAviso(texto: string): void {
@@ -810,6 +827,24 @@ ${this.livre ? '[N] [P] pista  ' : ''}[R] reiniciar  ↑ acelera  ↓ freia`);
   }
 
   /** O ponto (x, y) da tela está sobre o pedal? (área um pouco maior que o desenho, para acertar fácil) */
+  private alternarAuto(): void {
+    this.autoAcelera = !this.autoAcelera;
+    this.atualizarBotaoAuto();
+    this.mostrarAviso(this.autoAcelera ? 'Aceleração automática: LIGADA' : 'Aceleração automática: DESLIGADA (↑ ou W)');
+  }
+
+  private atualizarBotaoAuto(): void {
+    this.btnAuto.setText(this.autoAcelera ? 'ACELERAÇÃO AUTO: SIM [T]' : 'ACELERAÇÃO AUTO: NÃO [T]');
+    this.pedal?.setVisible(!this.autoAcelera);
+    if (this.autoAcelera) this.dedoPedal = null;
+  }
+
+  /** O ponto (x, y) da tela está sobre o botão da aceleração automática? */
+  private noBotaoAuto(x: number, y: number): boolean {
+    const k = this.H / ALTURA_REFERENCIA_UI;
+    return Math.abs(x - PEDAL_DX * k) < (AUTO_W / 2 + 20) * k && Math.abs(y - (this.H + AUTO_DY * k)) < (AUTO_H / 2 + 10) * k;
+  }
+
   private noPedal(x: number, y: number): boolean {
     const k = this.H / ALTURA_REFERENCIA_UI;
     return Math.hypot(x - PEDAL_DX * k, y - (this.H + PEDAL_DY * k)) < PEDAL * 0.6 * k;
