@@ -29,6 +29,12 @@ export interface Novidade {
 
 export const NOVIDADES: Novidade[] = [
   {
+    data: '2026-11-24',
+    tipo: 'plataforma',
+    titulo: 'Ranking geral com Pontos Flix',
+    texto: 'Agora há um ranking que reúne todos os jogos. Em cada jogo, sua melhor partida do mês vale até 1.000 Pontos Flix, conforme quantos jogadores você superou; o geral soma tudo e recomeça no dia 1 de cada mês. No ranking de cada jogo, escolha o jogo pela lista com pesquisa e veja o recorde de todos os tempos ou só o do mês.',
+  },
+  {
     data: '2026-11-19',
     tipo: 'plataforma',
     titulo: 'Seu personagem dentro dos jogos',

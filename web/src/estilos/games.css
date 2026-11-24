@@ -1000,3 +1000,71 @@ button.gx-cartao-capa{width:100%;border:0;padding:0;cursor:pointer}
 .gx-plataforma{display:contents}
 :root.jogo-aberto .gx-plataforma *,:root.jogo-aberto .gx-plataforma *::before,:root.jogo-aberto .gx-plataforma *::after,
 :root.jogo-aberto .gx-fundo,:root.jogo-aberto .gx-fundo::before,:root.jogo-aberto .gx-fundo::after{animation-play-state:paused!important;transition:none!important}
+
+/* ---------- Ranking: Geral | Por jogo, seletor de jogo e temporada ----------
+   A fileira de etiquetas (uma por jogo) crescia a cada jogo novo. Agora: uma chave de 2 posições e, no "Por jogo",
+   um botão só com o jogo atual, que abre a lista com pesquisa. O espaço ocupado não depende do tamanho do catálogo. */
+.gx-ranking-barra{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2) 12px;max-width:760px;margin-bottom:var(--s3)}
+.gx-segmentos{display:inline-flex;padding:3px;border-radius:999px;background:var(--hover);border:1px solid var(--line)}
+.gx-segmentos button{min-height:38px;padding:0 20px;border:0;border-radius:999px;background:none;color:var(--muted);font-weight:600;font-size:14px;cursor:pointer;
+  transition:background-color .3s ease-out,color .3s ease-out}
+.gx-segmentos button[aria-selected=true]{background:var(--ink);color:var(--bg)}
+
+.gx-seletor{position:relative;min-width:0}
+.gx-seletor-botao{display:inline-flex;align-items:center;gap:10px;max-width:100%;min-height:44px;padding:4px 14px 4px 4px;border-radius:999px;
+  border:1px solid var(--line);background:var(--card);color:var(--ink);font-weight:600;font-size:14px;cursor:pointer}
+.gx-seletor-botao:hover,.gx-seletor-botao[aria-expanded=true]{border-color:var(--ink)}
+.gx-seletor-botao .gx-mini{width:34px;height:34px;border-radius:50%}
+.gx-seletor-botao .gx-mini svg{width:18px;height:18px}
+.gx-seletor-nome{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gx-seletor-seta,.gx-linha-seta{flex:none;width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;
+  color:var(--muted);transition:transform .25s var(--ease)}
+[aria-expanded=true]>.gx-seletor-seta,[aria-expanded=true]>.gx-linha-seta{transform:rotate(180deg)}
+.gx-seletor-painel{position:absolute;z-index:30;top:calc(100% + 8px);left:0;width:min(360px,calc(100vw - 2 * var(--pad)));padding:8px;
+  border-radius:18px;border:1px solid var(--line);background:#FFFFFF;box-shadow:0 18px 48px rgba(0,0,0,.18)}
+:root[data-theme=dark] .gx-seletor-painel{background:#25272B;box-shadow:0 18px 48px rgba(0,0,0,.5)}
+.gx-busca.gx-seletor-busca{max-width:none;height:40px;margin:0 0 6px;padding:0 14px;background:var(--bg)}
+.gx-seletor-busca input{font-size:15px}
+.gx-seletor-lista{list-style:none;margin:0;padding:0;max-height:min(340px,55vh);overflow-y:auto;overscroll-behavior:contain;outline:none}
+.gx-seletor-opcao{display:grid;grid-template-columns:36px minmax(0,1fr) 18px;align-items:center;gap:10px;padding:6px 8px;border-radius:12px;cursor:pointer}
+.gx-seletor-opcao.destaque{background:var(--hover)}
+.gx-seletor-opcao .gx-mini{width:36px;height:36px;border-radius:10px}
+.gx-seletor-opcao .gx-mini svg{width:18px;height:18px}
+.gx-seletor-texto{display:grid;min-width:0;line-height:1.25}
+.gx-seletor-texto strong,.gx-seletor-texto small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gx-seletor-texto strong{font-size:14px;font-weight:600}
+.gx-seletor-texto small{font-size:12px;color:var(--muted)}
+.gx-seletor-marca{width:18px;height:18px;fill:none;stroke:var(--red);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.gx-seletor-vazio{padding:14px 8px;font-size:14px;color:var(--muted)}
+
+.gx-temporada{display:inline-flex;align-items:center;gap:10px;margin-bottom:var(--s3);font-size:14px;color:var(--muted)}
+.gx-temporada select{min-height:40px;padding:0 36px 0 16px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);
+  font-weight:600;font-size:14px;cursor:pointer;appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;background-size:16px}
+
+/* Geral: cada jogador abre o detalhe dos pontos por jogo (na lista, logo abaixo dele; no pódio, abaixo do pódio) */
+.gx-linha.gx-linha-geral{display:block;padding:0}
+.gx-linha-botao{display:grid;grid-template-columns:32px 32px minmax(0,1fr) auto 16px;align-items:center;gap:10px;width:100%;padding:9px 6px;
+  border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;border-radius:12px}
+.gx-linha-botao:hover{background:var(--hover)}
+.gx-linha.eu .gx-linha-botao:hover{background:none}
+button.gx-podio-item{display:block;width:100%;padding:0;border:0;background:none;color:inherit;font:inherit;cursor:pointer}
+button.gx-podio-item[aria-expanded=true] .gx-podio-av{box-shadow:0 0 0 3px var(--card),0 0 0 5px var(--cor)}
+.gx-pontos-jogos{list-style:none;margin:0 0 10px;padding:6px 8px;display:grid;gap:2px;border-radius:14px;background:var(--hover)}
+.gx-linha-geral .gx-pontos-jogos{margin:2px 6px 10px 48px}
+.gx-pontos-jogos li{display:grid;grid-template-columns:30px minmax(0,1fr) auto;align-items:center;gap:10px;padding:5px 0}
+.gx-pontos-jogos .gx-mini{width:30px;height:30px;border-radius:9px}
+.gx-pontos-jogos .gx-mini svg{width:16px;height:16px}
+.gx-pontos-jogo-texto{display:grid;min-width:0;line-height:1.25}
+.gx-pontos-jogo-texto strong{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gx-pontos-jogo-texto small{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.gx-pontos-jogo-valor{font-weight:700;font-size:14px;font-variant-numeric:tabular-nums}
+.gx-ranking-regra{max-width:760px;margin:var(--s3) 0 0;font-size:13px;line-height:1.55;color:var(--muted)}
+.gx-ranking-regra strong{color:var(--ink);font-weight:600}
+@media (max-width:560px){
+  .gx-ranking-barra{display:grid;grid-template-columns:minmax(0,1fr)}
+  .gx-segmentos{display:grid;grid-template-columns:1fr 1fr}
+  .gx-seletor-botao{width:100%}
+  .gx-linha-geral .gx-pontos-jogos{margin-left:6px}
+}

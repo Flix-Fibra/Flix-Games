@@ -72,6 +72,33 @@ export interface LinhaRanking {
   eu: boolean;
 }
 
+/** Pontos Flix de um perfil num jogo, na temporada: 1000 × (jogadores − posição + 0,5) / jogadores. */
+export interface PontosNoJogo {
+  jogoId: string;
+  posicao: number;
+  jogadores: number;
+  melhor: number;        // melhor resultado na temporada, na unidade do jogo
+  pontos: number;
+}
+
+/** Linha do ranking geral: `pontos` é a soma dos Pontos Flix de todos os jogos, com o detalhe em `jogos`. */
+export interface LinhaRankingGeral extends LinhaRanking {
+  jogos: PontosNoJogo[];
+}
+
+/** Ranking geral de uma temporada (mês "AAAA-MM", fuso de Brasília). */
+export interface RankingGeral {
+  temporada: string;
+  atual: string;
+  linhas: LinhaRankingGeral[];
+}
+
+/** Temporadas que a página Ranking oferece: a atual e as anteriores com partidas (até 12), da mais nova para a mais velha. */
+export interface Temporadas {
+  atual: string;
+  temporadas: string[];
+}
+
 /** Resposta da API ao fim da partida. Recusada = não entra no ranking (motivo fica gravado para a TI). */
 export type ResultadoPartida =
   | { aceita: true; melhor: number | null; posicao: number | null }

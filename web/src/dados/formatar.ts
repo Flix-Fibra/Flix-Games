@@ -26,6 +26,19 @@ export function rotuloUnidade(unidade: string): string {
   return unidade === 'ms' ? 'tempo' : unidade;
 }
 
+/** Texto sem acento e em minúsculas, para a pesquisa achar "Cabecada" em "Cabeçada". */
+export const normalizarBusca = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+/** Temporada "2026-11" → "Novembro de 2026". */
+export function nomeDaTemporada(t: string): string {
+  const [ano, mes] = t.split('-').map(Number);
+  const nome = new Date(ano!, (mes ?? 1) - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  return nome.charAt(0).toUpperCase() + nome.slice(1);
+}
+
+/** Pontos Flix com separador de milhar ("2.350"). */
+export const formatarPontosFlix = (n: number) => num(n);
+
 export function tipoAparelho(nome: string): 'cel' | 'pc' | 'tab' {
   if (/iPad/i.test(nome)) return 'tab';
   if (/iPhone|Android/i.test(nome)) return 'cel';

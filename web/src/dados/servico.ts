@@ -1,5 +1,5 @@
 import type { PersonagemFlix } from '../personagem/flix';
-import type { AlteracaoPerfil, Aparelho, AvatarConfig, CatalogoAvatar, Comentario, DetalhesJogo, Jogo, LinhaRanking, Perfil, ResultadoPartida, ResumoAvaliacao, Sessao, NovoPerfil } from './tipos';
+import type { AlteracaoPerfil, Aparelho, AvatarConfig, CatalogoAvatar, Comentario, DetalhesJogo, Jogo, LinhaRanking, Perfil, RankingGeral, ResultadoPartida, Temporadas, ResumoAvaliacao, Sessao, NovoPerfil } from './tipos';
 
 /** Erro da API com a mensagem já pronta para mostrar ao cliente. */
 export class ErroApi extends Error {
@@ -32,6 +32,8 @@ async function api<T>(metodo: string, caminho: string, corpo?: unknown): Promise
 }
 
 /** Tudo o que a interface pede ao servidor passa por aqui. */
+const naTemporada = (t?: string) => (t ? `?temporada=${encodeURIComponent(t)}` : '');
+
 export const servico = {
   /**
    * Sessão deste aparelho. Em desenvolvimento, sem sessão, entra pela conta de teste
@@ -52,7 +54,11 @@ export const servico = {
   sairDesteAparelho: () => api<void>('DELETE', '/sessao'),
 
   jogos: () => api<Jogo[]>('GET', '/jogos'),
-  ranking: (jogoId: string) => api<LinhaRanking[]>('GET', `/ranking/${encodeURIComponent(jogoId)}`),
+  // Sem temporada: ranking de todos os tempos (jogo) ou da temporada atual (geral)
+  ranking: (jogoId: string, temporada?: string) =>
+    api<LinhaRanking[]>('GET', `/ranking/${encodeURIComponent(jogoId)}` + naTemporada(temporada)),
+  rankingGeral: (temporada?: string) => api<RankingGeral>('GET', '/ranking/geral' + naTemporada(temporada)),
+  temporadas: () => api<Temporadas>('GET', '/ranking/temporadas'),
 
   criarPerfil: (dados: NovoPerfil) => api<Perfil>('POST', '/perfis', dados),
   alterarPerfil: (id: string, dados: AlteracaoPerfil) => api<Perfil>('PATCH', `/perfis/${encodeURIComponent(id)}`, dados),

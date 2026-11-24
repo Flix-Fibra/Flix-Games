@@ -7,14 +7,19 @@ por jogo, duração mínima e duração nunca maior que o tempo real desde o in�
 """
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from psycopg.errors import UniqueViolation
 
-from .consultas import ranking_do_jogo
+from .consultas import ranking_do_jogo, ranking_geral, temporada_atual, temporadas
 from .sessao import Db, SessaoComPerfil
 
 router = APIRouter(prefix="/api")
+
+# Temporada do ranking: um mês, "AAAA-MM" (ver consultas.FILTRO_TEMPORADA)
+Temporada = Annotated[str | None, Query(pattern=r"^20[0-9]{2}-(0[1-9]|1[0-2])$")]
 
 LIMITE_POR_MINUTO = 20          # partidas iniciadas por perfil por minuto
 FOLGA_MS = 2000                 # atraso de rede tolerado entre "started" e "gameover"
@@ -57,11 +62,35 @@ def listar_jogos(c: Db) -> list[dict]:
     ]
 
 
+# Antes de /ranking/{jogo_id}: "geral" não é id de jogo (ids são g01..g99), mas a ordem deixa isso explícito.
+@router.get("/ranking/geral")
+def ranking_geral_da_temporada(
+    s: SessaoComPerfil, c: Db,
+    temporada: Temporada = None,
+) -> dict:
+    """Ranking geral por Pontos Flix (ver consultas.SQL_PONTOS_FLIX). Sem `temporada`, o mês corrente."""
+    atual = temporada_atual(c)
+    escolhida = temporada or atual
+    return {
+        "temporada": escolhida,
+        "atual": atual,
+        "linhas": ranking_geral(c, s["perfil_id"], escolhida) if escolhida <= atual else [],
+    }
+
+
+@router.get("/ranking/temporadas")
+def temporadas_do_ranking(s: SessaoComPerfil, c: Db) -> dict:
+    """Temporadas que a página Ranking oferece (a atual e as anteriores com partidas), no Geral e no Por jogo."""
+    atual = temporada_atual(c)
+    return {"atual": atual, "temporadas": temporadas(c, atual)}
+
+
 @router.get("/ranking/{jogo_id}")
-def ranking(jogo_id: str, s: SessaoComPerfil, c: Db) -> list[dict]:
+def ranking(jogo_id: str, s: SessaoComPerfil, c: Db, temporada: Temporada = None) -> list[dict]:
+    """Ranking do jogo: recorde de todos os tempos ou, com `temporada`, só as partidas daquele mês."""
     if not c.execute("SELECT 1 FROM jogos WHERE id = %s AND publicado AND tem_ranking", (jogo_id,)).fetchone():
         raise HTTPException(404, "Jogo sem ranking.")
-    return ranking_do_jogo(c, jogo_id, s["perfil_id"])
+    return ranking_do_jogo(c, jogo_id, s["perfil_id"], temporada=temporada)
 
 
 @router.post("/partidas/inicio", status_code=201)

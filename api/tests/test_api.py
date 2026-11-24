@@ -265,6 +265,103 @@ def test_perfil_oculto_some_para_os_outros(app_ativo):
     assert any(l["apelido"] == "Discreto" for l in dono.get("/api/ranking/g15").json())  # o dono ainda se vê
 
 
+# ---------- Ranking geral: Pontos Flix por colocação, temporada mensal (Q20) ----------
+def _resultado(perfil_id: str, jogo: str, pontos: int, quando: str) -> None:
+    """Partida já terminada numa data escolhida (temporadas passadas não se misturam com as partidas dos outros testes)."""
+    sql(
+        """INSERT INTO partidas (run_id, perfil_id, jogo_id, status, iniciada_em, finalizada_em, pontos, duracao_ms)
+           VALUES (%s, %s, %s, 'finalizada', %s::timestamptz - interval '1 minute', %s::timestamptz, %s, 60000)""",
+        str(uuid.uuid4()), perfil_id, jogo, quando, quando, pontos,
+    )
+
+
+def _no_hub(*jogos: str) -> None:
+    """O ranking geral só conta jogos que abrem no hub (com pasta entregue)."""
+    pastas = {"g03": "snake", "g12": "corrida", "g14": "espiral"}
+    for j in jogos:
+        sql("UPDATE jogos SET pasta = %s WHERE id = %s", pastas[j], j)
+
+
+def test_ranking_geral_soma_pontos_flix_pela_colocacao(app_ativo):
+    """Pontuações de unidades e sentidos diferentes viram Pontos Flix pela colocação: 1000 × (N − posição + 0,5) / N."""
+    _no_hub("g03", "g12", "g14")
+    _, a = com_perfil(app_ativo, "Geral A")
+    _, b = com_perfil(app_ativo, "Geral B")
+    _, cc = com_perfil(app_ativo, "Geral C")
+    quando = "2025-03-15 12:00-03"
+    for pid, pts in ((a, 300), (b, 200), (cc, 100)):      # g03: vence o maior; N = 3 → 833, 500, 167
+        _resultado(pid, "g03", pts, quando)
+    _resultado(a, "g03", 50, quando)                        # partida pior não muda nada: conta a melhor
+    _resultado(b, "g12", 40_000, quando)                    # g12: vence o MENOR tempo; N = 2 → 750, 250
+    _resultado(a, "g12", 50_000, quando)
+    _resultado(cc, "g14", 10, quando)                       # sozinho no jogo: 500 (vencer sem concorrência vale menos)
+    _resultado(cc, "g13", 9, quando)                        # g13 só cadastrado, sem pasta no hub: não soma nada
+
+    olhando, _ = com_perfil(app_ativo, "Geral Plateia")
+    r = olhando.get("/api/ranking/geral", params={"temporada": "2025-03"})
+    assert r.status_code == 200, r.text
+    corpo = r.json()
+    assert corpo["temporada"] == "2025-03"
+    linhas = [(l["apelido"], l["posicao"], l["pontos"]) for l in corpo["linhas"]]
+    assert linhas == [("Geral B", 1, 1250), ("Geral A", 2, 1083), ("Geral C", 3, 667)]
+    b_jogos = corpo["linhas"][0]["jogos"]
+    assert b_jogos == [
+        {"jogoId": "g12", "posicao": 1, "jogadores": 2, "melhor": 40_000, "pontos": 750},
+        {"jogoId": "g03", "posicao": 2, "jogadores": 3, "melhor": 200, "pontos": 500},
+    ]
+    assert not any(l["eu"] for l in corpo["linhas"])        # quem olha não jogou nessa temporada
+
+
+def test_temporada_do_ranking_geral_segue_o_fuso_de_brasilia(app_ativo):
+    _no_hub("g03")
+    c, pid = com_perfil(app_ativo, "Geral Virada")
+    _resultado(pid, "g03", 100, "2025-06-01 01:00+00")      # 31/05 às 22h em Brasília: ainda é maio
+    maio = c.get("/api/ranking/geral", params={"temporada": "2025-05"}).json()["linhas"]
+    junho = c.get("/api/ranking/geral", params={"temporada": "2025-06"}).json()["linhas"]
+    assert [l["apelido"] for l in maio] == ["Geral Virada"] and maio[0]["eu"]
+    assert junho == []
+
+
+def test_ranking_geral_oculto_conta_nos_pontos_mas_some_para_os_outros(app_ativo):
+    _no_hub("g03")
+    dono, oculto = com_perfil(app_ativo, "Geral Oculto")
+    outro, visivel = com_perfil(app_ativo, "Geral Visivel")
+    _resultado(oculto, "g03", 500, "2025-07-10 12:00-03")
+    _resultado(visivel, "g03", 100, "2025-07-10 12:00-03")
+    assert dono.patch(f"/api/perfis/{oculto}", json={"oculto": True}).status_code == 200
+    # Os pontos não mudam conforme quem olha: o 2º de 2 vale 250, mesmo sem ver quem está na frente
+    para_outro = outro.get("/api/ranking/geral", params={"temporada": "2025-07"}).json()["linhas"]
+    assert [(l["apelido"], l["pontos"]) for l in para_outro] == [("Geral Visivel", 250)]
+    para_dono = dono.get("/api/ranking/geral", params={"temporada": "2025-07"}).json()["linhas"]
+    assert [(l["apelido"], l["pontos"], l["eu"]) for l in para_dono] == [("Geral Oculto", 750, True), ("Geral Visivel", 250, False)]
+
+
+def test_ranking_geral_temporada_atual_e_invalida(app_ativo):
+    c, _ = com_perfil(app_ativo, "Geral Agora")
+    corpo = c.get("/api/ranking/geral").json()
+    lista = c.get("/api/ranking/temporadas").json()
+    assert corpo["temporada"] == corpo["atual"] == lista["atual"] == lista["temporadas"][0]
+    assert c.get("/api/ranking/geral", params={"temporada": "2099-01"}).json()["linhas"] == []
+    for ruim in ("2025-13", "25-03", "2025-3", "geral"):
+        assert c.get("/api/ranking/geral", params={"temporada": ruim}).status_code == 422
+        assert c.get("/api/ranking/g03", params={"temporada": ruim}).status_code == 422
+
+
+def test_ranking_do_jogo_por_temporada_e_de_todos_os_tempos(app_ativo):
+    """Mesmo filtro de mês do geral: o ranking do jogo no mês só vê as partidas daquele mês."""
+    a, pa = com_perfil(app_ativo, "Mes A")
+    _, pb = com_perfil(app_ativo, "Mes B")
+    _resultado(pa, "g03", 100, "2025-08-10 12:00-03")
+    _resultado(pb, "g03", 70, "2025-08-20 12:00-03")
+    _resultado(pa, "g03", 50, "2025-09-05 12:00-03")
+    agosto = [(l["apelido"], l["posicao"], l["pontos"]) for l in a.get("/api/ranking/g03", params={"temporada": "2025-08"}).json()]
+    setembro = [(l["apelido"], l["posicao"], l["pontos"]) for l in a.get("/api/ranking/g03", params={"temporada": "2025-09"}).json()]
+    assert agosto == [("Mes A", 1, 100), ("Mes B", 2, 70)]
+    assert setembro == [("Mes A", 1, 50)]                    # em setembro, vale a melhor partida de setembro
+    sempre = {l["apelido"]: l["pontos"] for l in a.get("/api/ranking/g03").json() if l["eu"]}
+    assert sempre == {"Mes A": 100}                          # todos os tempos: a melhor de qualquer mês
+
+
 def test_limite_de_partidas_por_minuto(app_ativo):
     c, _ = com_perfil(app_ativo, "Spammer")
     codigos = [c.post("/api/partidas/inicio", json={"jogoId": "g01", "runId": str(uuid.uuid4())}).status_code for _ in range(22)]

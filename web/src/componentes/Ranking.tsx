@@ -1,49 +1,165 @@
-import { regraDoRanking } from '../dados/formatar';
-import type { Jogo, Perfil } from '../dados/tipos';
+import { useEffect, useState } from 'react';
+import { formatarNumero, formatarPontos, formatarPontosFlix, nomeDaTemporada, regraDoRanking } from '../dados/formatar';
+import type { Jogo, LinhaRankingGeral, Perfil } from '../dados/tipos';
 import { Mini } from './Icones';
-import { Linha, Podio, SemRanking, useRanking } from './ListaRanking';
+import { ConteudoLinha, Linha, Podio, SemRanking, useRanking, useRankingGeral, useTemporadas } from './ListaRanking';
+import { SeletorJogo } from './SeletorJogo';
 
 interface Props {
   jogos: Jogo[];
   perfil: Perfil;
+  /** `null` = ranking geral; um id = ranking daquele jogo. */
   jogoId: string | null;
-  onJogo: (id: string) => void;
+  onJogo: (id: string | null) => void;
 }
 
+/**
+ * Página Ranking, em dois modos:
+ * - Geral: soma dos Pontos Flix de todos os jogos, por temporada (mês). Ver a regra em api/app/consultas.py.
+ * - Por jogo: o recorde de todos os tempos de cada jogo, na unidade dele, ou só as partidas de um mês.
+ * O jogo é escolhido num seletor único (não numa fileira de etiquetas), que não cresce com o catálogo.
+ * A temporada escolhida vale para os dois modos: vendo outubro no Geral e trocando para o Por jogo, continua outubro,
+ * e a posição do detalhe do Geral ("1º de 7") é a mesma do ranking do jogo naquele mês. `null` = o padrão de cada
+ * modo (mês atual no Geral, todos os tempos no Por jogo).
+ */
 export function Ranking({ jogos, perfil, jogoId, onJogo }: Props) {
   const comRanking = jogos.filter((j) => j.ranking);
-  const jogo = comRanking.find((j) => j.id === jogoId) ?? comRanking[0];
-  const { linhas, erro } = useRanking(jogo ?? { id: '', ranking: false } as Jogo, `${perfil.id}|${perfil.apelido}|${perfil.oculto}|${perfil.partidas}`);
+  const jogo = jogoId ? comRanking.find((j) => j.id === jogoId) ?? comRanking[0] : null;
+  const versao = `${perfil.id}|${perfil.apelido}|${perfil.oculto}|${perfil.partidas}`;
+  // Ao voltar do Geral para o Por jogo, reabre o último jogo escolhido (não o primeiro da lista)
+  const [ultimoJogo, setUltimoJogo] = useState(jogoId);
+  useEffect(() => { if (jogoId) setUltimoJogo(jogoId); }, [jogoId]);
+  const [temporada, setTemporada] = useState<string | null>(null);
+  const lista = useTemporadas();
+
+  if (comRanking.length === 0) {
+    return (
+      <section className="gx-view ativa" aria-label="Ranking">
+        <div className="titulo-pagina"><h1>Ranking</h1></div>
+        <p className="perfil-dica">Nenhum jogo com ranking publicado ainda.</p>
+      </section>
+    );
+  }
 
   return (
     <section className="gx-view ativa" aria-label="Ranking">
       <div className="titulo-pagina">
         <h1>Ranking</h1>
-        <p>Um ranking permanente para cada jogo{jogo ? ` · ${regraDoRanking(jogo).toLowerCase()}` : ''}</p>
+        <p>{!jogo ? 'Pontos Flix somados em todos os jogos, por temporada'
+          : `${temporada ? nomeDaTemporada(temporada) : 'Recorde de todos os tempos'} · ${regraDoRanking(jogo).toLowerCase()}`}</p>
       </div>
-      {!jogo ? <p className="perfil-dica">Nenhum jogo com ranking publicado ainda.</p> : (
-        <>
-          <div className="gx-filtro-jogos" role="tablist" aria-label="Escolha o jogo">
-            {comRanking.map((j) => (
-              <button key={j.id} className="gx-filtro" role="tab" aria-selected={j.id === jogo.id} onClick={() => onJogo(j.id)}>
-                <Mini jogo={j} />{j.nome}
-              </button>
-            ))}
-          </div>
-          <div className="card gx-ranking-card">
-            {linhas === null ? <p className="perfil-dica">Carregando…</p>
-              : linhas.length === 0 ? <SemRanking erro={erro} />
-              : (
-                <>
-                  <Podio linhas={linhas} jogo={jogo} />
-                  <ol className="gx-top">
-                    {(linhas.length >= 3 ? linhas.slice(3) : linhas).map((l) => <Linha key={l.posicao + l.apelido} l={l} jogo={jogo} />)}
-                  </ol>
-                </>
-              )}
-          </div>
-        </>
+
+      <div className="gx-ranking-barra">
+        <div className="gx-segmentos" role="tablist" aria-label="Tipo de ranking">
+          <button type="button" role="tab" aria-selected={!jogo} onClick={() => onJogo(null)}>Geral</button>
+          <button type="button" role="tab" aria-selected={!!jogo} onClick={() => onJogo(jogo?.id ?? ultimoJogo ?? comRanking[0]!.id)}>Por jogo</button>
+        </div>
+        {jogo && <SeletorJogo jogos={comRanking} atual={jogo} onEscolher={(j) => onJogo(j.id)} />}
+      </div>
+
+      {lista && (
+        <label className="gx-temporada">
+          <span>Temporada</span>
+          <select value={temporada ?? (jogo ? '' : lista.atual)} onChange={(e) => setTemporada(e.target.value || null)}>
+            {jogo && <option value="">Todos os tempos</option>}
+            {lista.temporadas.map((t) => <option key={t} value={t}>{nomeDaTemporada(t)}{t === lista.atual ? ' (atual)' : ''}</option>)}
+          </select>
+        </label>
       )}
+
+      {jogo ? <RankingDoJogo jogo={jogo} versao={versao} temporada={temporada} atual={lista?.atual} />
+        : <RankingGeralDaTemporada key={temporada ?? 'atual'} jogos={comRanking} versao={versao} temporada={temporada} />}
     </section>
+  );
+}
+
+function RankingDoJogo({ jogo, versao, temporada, atual }: { jogo: Jogo; versao: string; temporada: string | null; atual?: string }) {
+  const { linhas, erro } = useRanking(jogo, versao, temporada);
+  const vazio = !temporada ? undefined
+    : temporada === atual ? 'Ninguém pontuou neste jogo nesta temporada ainda. Seja o primeiro!'
+    : `Ninguém pontuou neste jogo em ${nomeDaTemporada(temporada).toLowerCase()}.`;
+  return (
+    <div className="card gx-ranking-card">
+      {linhas === null ? <p className="perfil-dica">Carregando…</p>
+        : linhas.length === 0 ? <SemRanking erro={erro} texto={vazio} />
+        : (
+          <>
+            <Podio linhas={linhas} valor={(l) => formatarNumero(l.pontos, jogo.unidade)} />
+            <ol className="gx-top">
+              {(linhas.length >= 3 ? linhas.slice(3) : linhas).map((l) => <Linha key={l.posicao + l.apelido} l={l} jogo={jogo} />)}
+            </ol>
+          </>
+        )}
+    </div>
+  );
+}
+
+function RankingGeralDaTemporada({ jogos, versao, temporada }: { jogos: Jogo[]; versao: string; temporada: string | null }) {
+  const [aberto, setAberto] = useState<string | null>(null); // nickname do jogador com o detalhe aberto
+  const { dados, erro } = useRankingGeral(temporada, versao);
+  const linhas = dados?.linhas ?? null;
+  const alternar = (l: LinhaRankingGeral) => setAberto((a) => (a === l.apelido ? null : l.apelido));
+  const noPodio = linhas && linhas.length >= 3 ? linhas.slice(0, 3) : [];
+  const abertoNoPodio = noPodio.find((l) => l.apelido === aberto);
+  const total = (l: LinhaRankingGeral) => `${formatarPontosFlix(l.pontos)} pts`;
+  const atual = dados?.atual;
+
+  return (
+    <>
+      <div className="card gx-ranking-card">
+        {erro ? <SemRanking erro />
+          : linhas === null ? <p className="perfil-dica">Carregando…</p>
+          : linhas.length === 0 ? (
+            <SemRanking erro={false} texto={dados?.temporada === atual
+              ? 'Ninguém pontuou nesta temporada ainda. Jogue qualquer jogo para entrar no ranking geral!'
+              : 'Ninguém pontuou nesta temporada.'} />
+          ) : (
+            <>
+              {noPodio.length > 0 && <Podio linhas={noPodio} valor={total} aberto={aberto} onAbrir={alternar} />}
+              {abertoNoPodio && <PontosPorJogo l={abertoNoPodio} jogos={jogos} />}
+              <ol className="gx-top">
+                {(noPodio.length ? linhas.slice(3) : linhas).map((l) => (
+                  <li key={l.posicao + l.apelido} className={'gx-linha gx-linha-geral' + (l.eu ? ' eu' : '')}>
+                    <button type="button" className="gx-linha-botao" aria-expanded={aberto === l.apelido} onClick={() => alternar(l)}>
+                      <ConteudoLinha l={l} valor={formatarPontosFlix(l.pontos)} unidade="Pontos Flix" />
+                      <svg className="gx-linha-seta" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+                    </button>
+                    {aberto === l.apelido && <PontosPorJogo l={l} jogos={jogos} />}
+                  </li>
+                ))}
+              </ol>
+            </>
+          )}
+      </div>
+
+      <p className="gx-ranking-regra">
+        <strong>Como funciona:</strong> em cada jogo, sua melhor partida do mês vale até 1.000 Pontos Flix, conforme a
+        parcela de jogadores que você superou; quanto mais gente no jogo, mais vale ficar na frente. O ranking geral soma
+        todos os jogos e recomeça no dia 1 de cada mês. Toque num jogador para ver os pontos de cada jogo.
+      </p>
+    </>
+  );
+}
+
+/** Detalhe de um jogador no geral: de onde veio cada parte do total. */
+function PontosPorJogo({ l, jogos }: { l: LinhaRankingGeral; jogos: Jogo[] }) {
+  const porId = new Map(jogos.map((j) => [j.id, j]));
+  return (
+    <ul className="gx-pontos-jogos" aria-label={`Pontos Flix de ${l.apelido} por jogo`}>
+      {l.jogos.map((pj) => {
+        const j = porId.get(pj.jogoId);
+        if (!j) return null;
+        return (
+          <li key={pj.jogoId}>
+            <Mini jogo={j} />
+            <span className="gx-pontos-jogo-texto">
+              <strong>{j.nome}</strong>
+              <small>{pj.posicao}º de {pj.jogadores} · {formatarPontos(pj.melhor, j.unidade)}</small>
+            </span>
+            <span className="gx-pontos-jogo-valor">{formatarPontosFlix(pj.pontos)}</span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

@@ -5,6 +5,7 @@ import { CartaoJogo } from './CartaoJogo';
 import { DetalheJogo } from './DetalheJogo';
 import { Coracao, Lupa } from './Icones';
 import { jogosNovos } from '../dados/novidades';
+import { normalizarBusca } from '../dados/formatar';
 
 interface Props {
   jogos: Jogo[];
@@ -19,8 +20,6 @@ const FAVORITOS = 'Favoritos';
 const NOVOS = 'Novos';
 const MAIS_JOGADOS = 'Mais jogados';
 
-/** Texto sem acento e em minúsculas, para a pesquisa achar "Cabecada" em "Cabeçada". */
-const normalizar = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
 /**
  * Página "Jogos": todos os jogos do hub, com pesquisa por nome e filtros (Favoritos, Todos, Novos, Mais jogados e
@@ -45,8 +44,8 @@ export function Jogos({ jogos, perfil, onJogar, onFavoritar, onAvaliado }: Props
   const maisJogados = useMemo(() => jogos.filter((j) => (j.partidas ?? 0) > 0).sort((a, b) => (b.partidas ?? 0) - (a.partidas ?? 0)), [jogos]);
   const doFiltro = filtro === TODOS ? jogos : filtro === FAVORITOS ? favoritos : filtro === NOVOS ? novos
     : filtro === MAIS_JOGADOS ? maisJogados : jogos.filter((j) => j.genero === filtro);
-  const termo = normalizar(busca);
-  const lista = termo ? doFiltro.filter((j) => normalizar(j.nome).includes(termo)) : doFiltro;
+  const termo = normalizarBusca(busca);
+  const lista = termo ? doFiltro.filter((j) => normalizarBusca(j.nome).includes(termo)) : doFiltro;
 
   function jogar(j: Jogo) {
     if (j.pasta) onJogar(j);
