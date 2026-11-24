@@ -1068,3 +1068,21 @@ button.gx-podio-item[aria-expanded=true] .gx-podio-av{box-shadow:0 0 0 3px var(-
   .gx-seletor-botao{width:100%}
   .gx-linha-geral .gx-pontos-jogos{margin-left:6px}
 }
+
+/* ---------- Ranking: troca de filtro sem solavanco ----------
+   - .gx-altura-suave: a altura do cartão desliza até a do conteúdo novo (medida por ResizeObserver, em AlturaSuave.tsx).
+     A folga de 6 px (com margem negativa) deixa o anel do avatar do pódio aparecer inteiro apesar do overflow:hidden.
+   - .gx-ranking-estado.carregando: o resultado anterior fica à vista, esmaecido, até o novo chegar.
+   - .gx-ranking-conteudo: o resultado novo entra com opacidade e um deslocamento curto. Só opacidade e transform:
+     o navegador anima isso na GPU, sem refazer o layout a cada quadro. */
+.gx-altura-suave{overflow:hidden;margin:-6px;padding:6px;transition:height .34s var(--ease)}
+.gx-ranking-estado{transition:opacity .18s ease-out}
+.gx-ranking-estado.carregando{opacity:.5;pointer-events:none;transition-delay:.08s} /* resposta rápida nem chega a esmaecer */
+.gx-ranking-conteudo{animation:gx-ranking-entra .3s var(--ease)}
+.gx-pontos-jogos{animation:gx-ranking-entra .26s var(--ease)}
+@keyframes gx-ranking-entra{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.gx-ranking-espera{min-height:120px;display:grid;place-items:center;margin:0}
+@media (prefers-reduced-motion:reduce){
+  .gx-altura-suave,.gx-ranking-estado{transition:none}
+  .gx-ranking-conteudo,.gx-pontos-jogos{animation:none}
+}

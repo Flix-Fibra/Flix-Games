@@ -1,54 +1,27 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { type CSSProperties, type ReactNode } from 'react';
 import { iniciais } from '../dados/apelido';
 import { formatarNumero, rotuloUnidade } from '../dados/formatar';
 import { servico } from '../dados/servico';
-import type { Jogo, LinhaRanking, RankingGeral, Temporadas } from '../dados/tipos';
+import type { Jogo, LinhaRanking, Temporadas } from '../dados/tipos';
+import { useBusca } from '../dados/useBusca';
 
 /**
- * Busca o ranking de um jogo na API. `versao` muda quando o perfil muda (força nova busca). `temporada` ("AAAA-MM")
- * restringe ao mês; sem ela, recorde de todos os tempos.
+ * Ranking de um jogo (Início, página do jogo). `versao` muda quando o perfil muda (força nova busca). `temporada`
+ * ("AAAA-MM") restringe ao mês; sem ela, recorde de todos os tempos. Resultado já visto aparece na hora (useBusca).
  */
 export function useRanking(jogo: Jogo, versao: string, temporada?: string | null): { linhas: LinhaRanking[] | null; erro: boolean } {
-  const [linhas, setLinhas] = useState<LinhaRanking[] | null>(null);
-  const [erro, setErro] = useState(false);
-  useEffect(() => {
-    let ativo = true; // ignora resposta atrasada se o jogo mudou no meio
-    setLinhas(null);
-    setErro(false);
-    if (!jogo.ranking) { setLinhas([]); return; }
-    servico.ranking(jogo.id, temporada ?? undefined)
-      .then((l) => { if (ativo) setLinhas(l); })
-      .catch(() => { if (ativo) { setLinhas([]); setErro(true); } });
-    return () => { ativo = false; };
-  }, [jogo.id, jogo.ranking, versao, temporada]);
-  return { linhas, erro };
+  const chave = jogo.ranking ? chaveDoRanking(jogo.id, temporada ?? null, versao) : null;
+  const { dados, erro } = useBusca(chave, () => servico.ranking(jogo.id, temporada ?? undefined));
+  if (!jogo.ranking) return { linhas: [], erro: false };
+  return { linhas: erro ? [] : dados, erro };
 }
 
-/** Busca o ranking geral de uma temporada (`null` = a atual). */
-export function useRankingGeral(temporada: string | null, versao: string): { dados: RankingGeral | null; erro: boolean } {
-  const [dados, setDados] = useState<RankingGeral | null>(null);
-  const [erro, setErro] = useState(false);
-  useEffect(() => {
-    let ativo = true;
-    setDados(null);
-    setErro(false);
-    servico.rankingGeral(temporada ?? undefined)
-      .then((d) => { if (ativo) setDados(d); })
-      .catch(() => { if (ativo) setErro(true); });
-    return () => { ativo = false; };
-  }, [temporada, versao]);
-  return { dados, erro };
-}
+/** Mesma chave na página Ranking e no Início: o que um já buscou, o outro mostra na hora. */
+export const chaveDoRanking = (jogoId: string, temporada: string | null, versao: string) => `ranking|${jogoId}|${temporada ?? ''}|${versao}`;
 
-/** Temporadas oferecidas na página Ranking (busca uma vez por visita à página). */
+/** Temporadas oferecidas na página Ranking. */
 export function useTemporadas(): Temporadas | null {
-  const [dados, setDados] = useState<Temporadas | null>(null);
-  useEffect(() => {
-    let ativo = true;
-    servico.temporadas().then((t) => { if (ativo) setDados(t); }).catch(() => undefined); // sem lista, o seletor só não aparece
-    return () => { ativo = false; };
-  }, []);
-  return dados;
+  return useBusca('temporadas', () => servico.temporadas()).dados;
 }
 
 /** Miolo de uma linha (posição, avatar, nickname e nome, valor). Igual no ranking de cada jogo e no geral. */
