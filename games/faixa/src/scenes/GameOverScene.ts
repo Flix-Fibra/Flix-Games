@@ -10,6 +10,8 @@ import { portraitKey } from './BootScene';
 
 interface GameOverData {
   score: number;
+  lanes: number;
+  bonus: number;
   cause: Cause;
   previousBest: number;
   expression: Expression;
@@ -50,7 +52,8 @@ export class GameOverScene extends Phaser.Scene {
       pontos: data.score,
       linhas: [
         { texto: CAUSE_TEXT[data.cause] },
-        { texto: data.score === 1 ? '1 FAIXA ATRAVESSADA' : `${data.score} FAIXAS ATRAVESSADAS` },
+        { texto: data.lanes === 1 ? '1 FAIXA ATRAVESSADA' : `${data.lanes} FAIXAS ATRAVESSADAS` },
+        ...(data.bonus > 0 ? [{ texto: `BÔNUS DE COMBO: +${data.bonus}`, cor: 0xf5c04a }] : []),
         newRecord ? { texto: 'NOVO RECORDE!', cor: 0xf5c04a } : { texto: `SEU MELHOR: ${best}`, cor: 0xb8c6e0 },
       ],
       px: { titulo: 3, pontos: 5, texto: 1, botao: 2 },

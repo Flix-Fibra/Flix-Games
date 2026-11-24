@@ -5,7 +5,7 @@ import type { HubBridge } from '@flix/game-sdk';
 import { PLAYER, SPLASH, TAPUME } from '../art';
 import { sfx } from '../audio';
 import { LaneView } from '../laneView';
-import { createGame, move, score, update, type Cause, type Dir, type Game } from '../logic';
+import { COMBO_WINDOW, createGame, lanes, move, score, update, type Cause, type Dir, type Game } from '../logic';
 import { RENDER } from '../camera';
 import { loadBest } from '../storage';
 import { CELL, COLORS, GAME_H, GAME_W, HUD_H, PLAY_W, PLAY_X } from '../theme';
@@ -17,6 +17,8 @@ const STEP = 1 / 60;
 const SWIPE_PX = 18;
 const TAP_PX = 10;
 const MILESTONE = 10;
+const COMBO_BAR_W = 90;
+const COMBO_BAR_H = 5;
 const ROWS_ON_SCREEN = Math.ceil(GAME_H / CELL) + 2;
 
 const KEY_DIR: Record<string, Dir> = {
@@ -50,6 +52,9 @@ export class PlayScene extends Phaser.Scene {
   private scoreText!: Phaser.GameObjects.BitmapText;
   private bestText!: Phaser.GameObjects.BitmapText;
   private readyText!: Phaser.GameObjects.Text;
+  private comboText!: Phaser.GameObjects.BitmapText;
+  private comboBack!: Phaser.GameObjects.Rectangle;
+  private comboBar!: Phaser.GameObjects.Rectangle;
   private camTop = 0;
 
   constructor() {
@@ -84,6 +89,9 @@ export class PlayScene extends Phaser.Scene {
     this.portrait = this.add.image(0, 0, portraitKey('neutral')).setScale(1).setDepth(7);
     this.scoreText = hudText(this, GAME_W / 2, 0, '0', 4).setOrigin(0.5, 0).setDepth(7);
     this.bestText = hudText(this, GAME_W - 6, 0, `MELHOR ${this.previousBest}`, 1).setOrigin(1, 0).setDepth(7);
+    this.comboText = hudText(this, GAME_W / 2, 0, '', 2).setOrigin(0.5, 0).setDepth(7).setTint(0xf5c04a);
+    this.comboBack = this.add.rectangle(0, 0, COMBO_BAR_W + 2, COMBO_BAR_H + 2, 0x000000, 0.55).setOrigin(0.5, 0).setDepth(7);
+    this.comboBar = this.add.rectangle(0, 0, COMBO_BAR_W, COMBO_BAR_H, 0xf5c04a).setOrigin(0, 0).setDepth(7);
     this.readyText = this.add
       .text(GAME_W / 2, 0, 'VAI!', { fontFamily: 'sans-serif', fontSize: '30px', fontStyle: 'bold', color: COLORS.text })
       .setOrigin(0.5)
@@ -143,7 +151,14 @@ export class PlayScene extends Phaser.Scene {
     sfx(dir === 'left' || dir === 'right' ? 'side' : 'hop');
     this.player.setAngle(ANGLE[dir]);
     this.bump = 1.18;
+    if (this.g.lastBonus > 0) this.bonusPopup(this.g.lastBonus);
     this.syncViews();
+  }
+
+  /** "+N" que sobe a partir do jogador quando o combo dá bônus. */
+  private bonusPopup(n: number): void {
+    const t = hudText(this, this.sx, this.sy - CELL * 0.6, `+${n}`, 2).setOrigin(0.5, 1).setDepth(7).setTint(0xf5c04a);
+    this.tweens.add({ targets: t, y: t.y - 26, alpha: 0, duration: 520, onComplete: () => t.destroy() });
   }
 
   // ---------- faixas ----------
@@ -217,11 +232,23 @@ export class PlayScene extends Phaser.Scene {
     const close = Phaser.Math.Clamp((2.2 - gap) / 2.2, 0, 1);
     this.danger.setY(top + GAME_H - 14).setAlpha(this.g.alive ? close * (0.35 + 0.25 * Math.sin(this.time.now / 90)) : 0);
 
+    // combo: a barra esvazia em COMBO_WINDOW; se zerar, o bônus acaba
+    const ativo = this.g.alive && this.g.comboLeft > 0;
+    const by = top + HUD_H + 16;
+    this.comboText.setVisible(ativo && this.g.combo >= 2).setPosition(GAME_W / 2, by);
+    if (ativo && this.g.combo >= 2) this.comboText.setText(`COMBO X${this.g.combo}`);
+    this.comboBack.setVisible(ativo).setPosition(GAME_W / 2, by + 15);
+    this.comboBar
+      .setVisible(ativo)
+      .setPosition(GAME_W / 2 - COMBO_BAR_W / 2, by + 16)
+      .setSize(Math.max(0.01, COMBO_BAR_W * (this.g.comboLeft / COMBO_WINDOW)), COMBO_BAR_H);
+
     const s = score(this.g);
     if (s !== this.lastScore) {
+      const antes = this.lastScore;
       this.lastScore = s;
       this.scoreText.setText(String(s));
-      if (s % MILESTONE === 0) {
+      if (Math.floor(s / MILESTONE) > Math.floor(antes / MILESTONE)) {
         sfx('milestone');
         this.tweens.add({ targets: this.scoreText, scale: { from: 1.5, to: 1 }, duration: 260 });
       }
@@ -255,9 +282,9 @@ export class PlayScene extends Phaser.Scene {
       runId: this.runId,
       score: s,
       durationMs: this.elapsed,
-      meta: { cause },
+      meta: { cause, lanes: lanes(this.g), bonus: this.g.bonus },
     });
-    const result = { score: s, cause, previousBest: this.previousBest, expression };
+    const result = { score: s, lanes: lanes(this.g), bonus: this.g.bonus, cause, previousBest: this.previousBest, expression };
     this.time.delayedCall(900, () => this.scene.start('GameOver', result));
   }
 

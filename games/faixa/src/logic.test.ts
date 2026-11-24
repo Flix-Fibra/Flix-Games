@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   COLS, LOOP, MARGIN, MAX_HAZARD_STREAK, MIN_TRAIN_WARNING, SAFE_AHEAD, START_COL, START_ROW,
   World, createGame, creepSpeed, difficulty, hitByTrain, hitByVehicle, move, moverLeft, mulberry32, placeMovers, score,
-  supportAt, trainCrossTime, trainState, update,
+  supportAt, COMBO_WINDOW, COMBO_BONUS_CAP, lanes, trainCrossTime, trainState, update,
   type Game, type GrassLane, type Lane, type RailLane, type RiverLane, type RoadLane,
 } from './logic';
 
@@ -238,12 +238,13 @@ describe('placeMovers', () => {
 describe('jogador: movimento', () => {
   it('anda para cima e a pontuação conta as faixas além da largada', () => {
     const g = jogoCom({ [START_ROW + 1]: grama(START_ROW + 1), [START_ROW + 2]: grama(START_ROW + 2) });
-    expect(score(g)).toBe(0);
+    expect(lanes(g)).toBe(0);
     expect(move(g, 'up')).toBe(true);
     expect(move(g, 'up')).toBe(true);
-    expect(score(g)).toBe(2);
+    expect(lanes(g)).toBe(2);
     expect(move(g, 'down')).toBe(true);
-    expect(score(g)).toBe(2); // voltar não tira ponto
+    expect(lanes(g)).toBe(2); // voltar não tira ponto
+    expect(score(g)).toBe(3); // 2 faixas + 1 de bônus (as duas vieram sem pausa)
   });
   it('árvore bloqueia o passo, de frente e de lado', () => {
     const g = jogoCom({ [START_ROW + 1]: grama(START_ROW + 1, [START_COL]), [START_ROW]: grama(START_ROW, [START_COL + 1]) });
@@ -276,6 +277,23 @@ describe('jogador: perigos', () => {
     update(cheia, 1 / 60);
     expect(cheia.alive).toBe(false);
     expect(cheia.cause).toBe('vehicle');
+  });
+  it('andar para dentro de um carro ou do trem é recusado e não mata', () => {
+    const carro = { x0: START_COL + MARGIN - 0.2, len: 1.4, variant: 0 };
+    const g = jogoCom({ [START_ROW + 1]: rua(START_ROW + 1, { speed: 0.001, vehicles: [carro] }), [START_ROW]: grama(START_ROW) });
+    expect(move(g, 'up')).toBe(false);
+    expect(g.row).toBe(START_ROW);
+    update(g, 1 / 60);
+    expect(g.alive).toBe(true);
+    const t = jogoCom({ [START_ROW + 1]: trilho(START_ROW + 1), [START_ROW]: grama(START_ROW) });
+    t.t = trainCrossTime(trilho(0)) / 2; // trem no meio da passagem
+    expect(move(t, 'up')).toBe(false);
+    expect(t.alive).toBe(true);
+  });
+  it('mas o carro que vem até o jogador parado ainda atropela', () => {
+    const g = jogoCom({ [START_ROW]: rua(START_ROW, { speed: 3, vehicles: [{ x0: MARGIN - 3, len: 1.4, variant: 0 }] }) });
+    for (let i = 0; i < 600 && g.alive; i++) update(g, 1 / 60);
+    expect(g.cause).toBe('vehicle');
   });
   it('carro que passa só pela coluna ao lado não atinge', () => {
     const r = rua(START_ROW, { speed: 0.001, vehicles: [{ x0: START_COL + 1.1 + MARGIN, len: 1.4, variant: 0 }] });
@@ -335,5 +353,53 @@ describe('jogador: perigos', () => {
   });
   it('a pressão do tempo aumenta com a distância', () => {
     expect(creepSpeed(START_ROW + 300)).toBeGreaterThan(creepSpeed(START_ROW));
+  });
+});
+
+describe('combo de faixas', () => {
+  const novo = (): Game => createGame(1); // faixas seguras logo à frente da largada
+  it('faixas novas dentro da janela formam combo e dão bônus crescente', () => {
+    const g = novo();
+    expect(move(g, 'up')).toBe(true);
+    expect([g.combo, g.bonus, g.lastBonus]).toEqual([1, 0, 0]);
+    update(g, COMBO_WINDOW / 2);
+    move(g, 'up');
+    expect([g.combo, g.bonus, g.lastBonus]).toEqual([2, 1, 1]);
+    update(g, COMBO_WINDOW / 2);
+    move(g, 'up');
+    expect([g.combo, g.bonus]).toEqual([3, 3]);
+    expect(lanes(g)).toBe(3);
+    expect(score(g)).toBe(6);
+  });
+  it('a janela é de 0,2 s: passou disso, o combo zera', () => {
+    expect(COMBO_WINDOW).toBeCloseTo(0.2, 5);
+    const g = novo();
+    move(g, 'up');
+    for (let i = 0; i < 14; i++) update(g, 1 / 60); // 0,23 s
+    expect(g.combo).toBe(0);
+    move(g, 'up');
+    expect([g.combo, g.bonus]).toEqual([1, 0]);
+  });
+  it('o bônus por faixa tem teto', () => {
+    const g = novo();
+    for (let i = 0; i < 5; i++) {
+      move(g, 'up');
+      update(g, 0.05);
+    }
+    expect(g.lastBonus).toBeLessThanOrEqual(COMBO_BONUS_CAP);
+    g.combo = 20;
+    g.comboLeft = COMBO_WINDOW;
+    move(g, 'up');
+    expect(g.lastBonus).toBe(COMBO_BONUS_CAP);
+  });
+  it('voltar para uma faixa já vista não conta como faixa nova', () => {
+    const g = novo();
+    move(g, 'up');
+    update(g, 0.05);
+    move(g, 'down');
+    update(g, 0.05);
+    move(g, 'up');
+    expect(g.combo).toBe(1);
+    expect(g.bonus).toBe(0);
   });
 });

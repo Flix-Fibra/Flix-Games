@@ -53,6 +53,11 @@ export const HIT_PAD = 0.2;
 /** Quantas faixas existem à frente da câmera. */
 export const LOOKAHEAD = 26;
 
+/** Segundos para alcançar a próxima faixa nova e manter o combo (a barra da tela mostra o que resta). */
+export const COMBO_WINDOW = 0.2;
+/** Bônus máximo por faixa de um combo: a faixa de número n do combo vale n - 1 pontos extras, até aqui. */
+export const COMBO_BONUS_CAP = 5;
+
 export type LaneKind = 'grass' | 'road' | 'river' | 'rail';
 export type Dir = 'up' | 'down' | 'left' | 'right';
 export type Cause = 'vehicle' | 'train' | 'water' | 'carried' | 'time';
@@ -439,6 +444,14 @@ export interface Game {
   maxRow: number;
   /** Faixa na base da tela (decimal). Só sobe. Quando passa do jogador, ele perdeu por demorar. */
   camRow: number;
+  /** Faixas novas seguidas, cada uma dentro de COMBO_WINDOW da anterior (0 = sem combo). */
+  combo: number;
+  /** Segundos que restam para o combo continuar. */
+  comboLeft: number;
+  /** Pontos extras acumulados pelos combos. */
+  bonus: number;
+  /** Bônus ganho no último passo (a cena mostra "+N"). */
+  lastBonus: number;
 }
 
 /** Velocidade com que a base da tela sobe sozinha, em faixas por segundo (aumenta com a dificuldade). */
@@ -449,11 +462,13 @@ export const FOLLOW_ROWS = 5;
 export function createGame(seed: number): Game {
   const world = new World(seed);
   world.ensure(START_ROW + LOOKAHEAD);
-  return { world, t: 0, alive: true, cause: null, row: START_ROW, x: START_COL, maxRow: START_ROW, camRow: 0 };
+  return { world, t: 0, alive: true, cause: null, row: START_ROW, x: START_COL, maxRow: START_ROW, camRow: 0, combo: 0, comboLeft: 0, bonus: 0, lastBonus: 0 };
 }
 
-/** Pontuação: faixas atravessadas além da largada. */
-export const score = (g: Game): number => g.maxRow - START_ROW;
+/** Faixas atravessadas além da largada. */
+export const lanes = (g: Game): number => g.maxRow - START_ROW;
+/** Pontuação: faixas atravessadas mais o bônus de combo. */
+export const score = (g: Game): number => lanes(g) + g.bonus;
 
 /** Coluna inteira mais próxima de x que esteja livre na faixa; null se nenhuma das duas vizinhas estiver. */
 function snapFree(lane: Lane, x: number): number | null {
@@ -465,6 +480,11 @@ function snapFree(lane: Lane, x: number): number | null {
   return ok(other) ? other : null;
 }
 
+/** Tem veículo ou trem ocupando esta posição agora? Andar para dentro dele é recusado (só morre quando ele passa por cima). */
+function occupied(lane: Lane, x: number, t: number): boolean {
+  return (lane.kind === 'road' && hitByVehicle(lane, x, t)) || (lane.kind === 'rail' && hitByTrain(lane, x, t));
+}
+
 /** Tenta um passo. Devolve true se o jogador andou (não anda para dentro de obstáculo nem para fora das colunas). */
 export function move(g: Game, dir: Dir): boolean {
   if (!g.alive) return false;
@@ -473,6 +493,7 @@ export function move(g: Game, dir: Dir): boolean {
     if (nx < -0.001 || nx > COLS - 1 + 0.001) return false; // barreira lateral
     const lane = g.world.lane(g.row);
     if (lane.kind === 'grass' && lane.blocked[Math.round(nx)]) return false;
+    if (occupied(lane, nx, g.t)) return false;
     g.x = nx;
     return true;
   }
@@ -483,10 +504,17 @@ export function move(g: Game, dir: Dir): boolean {
   // em cima de um tronco o jogador pode ficar fora da grade; em qualquer outra faixa ele volta para uma coluna
   const keepsFloat = target.kind === 'river' && target.mode === 'logs';
   const nx = keepsFloat ? g.x : snapFree(target, g.x);
-  if (nx === null) return false;
+  if (nx === null || occupied(target, nx, g.t)) return false;
   g.row = nrow;
   g.x = nx;
-  if (nrow > g.maxRow) g.maxRow = nrow;
+  g.lastBonus = 0;
+  if (nrow > g.maxRow) {
+    g.maxRow = nrow;
+    g.combo = g.comboLeft > 0 ? g.combo + 1 : 1;
+    g.comboLeft = COMBO_WINDOW;
+    if (g.combo >= 2) g.lastBonus = Math.min(g.combo - 1, COMBO_BONUS_CAP);
+    g.bonus += g.lastBonus;
+  }
   return true;
 }
 
@@ -501,6 +529,10 @@ function die(g: Game, cause: Cause): void {
 export function update(g: Game, dt: number): void {
   if (!g.alive) return;
   g.t += dt;
+  if (g.comboLeft > 0) {
+    g.comboLeft = Math.max(0, g.comboLeft - dt);
+    if (g.comboLeft === 0) g.combo = 0;
+  }
 
   // A câmera acompanha o jogador mais avançado e, mesmo parado, sobe sozinha: quem demora é alcançado.
   const target = g.maxRow - FOLLOW_ROWS;
