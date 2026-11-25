@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@flix/avatar": "0.1.0",
-    "@flix/game-sdk": "0.1.0",
+    "@flix/game-sdk": "0.2.0",
     "three": "0.187.0"
   },
   "devDependencies": {

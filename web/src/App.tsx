@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ProvedorAviso, useAviso } from './componentes/Aviso';
 import { Congelada } from './componentes/Congelada';
 import { Creditos } from './componentes/Creditos';
+import { Entrar } from './componentes/Entrar';
 import { Inicio } from './componentes/Inicio';
 import { FundoPlasma } from './componentes/FundoPlasma';
 import { Jogando } from './componentes/Jogando';
@@ -69,14 +70,16 @@ function Portal() {
   }, []);
 
   if (carga.estado === 'carregando') return null;
-  if (carga.estado === 'sem-sessao' || carga.estado === 'erro') {
+  if (carga.estado === 'sem-sessao') {
+    // Entrou: recarrega sem o ?entrar (que em desenvolvimento só serve para ver esta tela)
+    return <Entrar onEntrou={() => window.location.replace(window.location.pathname + window.location.hash)} />;
+  }
+  if (carga.estado === 'erro') {
     return (
       <section className="gx-quem" aria-live="polite">
         <img className="gx-quem-logo" src="/logo-flix-chapada.png" alt="Flix" width={218} height={84} />
-        <h1>{carga.estado === 'sem-sessao' ? 'Entre pelo App Flix' : 'Não foi possível abrir o Flix Games'}</h1>
-        <p className="gx-quem-sub">
-          {carga.estado === 'sem-sessao' ? 'Abra o Flix Games pelo botão Games do App Flix ou do site.' : 'Verifique sua conexão e tente de novo.'}
-        </p>
+        <h1>Não foi possível abrir o Flix Games</h1>
+        <p className="gx-quem-sub">Verifique sua conexão e tente de novo.</p>
         <button className="btn" type="button" onClick={() => window.location.reload()}>Tentar de novo</button>
       </section>
     );
@@ -154,7 +157,7 @@ function Portal() {
 
   async function sair() {
     await servico.sairDesteAparelho();
-    window.location.reload(); // sem sessão: mostra "Entre pelo App Flix"
+    window.location.reload(); // sem sessão: mostra a tela de entrada
   }
 
   return (

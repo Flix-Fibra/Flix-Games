@@ -3,7 +3,7 @@
   "catalogo": "g01",
   "name": "Network Runner",
   "capa": "img/capa-cheia.png",
-  "cores": ["#EF7208", "#CC3C04"],
+  "cores": ["#F7760A", "#AA2F03"],
   "previa": "img/previa.webp",
   "imagens": ["img/telas/tela-1.webp", "img/telas/tela-2.webp", "img/telas/tela-3.webp"],
   "_nome_de_trabalho": "Nome mudado de Flix Runner para Network Runner pelo solicitante em 23/11/2026; validar com o marketing antes de publicar. G01 em teste: sem inimigos nem fim de partida por enquanto.",

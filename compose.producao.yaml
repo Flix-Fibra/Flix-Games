@@ -1,0 +1,66 @@
+# PRODUÇÃO do Flix Games (servidor compartilhado 132.255.110.226, https://games.flixfibra.com.br).
+# Roteiro completo em deploy/LEIAME.md. Sobe a partir de uma cópia do COMMIT (git archive), nunca da pasta de trabalho.
+#
+#   docker compose -f compose.producao.yaml -p flix-games up -d --build
+#
+# Segurança:
+# - Postgres sem porta publicada: só a API o alcança, pela rede interna do compose.
+# - API só em 127.0.0.1:8047; quem fala com a internet é o nginx do servidor (HTTPS pelo Cloudflare).
+# - MODO=producao: sem login simulado, sem /api/docs, cookie só por HTTPS, conferidor = API Própria.
+# - Senha do banco: arquivo .env ao lado deste compose (gerado no servidor, nunca versionado, nunca exibido).
+# - Chave da API Própria: arquivo em /opt/flix-games/segredos (segredo do compose, lido só pela API; nunca no ambiente).
+
+services:
+  db:
+    image: postgres:16.16-alpine
+    environment:
+      POSTGRES_DB: flixgames
+      POSTGRES_USER: flixgames
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+    volumes:
+      - db-dados:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flixgames -d flixgames"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    cpus: 1.0
+    mem_limit: 512m
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+      args:
+        INSTALAR_DEV: "0"
+    environment:
+      DATABASE_URL: postgresql://flixgames:${POSTGRES_PASSWORD}@db:5432/flixgames
+      MODO: producao
+      CONFERIDOR: api_propria
+      CHAVE_API_PROPRIA_ARQUIVO: /run/secrets/api_propria_chave
+    secrets:
+      - api_propria_chave
+    ports:
+      - "127.0.0.1:8047:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cpus: 1.0
+    mem_limit: 256m
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+secrets:
+  api_propria_chave:
+    file: /opt/flix-games/segredos/api_propria_chave
+
+volumes:
+  db-dados:

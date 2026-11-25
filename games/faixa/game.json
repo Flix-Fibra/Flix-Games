@@ -1,0 +1,11 @@
+{
+  "id": "faixa",
+  "catalogo": "g09",
+  "name": "Faixa a Faixa",
+  "cores": ["#EAB308", "#A16207"],
+  "_nome_de_trabalho": "G09. Travessia infinita em grade, mapa gerado por código (src/logic.ts). Nome do catálogo; validar com o marketing e o jurídico antes de publicar. Sem capa ainda.",
+  "avatarTier": "B",
+  "avatarViews": ["portrait"],
+  "rankingMetric": "lanes_crossed",
+  "sdkVersion": "0.1.0"
+}
