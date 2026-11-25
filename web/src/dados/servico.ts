@@ -36,20 +36,23 @@ const naTemporada = (t?: string) => (t ? `?temporada=${encodeURIComponent(t)}` :
 
 export const servico = {
   /**
-   * Sessão deste aparelho. Em desenvolvimento, sem sessão, entra pela conta de teste
-   * (login simulado da API). Em produção o cliente chega pelo App Flix (API do sistema dele, Q02).
+   * Sessão deste aparelho. Em desenvolvimento, sem sessão, entra pela conta de teste (login simulado da API), a não
+   * ser com ?entrar no endereço (para ver a tela de CPF/CNPJ). Em produção, sem sessão, aparece a tela de entrada.
    */
   async sessao(): Promise<Sessao> {
     try {
       return await api<Sessao>('GET', '/sessao');
     } catch (e) {
-      if (import.meta.env.DEV && e instanceof ErroApi && e.status === 401) {
+      const verEntrada = new URLSearchParams(window.location.search).has('entrar');
+      if (import.meta.env.DEV && !verEntrada && e instanceof ErroApi && e.status === 401) {
         await api<void>('POST', '/dev/entrar', {});
         return api<Sessao>('GET', '/sessao');
       }
       throw e;
     }
   },
+  /** CPF/CNPJ e senha do Minha Flix; a API confere na API Própria e devolve o cookie de sessão. */
+  entrar: (documento: string, senha: string) => api<void>('POST', '/entrar', { documento, senha }),
   escolherPerfil: (perfilId: string) => api<void>('PUT', '/sessao/perfil', { perfilId }),
   sairDesteAparelho: () => api<void>('DELETE', '/sessao'),
 

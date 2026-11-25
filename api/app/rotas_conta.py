@@ -1,4 +1,4 @@
-"""Sessão, login simulado (só desenvolvimento), aparelhos, perfis e favoritos."""
+"""Login com CPF/CNPJ (API Própria), login simulado (só desenvolvimento), sessão, aparelhos, perfis e favoritos."""
 import re
 from typing import Annotated
 from uuid import UUID
@@ -7,6 +7,8 @@ from fastapi import APIRouter, HTTPException, Path, Request, Response
 from pydantic import BaseModel, Field, field_validator
 from psycopg.errors import CheckViolation, UniqueViolation
 
+from . import travas
+from .conferidor import Situacao, conferir, documento_valido
 from .config import config
 from .consultas import montar_perfil
 from .sessao import COOKIE, Db, Sessao, criar_sessao
@@ -126,10 +128,60 @@ class EntradaDev(BaseModel):
     cliente_ref: str = Field(default="DEV-0001", alias="clienteRef", pattern=r"^[A-Z0-9-]{3,40}$")
 
 
+class Entrada(BaseModel):
+    """CPF/CNPJ (aceita com pontos, traço e barra) e a senha do Minha Flix. A senha nunca é guardada nem registrada."""
+
+    documento: str = Field(max_length=20)
+    senha: str = Field(min_length=1, max_length=128, repr=False)
+
+    @field_validator("documento")
+    @classmethod
+    def _documento(cls, v: str) -> str:
+        d = re.sub(r"[.\-/\s]", "", v)
+        if not documento_valido(d):
+            raise ValueError("Confira o CPF ou CNPJ digitado.")
+        return d
+
+
+# Mensagens para o cliente (a API Própria pede: com o sistema fora, nunca dizer que a senha está errada)
+MSG_SENHA = "CPF/CNPJ ou senha incorretos."
+MSG_ESPERA = "Muitas tentativas. Espere alguns minutos e tente de novo."
+MSG_SEM_GAMES = "Sua conta Flix ainda não tem o Flix Games. Fale com a Flix para ativar."
+MSG_BLOQUEADO = "O acesso está suspenso por pendência no contrato. Regularize pelo Minha Flix para jogar."
+MSG_FORA = "Não conseguimos conferir seu acesso agora. Tente de novo em alguns minutos."
+
+
 def _do_dono(c, perfil_id: UUID, conta_id: int) -> None:
     """404 (e não 403) para não revelar que o perfil de outra conta existe."""
     if not c.execute("SELECT 1 FROM perfis WHERE id = %s AND conta_id = %s", (perfil_id, conta_id)).fetchone():
         raise HTTPException(404, "Perfil não encontrado.")
+
+
+# ---------- Login do cliente: CPF/CNPJ + senha do Minha Flix, conferidos na API Própria ----------
+@router.post("/entrar", status_code=204)
+def entrar(dados: Entrada, request: Request, response: Response, c: Db) -> None:
+    if not travas.pode_tentar(dados.documento, travas.ip_do_cliente(request)):
+        raise HTTPException(429, MSG_ESPERA)
+    r = conferir(dados.documento, dados.senha)
+    if r.situacao is Situacao.SENHA_ERRADA:
+        travas.senha_errada(dados.documento)
+        raise HTTPException(401, MSG_SENHA)
+    if r.situacao is Situacao.MUITAS_TENTATIVAS:
+        raise HTTPException(429, MSG_ESPERA)
+    if r.situacao is Situacao.SEM_GAMES:
+        raise HTTPException(403, MSG_SEM_GAMES)
+    if r.situacao is Situacao.BLOQUEADO:
+        raise HTTPException(403, MSG_BLOQUEADO)
+    if r.situacao is not Situacao.LIBERADO or not r.cliente_ref:
+        raise HTTPException(503, MSG_FORA)
+    travas.acertou(dados.documento)
+    # Só o cliente_ref (código anônimo da API Própria) fica no banco; nunca o CPF/CNPJ
+    conta = c.execute(
+        "INSERT INTO contas (cliente_ref) VALUES (%s) ON CONFLICT (cliente_ref) DO UPDATE SET ativo = TRUE RETURNING id",
+        (r.cliente_ref,),
+    ).fetchone()
+    assert conta is not None
+    criar_sessao(c, conta["id"], request, response)
 
 
 # ---------- Login simulado: só existe em desenvolvimento ----------
