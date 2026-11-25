@@ -26,3 +26,6 @@ Nest Shoot Assets/
 
 # Originais da arte do G02 (Voo Rasante) enviados pelo gestor; o jogo usa as versões preparadas em games/voo/public/img
 Voo Rasante Assets/
+
+# Imagens de referência das fases do G06 (Minigolfe) enviadas pelo gestor; as fases estão em games/minigolfe/src/levels.ts
+Fases Mini Golf/

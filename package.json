@@ -13,6 +13,8 @@
     "build:corrida": "npm run build -w games/corrida",
     "dev:voo": "npm run dev -w games/voo",
     "build:voo": "npm run build -w games/voo",
+    "dev:minigolfe": "npm run dev -w games/minigolfe",
+    "build:minigolfe": "npm run build -w games/minigolfe",
     "dev:faixa": "npm run dev -w games/faixa",
     "build:faixa": "npm run build -w games/faixa",
     "dev:estoque": "npm run dev -w games/estoque",
