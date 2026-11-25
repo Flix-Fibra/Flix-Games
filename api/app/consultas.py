@@ -16,6 +16,7 @@ FILTRO_TEMPORADA = f"""(%(temporada)s::text IS NULL OR (
 
 # Melhor resultado de cada perfil em cada jogo e a posição no ranking daquele jogo (de todos os tempos ou da temporada).
 # - 'maior' vence maior pontuação; 'menor' vence menor (tacadas, tempo).
+# - Partida de 0 pontos conta como partida jogada, mas não entra no ranking (decisão do solicitante, 25/11/2026).
 # - Perfis ocultos (Q24) somem para os outros, mas o próprio dono continua se vendo.
 # - Contas sem elegibilidade não aparecem.
 # - Empate: mesma posição (RANK). [D] Regra de desempate por jogo pendente (Q19).
@@ -25,7 +26,7 @@ WITH melhores AS (
            CASE WHEN j.ordem = 'maior' THEN max(p.pontos) ELSE min(p.pontos) END AS melhor
       FROM partidas p
       JOIN jogos j ON j.id = p.jogo_id AND j.tem_ranking
-     WHERE p.status = 'finalizada' AND {FILTRO_TEMPORADA}
+     WHERE p.status = 'finalizada' AND p.pontos > 0 AND {FILTRO_TEMPORADA}  -- partida de 0 pontos não entra no ranking
      GROUP BY p.jogo_id, p.perfil_id, j.ordem
 ), visiveis AS (
     SELECT m.*, pf.apelido, pf.cor, pf.nome, pf.sobrenome, pf.mostrar_nome
@@ -102,7 +103,7 @@ WITH melhores AS (
       JOIN jogos j   ON j.id = p.jogo_id AND j.tem_ranking AND {JOGO_NO_HUB}
       JOIN perfis pf ON pf.id = p.perfil_id
       JOIN contas ct ON ct.id = pf.conta_id AND ct.ativo
-     WHERE p.status = 'finalizada' AND {FILTRO_TEMPORADA}
+     WHERE p.status = 'finalizada' AND p.pontos > 0 AND {FILTRO_TEMPORADA}  -- partida de 0 pontos não entra no ranking
      GROUP BY p.jogo_id, p.perfil_id, j.ordem
 ), colocados AS (
     SELECT jogo_id, perfil_id, melhor,

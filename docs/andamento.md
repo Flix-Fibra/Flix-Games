@@ -64,6 +64,12 @@ Portal (`web/`) e API (`api/`): comandos no README e nas entradas de “Onde par
 
 **25/11/2026 — [F]** G02 **Voo Rasante** (`games/voo`, Phaser 3.90 + TypeScript, retrato 720x1280) jogável: avião de aviador-pássaro que sobe ao toque, passando entre prédios (embaixo) e braços de guindaste (em cima), 5 de cada sorteados. Proporções conferidas no flappybird.io (altura do campo = 1280): espaçamento 723 px, vão visível 358 px (fecha 10 px por par até 260), velocidade constante de 420 px/s; o fundo anda a 12% da velocidade dos obstáculos, com a imagem normal e a espelhada alternadas para não haver emenda. Colisão pelo contorno real dos sprites (caixas em faixas de 12 px geradas por `games/voo/tools/preparar-assets.py` a partir de `Voo Rasante Assets/`, fora do Git); tecla H mostra as hitboxes. 10 testes, typecheck e build. Ligado ao catálogo como g02 (sem capa ainda). [D] Ficha de gameplay, som, celular, capa, jurídico (G02 exige parecer antes de publicar), nome definitivo, gravidade e impulso (não medidos no original). Rodar: `npm run dev:voo`.
 
+**25/11/2026 — [F]** **Ranking**, depois do relato do solicitante ("alguns jogos não aparecem e não deixa clicar em outros"):
+
+1. **Lista do seletor por baixo do rodapé.** A lista de jogos do seletor abria por baixo do rodapé ("Créditos e Licenças"), que roubava o clique dos últimos jogos quando o ranking era curto. `main` passou para `z-index: 2`. Reproduzido e conferido no site no ar: Flix Grid bloqueado sem a correção, clicável com ela.
+2. **Flix Grid no ranking.** O G12 não enviava resultado e o ranking dele ficava sempre vazio. Agora manda `started`/`gameover` com a melhor volta em ms (catálogo: menor vence). Só valem Campeonato e Corrida livre; o Treino não conta. Conferido pelo hub local: início 201, fim 200, "4º no ranking".
+3. **Partida de 0 pontos.** Conta como jogada, mas não entra no ranking (decisão do solicitante). 80 testes da API.
+
 **25/11/2026 — [F]** G09 **Sinal Verde** (ex-Faixa a Faixa), tela de início no visual do modelo enviado pelo solicitante, adaptado à tela em pé:
 
 - título em fonte pixel com barra laranja ("SINAL" em creme, "VERDE" em verde);

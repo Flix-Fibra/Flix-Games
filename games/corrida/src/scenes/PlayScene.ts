@@ -117,6 +117,15 @@ function areaSegura(): typeof margens {
   return margens;
 }
 
+/** O pedaço do SDK do hub que a corrida usa (vem pelo registry, de main.ts). */
+interface Ponte {
+  sendLayout?: (imersivo: boolean) => void;
+  sendExit?: () => void;
+  newRunId?: () => string;
+  sendStarted?: (runId: string) => void;
+  sendGameOver?: (p: { runId: string; score: number; durationMs: number; meta?: Record<string, number | string> }) => void;
+}
+
 /** Acima de tudo do mundo (os carros usam 1 + y, até ~2.500) e do minimapa. */
 const PROFUNDIDADE_PLACAR = 100_000;
 
@@ -185,6 +194,9 @@ export class PlayScene extends Phaser.Scene {
   private modo: 'campeonato' | 'livre' | 'treino' = 'campeonato';
   private menu!: MenuCorrida;
   private noMenu = false; // com o menu aberto o jogo fica parado
+  /** Ranking: cada corrida do Campeonato ou da Corrida livre é uma partida no hub (o Treino não conta: carro mais rápido). */
+  private bridge: Ponte | null = null;
+  private runId: string | null = null;
   private posicaoFinal = 99;
   /** Escolha livre de pista (?livre na URL): teclas N e P, para testes. */
   private livre = new URLSearchParams(window.location.search).has('livre');
@@ -346,7 +358,8 @@ export class PlayScene extends Phaser.Scene {
     this.scale.on('resize', () => this.recalcular());
     this.recalcular();
     // Jogo imersivo: pede ao hub a tela toda (sem a barra dele); voltar ao hub é o botão do menu
-    const bridge = this.registry.get('bridge') as { sendLayout?: (i: boolean) => void; sendExit?: () => void } | undefined;
+    const bridge = this.registry.get('bridge') as Ponte | undefined;
+    this.bridge = bridge ?? null;
     bridge?.sendLayout?.(true);
     this.menu = new MenuCorrida(PISTAS, () => bridge?.sendExit?.());
     // ?pista=N e ?livre (testes) entram direto na corrida; o normal é abrir o menu
@@ -515,6 +528,13 @@ export class PlayScene extends Phaser.Scene {
     this.resultado.setVisible(false);
     this.camRot = this.girar ? -Math.PI / 2 - this.carro.ang : 0; // começa já alinhado
     this.aplicarLimites();
+    // partida no hub: só corrida de verdade (não a pista de fundo da abertura, nem o treino). Corrida reiniciada ou
+    // largada no meio fica sem resultado (o hub descarta).
+    this.runId = null;
+    if (!this.noMenu && this.modo !== 'treino' && this.bridge?.newRunId && this.bridge.sendStarted) {
+      this.runId = this.bridge.newRunId();
+      this.bridge.sendStarted(this.runId);
+    }
   }
 
   update(_t: number, delta: number): void {
@@ -891,6 +911,16 @@ export class PlayScene extends Phaser.Scene {
     this.aviso.setText('');
     const v = this.voltas;
     this.classificado = classificou(posicao);
+    // resultado para o ranking do hub: a melhor volta, em ms (no catálogo, g12 = "Melhor volta", menor vence)
+    if (this.runId && v.melhor !== null && this.bridge?.sendGameOver) {
+      this.bridge.sendGameOver({
+        runId: this.runId,
+        score: Math.round(v.melhor),
+        durationMs: Math.round(this.tempoCorrida),
+        meta: { posicao, pista: this.pista.def.id, modo: this.modo },
+      });
+    }
+    this.runId = null;
     this.posicaoFinal = posicao;
     const prox = proximaEtapa(this.etapa, PISTAS.length, posicao);
     let situacao: string;
