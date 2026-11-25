@@ -106,6 +106,7 @@ export function Perfil({ jogos, perfil, perfis, onSalvar, onTrocarPerfil, onSair
             <p>Cliente Flix · jogando desde {perfil.desde}</p>
             <span className="perfil-papel">Nível {perfil.nivel}</span>
             <button className="btn light gx-trocar" type="button" onClick={onTrocarPerfil}><Trocar />Trocar perfil</button>
+            <button className="btn light gx-trocar" type="button" onClick={() => void onSair()}>Sair da conta</button>
           </div>
           <dl className="perfil-fatos">
             <div><dt>Partidas</dt><dd>{perfil.partidas.toLocaleString('pt-BR')}</dd></div>
