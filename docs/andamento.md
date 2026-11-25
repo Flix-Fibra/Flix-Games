@@ -64,7 +64,7 @@ Portal (`web/`) e API (`api/`): comandos no README e nas entradas de “Onde par
 
 - A tela de entrada ganhou "Sou da equipe Flix Games", com usuário e senha (`POST /api/entrar-equipe`, conta `EQUIPE-<USUARIO>`).
 - No servidor fica só o hash scrypt de cada senha (segredo do compose), trocado com `scripts/deploy/codigo_equipe.py`.
-- Usuários criados: rafael e tobias. As senhas ficaram só com o solicitante.
+- Usuários criados: rafael, tobias e ian (ian acrescentado no mesmo dia, sem mudança de código). As senhas ficaram só com o solicitante.
 - A trava é por IP (5 erros em 15 min).
 - **Jogos publicados em produção:** G01, G03, G04, G09, G12, G14 e G15. O G10 segue fora (jurídico, Q47); o jogo de teste (G02) também.
 - 79 testes da API.
