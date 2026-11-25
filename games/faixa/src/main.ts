@@ -8,6 +8,7 @@ import { GameOverScene } from './scenes/GameOverScene';
 import { MenuScene } from './scenes/MenuScene';
 import { PlayScene } from './scenes/PlayScene';
 import { COLORS, GAME_H, GAME_W } from './theme';
+import { telaCheiaNoToque } from '@flix/game-kit/src/telaCheia';
 
 const bridge = createHubBridge({
   gameId: game_json.id,
@@ -35,6 +36,7 @@ const game = new Phaser.Game({
 });
 
 game.registry.set('bridge', bridge);
+telaCheiaNoToque();
 
 // Cada cena enxerga o mundo de GAME_W x GAME_H: câmera com zoom RENDER (vale também quando a cena reinicia)
 game.events.once(Phaser.Core.Events.READY, () => {
