@@ -49,3 +49,4 @@ Todo arquivo de terceiros entra aqui com: caminho, autor, origem (URL), licença
 - [F] Sem som nem fonte de terceiros: os sons são sintetizados por código (`games/snake/src/audio.ts`) e o texto usa fontes do sistema.
 - [F] O retrato do personagem no HUD e na tela de fim ainda vem de `packages/flix-avatar` (desenhado por código, pixelado); a equipe do portal está trocando essa parte.
 - Dependências de código (Phaser, Vite etc.) estão em `LICENSES/README.md`.
+| `games/voo/public/img/*` (avião, prédios, guindastes e fundo do G02 Voo Rasante) | Gestor da Flix | 4 JPGs “Gemini_Generated_Image_*” da pasta “Voo Rasante Assets” em 25/11/2026; fundo liso removido e recortados por `games/voo/tools/preparar-assets.py` | [D] a confirmar (arte gerada por IA, nome da pasta provisório) | 25/11/2026 |
