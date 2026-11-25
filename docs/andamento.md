@@ -60,6 +60,23 @@ Portal (`web/`) e API (`api/`): comandos no README e nas entradas de “Onde par
 
 ## 4. Onde parou
 
+**25/11/2026 — [F]** G12 Flix Grid, a pedido do solicitante, depois do teste no celular:
+
+- **Painel.** Caixas no estilo do modelo enviado, com a fonte pixel da plataforma: pista, volta, posição, tempo, velocidade e barra de teclas no computador.
+- **Menu inicial.**
+  - **Campeonato:** 24 pistas sorteadas.
+  - **Corrida livre:** escolhe a pista vendo o traçado.
+  - **Treino:** só o jogador, 30% mais rápido e sem limite de voltas.
+  - Botões no fim da corrida e **Voltar ao hub**.
+- **Celular.**
+  - Botões na tela (◀ ▶, FREIO, ACELERAR e TURBO) no lugar de arrastar.
+  - REINICIAR e MENU pedem um 2º toque, para não perder a corrida sem querer.
+  - O jogo ocupa a tela toda e afasta placar e botões da câmera.
+  - Tela cheia e tela deitada automáticas no Android. No iPhone isso não é possível, então o jogo avisa "Gire o celular".
+- **Jogo imersivo.** Mensagens novas do SDK, `layout` e `exit` (ver [HUB_CONTRACT](HUB_CONTRACT.md)): o hub esconde a própria barra e fecha o jogo pelo botão do jogo.
+- **Validação.** 128 testes da Corrida e 154 com o SDK; typecheck do jogo, SDK e portal; conferido em navegador no computador e em celular simulado (deitado, em pé e com câmera simulada).
+- **[D] Pendências.** Teste em celular real (Android e iPhone). Avisos no meio da tela e texto do resultado ainda na fonte antiga. O Tobias deve revisar (a Corrida é dele).
+
 **24/11/2026 — [F]** Login real e preparação do deploy em `https://games.flixfibra.com.br` (servidor compartilhado `132.255.110.226`), a pedido do solicitante.
 
 - **Login (Q02).** O cliente entra com CPF/CNPJ e a senha do Minha Flix (tela "Entrar no Flix Games"; no 1º acesso a senha é o próprio documento). A API confere na rota do Flix Games da **API Própria da Flix** (`POST /api/parceiro/flix-games/confere`, chave própria só válida do IP do servidor), que diz se o login está certo e se o contrato tem o serviço Flix Games (SVA, R$ 0) sem bloqueio.

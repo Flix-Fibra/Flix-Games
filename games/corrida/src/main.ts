@@ -25,7 +25,7 @@ const game = new Phaser.Game({
   pixelArt: true,
   roundPixels: true,
   scale: { mode: Phaser.Scale.NONE },
-  input: { activePointers: 2 },
+  input: { activePointers: 4 }, // celular: dois polegares nos botões e folga para o turbo
   scene: [PlayScene],
 });
 window.addEventListener('resize', () => {

@@ -513,6 +513,8 @@ html.rolando::-webkit-scrollbar-track{background:transparent}
 .gx-jogo .gx-jogo-barra>:first-child{justify-self:start}
 .gx-jogo-dir{display:flex;gap:8px;justify-self:end}
 .gx-jogo-palco{flex:1;min-height:0;display:flex;justify-content:center}
+/* jogo imersivo (ele pediu pela mensagem "layout"): sem a barra do hub; o jogo tem o próprio botão de voltar */
+.gx-jogo.imersivo .gx-jogo-barra{display:none}
 .gx-jogo-palco .gx-jogo-quadro{flex:1}
 /* Fundo dos lados: cores do jogo, escurecidas e desfocadas (no celular nada muda) */
 .gx-jogo.pc{background:

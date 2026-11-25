@@ -11,14 +11,17 @@
     <style>
       html, body { margin: 0; height: 100%; background: #0b0b0d; overflow: hidden; }
       body { overscroll-behavior: none; touch-action: none; -webkit-user-select: none; user-select: none;
-             -webkit-touch-callout: none; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); box-sizing: border-box; }
+             -webkit-touch-callout: none; box-sizing: border-box; }
+      /* o jogo ocupa a tela toda (até atrás da câmera); só o placar e os botões fogem da área da câmera (lida daqui) */
+      #area-segura { position: fixed; visibility: hidden; pointer-events: none; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
       #game { width: 100%; height: 100%; }
       /* a tela interna tem o tamanho da janela em pixels do aparelho: o canvas ocupa tudo, sem suavizar */
-      canvas { display: block; width: 100vw !important; height: 100vh !important; image-rendering: pixelated; }
+      #game canvas { display: block; width: 100vw !important; height: 100vh !important; image-rendering: pixelated; }
     </style>
   </head>
   <body>
     <div id="game"></div>
+    <div id="area-segura"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
