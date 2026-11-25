@@ -50,3 +50,4 @@ Todo arquivo de terceiros entra aqui com: caminho, autor, origem (URL), licença
 - [F] O retrato do personagem no HUD e na tela de fim ainda vem de `packages/flix-avatar` (desenhado por código, pixelado); a equipe do portal está trocando essa parte.
 - Dependências de código (Phaser, Vite etc.) estão em `LICENSES/README.md`.
 | `games/voo/public/img/*` (avião, prédios, guindastes e fundo do G02 Voo Rasante) | Gestor da Flix | 4 JPGs “Gemini_Generated_Image_*” da pasta “Voo Rasante Assets” em 25/11/2026; fundo liso removido e recortados por `games/voo/tools/preparar-assets.py` | [D] a confirmar (arte gerada por IA, nome da pasta provisório) | 25/11/2026 |
+| `games/faixa/public/img/capa-cheia.png` (capa do hub do G09 Sinal Verde) | Gestor da Flix | imagem 1024x1024 gerada a partir do prompt de logo enviado no chat em 25/11/2026; borda de 8% cortada e reduzida para 512x512 | [D] a confirmar (arte gerada por IA) | 25/11/2026 |

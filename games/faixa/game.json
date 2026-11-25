@@ -1,6 +1,7 @@
 {
   "id": "faixa",
   "catalogo": "g09",
+  "capa": "img/capa-cheia.png",
   "name": "Sinal Verde",
   "cores": ["#EAB308", "#A16207"],
   "_nome_de_trabalho": "G09. Travessia infinita em grade, mapa gerado por código (src/logic.ts). Nome do catálogo; validar com o marketing e o jurídico antes de publicar. Sem capa ainda.",
