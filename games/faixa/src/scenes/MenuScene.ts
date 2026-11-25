@@ -39,10 +39,10 @@ export class MenuScene extends Phaser.Scene {
     this.tweens.add({ targets: hero, y: mid(0), duration: 1400, yoyo: true, repeat: -1, hold: 300, ease: 'Sine.easeInOut' });
 
     this.add
-      .text(GAME_W / 2, 40, 'FAIXA', { fontFamily: FONT, fontSize: '38px', fontStyle: 'bold', color: COLORS.text })
+      .text(GAME_W / 2, 40, 'SINAL', { fontFamily: FONT, fontSize: '38px', fontStyle: 'bold', color: COLORS.text })
       .setOrigin(0.5);
     this.add
-      .text(GAME_W / 2, 74, 'A FAIXA', { fontFamily: FONT, fontSize: '26px', fontStyle: 'bold', color: COLORS.flixRedText })
+      .text(GAME_W / 2, 74, 'VERDE', { fontFamily: FONT, fontSize: '26px', fontStyle: 'bold', color: COLORS.flixRedText })
       .setOrigin(0.5);
 
     this.add.image(GAME_W / 2, 268, portraitKey('happy')).setScale(2.5);
