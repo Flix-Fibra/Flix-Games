@@ -1,5 +1,5 @@
 /**
- * G09 Faixa a Faixa: lógica pura (sem Phaser), determinística e testável.
+ * G09 Sinal Verde (antes Faixa a Faixa): lógica pura (sem Phaser), determinística e testável.
  *
  * O mundo é uma pilha infinita de FAIXAS (lanes). Cada faixa tem 9 colunas jogáveis e é gerada sob demanda, de baixo
  * para cima, por `World.ensure`. Faixas que ficaram para trás da câmera são descartadas por `World.prune`.
