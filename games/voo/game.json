@@ -1,0 +1,11 @@
+{
+  "id": "voo",
+  "catalogo": "g02",
+  "name": "Voo Rasante",
+  "_nome_de_trabalho": "G02. Nome provisório; validar com o marketing antes de publicar. Revisão do jurídico obrigatória (seção 2.2).",
+  "cores": ["#F59E0B", "#B45309"],
+  "avatarTier": "A",
+  "avatarViews": ["side"],
+  "rankingMetric": "score",
+  "sdkVersion": "0.1.0"
+}

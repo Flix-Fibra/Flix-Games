@@ -11,6 +11,8 @@
     "build:runner": "npm run build -w games/runner",
     "dev:corrida": "npm run dev -w games/corrida",
     "build:corrida": "npm run build -w games/corrida",
+    "dev:voo": "npm run dev -w games/voo",
+    "build:voo": "npm run build -w games/voo",
     "dev:faixa": "npm run dev -w games/faixa",
     "build:faixa": "npm run build -w games/faixa",
     "dev:estoque": "npm run dev -w games/estoque",
