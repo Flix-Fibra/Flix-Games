@@ -62,6 +62,14 @@ Portal (`web/`) e API (`api/`): comandos no README e nas entradas de “Onde par
 
 **25/11/2026 — [F]** G02 **Voo Rasante** (`games/voo`, Phaser 3.90 + TypeScript, retrato 720x1280) jogável: avião de aviador-pássaro que sobe ao toque, passando entre prédios (embaixo) e braços de guindaste (em cima), 5 de cada sorteados. Proporções conferidas no flappybird.io (altura do campo = 1280): espaçamento 723 px, vão visível 358 px (fecha 10 px por par até 260), velocidade constante de 420 px/s; o fundo anda a 12% da velocidade dos obstáculos, com a imagem normal e a espelhada alternadas para não haver emenda. Colisão pelo contorno real dos sprites (caixas em faixas de 12 px geradas por `games/voo/tools/preparar-assets.py` a partir de `Voo Rasante Assets/`, fora do Git); tecla H mostra as hitboxes. 10 testes, typecheck e build. Ligado ao catálogo como g02 (sem capa ainda). [D] Ficha de gameplay, som, celular, capa, jurídico (G02 exige parecer antes de publicar), nome definitivo, gravidade e impulso (não medidos no original). Rodar: `npm run dev:voo`.
 
+**25/11/2026 — [F]** G09 **Sinal Verde** (ex-Faixa a Faixa), tela de início no visual do modelo enviado pelo solicitante, adaptado à tela em pé:
+
+- título em fonte pixel com barra laranja ("SINAL" em creme, "VERDE" em verde);
+- a cena da obra animada no meio;
+- botão verde COMEÇAR e os controles embaixo.
+
+Só com as peças que o jogo já tem: cones, cavalete e semáforo do modelo não existem na arte. O rosto do personagem saiu da abertura. 35 testes.
+
 **25/11/2026 — [F]** G12 Flix Grid:
 
 - **Tela de abertura dentro do jogo.** Uma pista sorteada passa ao fundo com os carros no grid. Por cima ficam o título pixel, o botão JOGAR e "Voltar ao hub".
