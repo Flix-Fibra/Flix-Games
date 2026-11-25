@@ -143,6 +143,9 @@ export class PlayScene extends Phaser.Scene {
       bind('DOWN', 'down'); bind('S', 'down');
       bind('LEFT', 'left'); bind('A', 'left');
       bind('RIGHT', 'right'); bind('D', 'right');
+      // o Phaser lê a tecla e só depois cancela o efeito padrão do navegador: sem isto, no Safari as setas rolavam a
+      // página do hub atrás do jogo (25/11/2026). Não usar preventDefault antes do Phaser: ele ignora tecla cancelada.
+      kb.addCapture('UP,DOWN,LEFT,RIGHT,SPACE');
     }
 
     this.events.once('shutdown', () => {

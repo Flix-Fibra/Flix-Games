@@ -526,6 +526,13 @@ html.rolando::-webkit-scrollbar-track{background:transparent}
   box-shadow:0 0 0 1px rgba(255,255,255,.08),0 30px 90px rgba(0,0,0,.6)}
 /* Tela cheia: a barra flutua por cima e o jogo usa a altura toda */
 .gx-jogo.cheia .gx-jogo-barra{position:absolute;top:0;left:0;right:0;z-index:2;background:linear-gradient(rgba(0,0,0,.55),transparent)}
+/* Jogo em pé no computador (ex.: Network Snake): o quadro fica no meio e sobra espaço dos lados. Em tela cheia o título
+   não cobre o alto do jogo (os botões já ficam nos cantos, fora do quadro), e o aviso de ranking vai para o canto de
+   baixo, à esquerda, fora do quadro, em vez de cobrir o botão de reiniciar do jogo. */
+.gx-jogo.pc.proporcional.cheia .gx-jogo-barra strong{visibility:hidden}
+.gx-jogo.pc.proporcional .gx-jogo-toast{left:24px;right:auto;bottom:24px;transform:none;max-width:max(220px,calc((100vw - 100vh * var(--prop)) / 2 - 48px));
+  border-radius:16px;animation-name:gx-toast-canto}
+@keyframes gx-toast-canto{0%{opacity:0;transform:translateY(8px)}8%,85%{opacity:1;transform:none}100%{opacity:0;transform:translateY(8px)}}
 
 /* =====================================================================
    Diagramação (mesma grade do flixfibra.com.br)
