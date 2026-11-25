@@ -19,6 +19,9 @@ export function Entrar({ onEntrou }: { onEntrou: () => void }) {
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
+  // Acesso da equipe: usuário e senha cadastrados no servidor (antes do login do cliente ser liberado)
+  const [equipe, setEquipe] = useState(false);
+  const [usuario, setUsuario] = useState('');
 
   async function enviar(e: FormEvent) {
     e.preventDefault();
@@ -26,8 +29,10 @@ export function Entrar({ onEntrou }: { onEntrou: () => void }) {
     setErro('');
     setEnviando(true);
     try {
-      await servico.entrar(documento, senha);
+      if (equipe) await servico.entrarEquipe(usuario, senha);
+      else await servico.entrar(documento, senha);
       setSenha('');
+
       onEntrou();
     } catch (x) {
       setErro(x instanceof ErroApi ? x.message : 'Sem conexão. Verifique a internet e tente de novo.');
@@ -40,7 +45,22 @@ export function Entrar({ onEntrou }: { onEntrou: () => void }) {
     <section className="gx-quem" aria-live="polite">
       <img className="gx-quem-logo" src="/logo-flix-chapada.png" alt="Flix" width={218} height={84} />
       <h1>Entrar no Flix Games</h1>
-      <p className="gx-quem-sub">Use o CPF ou CNPJ e a senha do Minha Flix.</p>
+      <p className="gx-quem-sub">{equipe ? 'Acesso da equipe Flix Games.' : 'Use o CPF ou CNPJ e a senha do Minha Flix.'}</p>
+      {equipe ? (
+        <form className="gx-quem-novo" onSubmit={enviar} noValidate>
+          <label className="gx-quem-campo">Usuário
+            <input value={usuario} onChange={(e) => setUsuario(e.target.value)} autoComplete="username" autoCapitalize="none"
+              maxLength={30} required autoFocus />
+          </label>
+          <label className="gx-quem-campo">Senha
+            <input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} autoComplete="current-password"
+              maxLength={128} required />
+          </label>
+          {erro && <p className="perfil-msg erro" role="alert">{erro}</p>}
+          <button className="btn" type="submit" disabled={enviando || usuario.trim().length < 2 || !senha}>{enviando ? 'Conferindo…' : 'Entrar'}</button>
+          <button className="btn light" type="button" onClick={() => { setEquipe(false); setErro(''); setSenha(''); }}>Entrar com CPF ou CNPJ</button>
+        </form>
+      ) : (
       <form className="gx-quem-novo" onSubmit={enviar} noValidate>
         <label className="gx-quem-campo">CPF ou CNPJ
           <input value={documento} onChange={(e) => setDocumento(mascarar(e.target.value))} inputMode="numeric"
@@ -55,7 +75,9 @@ export function Entrar({ onEntrou }: { onEntrou: () => void }) {
         <button className="btn" type="submit" disabled={enviando || (digitos !== 11 && digitos !== 14) || !senha}>
           {enviando ? 'Conferindo…' : 'Entrar'}
         </button>
+        <button className="gx-quem-excluir" type="button" onClick={() => { setEquipe(true); setErro(''); setSenha(''); }}>Sou da equipe Flix Games</button>
       </form>
+      )}
     </section>
   );
 }

@@ -34,6 +34,15 @@ sudo sh -c 'umask 077; printf "POSTGRES_PASSWORD=%s\n" "$(openssl rand -hex 32)"
 # Chave da API Própria (o Marcio entrega em mãos). Enquanto não houver chave, um arquivo vazio:
 # o login responde "tente mais tarde" (503), sem dizer que a senha está errada.
 sudo install -m 400 -o 10001 -g 10001 /dev/null /opt/flix-games/segredos/api_propria_chave
+# Usuários da equipe (só os hashes das senhas; vazio = ninguém da equipe entra)
+sudo install -m 400 -o 10001 -g 10001 /dev/null /opt/flix-games/segredos/equipe
+```
+
+Acesso da equipe ao site antes do login do cliente funcionar: usuário e senha, na opção "Sou da equipe Flix Games" da tela de entrada. Para cadastrar ou trocar uma senha (digitada sem aparecer na tela; vale na hora):
+
+```bash
+sudo python3 /opt/flix-games/app/scripts/deploy/codigo_equipe.py rafael            # cadastra ou troca
+sudo python3 /opt/flix-games/app/scripts/deploy/codigo_equipe.py tobias --remover   # tira o acesso
 ```
 
 Para gravar a chave quando ela chegar, sem que ela vá para o histórico ou para a tela:
