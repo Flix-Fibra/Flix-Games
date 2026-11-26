@@ -12,6 +12,8 @@ interface Props {
   onCriar: (dados: NovoPerfil) => Promise<void>;
   onEditar: (id: string, dados: AlteracaoPerfil) => Promise<void>;
   onExcluir: (id: string) => Promise<void>;
+  /** Sai da conta neste aparelho (volta para a tela de entrada). */
+  onSair: () => Promise<void>;
 }
 
 /**
@@ -19,7 +21,7 @@ interface Props {
  * perfil abre o mesmo formulário da criação, preenchido, para editar ou excluir. Com o formulário aberto, a lista
  * some: só aparece o perfil que está sendo criado ou editado, com a escolha da cor de fundo.
  */
-export function QuemVaiJogar({ perfis, maxPerfis: MAX_PERFIS, cores, atualId, onEntrar, onCriar, onEditar, onExcluir }: Props) {
+export function QuemVaiJogar({ perfis, maxPerfis: MAX_PERFIS, cores, atualId, onEntrar, onCriar, onEditar, onExcluir, onSair }: Props) {
   const [gerenciando, setGerenciando] = useState(false);
   const [criando, setCriando] = useState(false);
   const [editando, setEditando] = useState<Perfil | null>(null);
@@ -86,6 +88,9 @@ export function QuemVaiJogar({ perfis, maxPerfis: MAX_PERFIS, cores, atualId, on
           onClick={() => (gerenciando ? fecharGerenciar() : (setGerenciando(true), setCriando(false), setErro('')))}>
           {gerenciando ? 'Concluído' : 'Gerenciar perfis'}
         </button>
+      )}
+      {!criando && !editando && !gerenciando && (
+        <button className="gx-quem-sair" type="button" onClick={() => void onSair()}>Sair da conta</button>
       )}
       <p className="gx-quem-nota">Até {MAX_PERFIS} perfis por conta Flix. Cada perfil tem nickname, ranking, progresso e conquistas próprios.</p>
     </section>

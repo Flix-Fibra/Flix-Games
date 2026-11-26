@@ -1,7 +1,7 @@
 # Ficha de gameplay — Faixa a Faixa (G09)
 
 Observador: a definir      Revisor: a definir      Data: 24/11/2026
-Observação: rascunho de projeto feito a partir do jogo já jogável (`games/faixa`). Gênero: travessia infinita em grade. Não usar nome, personagens ou visual de nenhum jogo existente. Nome de catálogo: validar com marketing e jurídico antes de publicar.
+Observação: rascunho de projeto feito a partir do jogo já jogável (`games/faixa`). Gênero: travessia infinita em grade. Não usar nome, personagens ou visual de nenhum jogo existente. Nome de catálogo: validar com o marketing antes de publicar.
 
 ## 1. Loop principal
 O técnico da Flix está numa obra de fibra ótica, numa rua que não termina. A cada passo ele avança uma faixa (9 colunas de largura): grama com obstáculos, estrada com carros e caminhões, rio com paletes, troncos ou vitórias-régias, e trilho de trem. A câmera acompanha o avanço e só sobe; o mapa é gerado enquanto se joga.

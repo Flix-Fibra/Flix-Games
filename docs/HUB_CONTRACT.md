@@ -52,3 +52,15 @@ O jogo roda em um **iframe** do hub e eles conversam por `postMessage`. O jogo *
 ## Testar sem o hub
 
 `npm run dev:snake` e abrir `/dev-host.html`. A página simula o hub: responde `init` com personagens de teste, mostra o fim da partida e envia `restart`, `pause`, `resume` e `mute`. O log mostra todas as mensagens.
+
+## Jogo imersivo (25/11/2026, opcional)
+
+Mensagens novas do jogo para o hub. Um hub antigo simplesmente as ignora.
+
+- **`layout`** com `{ imersivo: boolean }`: o hub esconde a barra dele (X, título e som) e o jogo ocupa a tela toda.
+  O jogo que pede isso precisa ter o próprio botão de voltar.
+- **`exit`**: o jogador tocou em "Voltar ao hub" dentro do jogo. O hub fecha o jogo, como no X da barra.
+
+No SDK: `bridge.sendLayout(true)` e `bridge.sendExit()`. O primeiro a usar é o G12 Flix Grid, com o botão no menu de escolher o modo.
+
+Tela cheia e tela deitada no celular: o próprio jogo pede as duas no toque que escolhe o modo. Isso funciona no Android/Chrome. No iPhone, uma página não consegue entrar em tela cheia nem girar a tela; o jogo então mostra "Gire o celular" enquanto o aparelho estiver em pé.

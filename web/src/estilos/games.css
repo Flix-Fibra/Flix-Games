@@ -66,7 +66,7 @@ header.rolado::before{background:rgba(11,11,13,.8);border-bottom-color:rgba(255,
 .gx-nav-item.ativo{color:#FF6961}
 
 /* ---------- Estrutura ---------- */
-main{position:relative;z-index:1;max-width:1550px;margin:0 auto;padding:4px 16px calc(96px + env(safe-area-inset-bottom))}
+main{position:relative;z-index:2;max-width:1550px;margin:0 auto;padding:4px 16px calc(96px + env(safe-area-inset-bottom))}
 .gx-view{display:none}
 .gx-view.ativa{display:block;animation:entra .3s var(--ease) both}
 @keyframes entra{from{opacity:0;transform:translateY(14px)}}
@@ -337,6 +337,8 @@ main{position:relative;z-index:1;max-width:1550px;margin:0 auto;padding:4px 16px
 .gx-quem-botoes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .gx-quem-gerenciar{margin-top:26px;min-height:44px;padding:8px 20px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--muted);font-weight:600;letter-spacing:.04em}
 .gx-quem-gerenciar[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.gx-quem-sair{margin-top:10px;min-height:44px;padding:8px 20px;border:0;background:none;color:var(--muted);font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.gx-quem-sair:hover,.gx-quem-sair:focus-visible{color:var(--ink)}
 .gx-quem-nota{max-width:320px;margin:14px 0 0;font-size:12px;color:var(--muted);line-height:1.5}
 .gx-trocar{display:inline-flex;align-items:center;gap:6px;margin:8px 0 0 6px;min-height:32px;padding:4px 12px;font-size:12px;border-radius:99px;vertical-align:middle}
 .gx-trocar svg{width:15px;height:15px}
@@ -513,6 +515,8 @@ html.rolando::-webkit-scrollbar-track{background:transparent}
 .gx-jogo .gx-jogo-barra>:first-child{justify-self:start}
 .gx-jogo-dir{display:flex;gap:8px;justify-self:end}
 .gx-jogo-palco{flex:1;min-height:0;display:flex;justify-content:center}
+/* jogo imersivo (ele pediu pela mensagem "layout"): sem a barra do hub; o jogo tem o próprio botão de voltar */
+.gx-jogo.imersivo .gx-jogo-barra{display:none}
 .gx-jogo-palco .gx-jogo-quadro{flex:1}
 /* Fundo dos lados: cores do jogo, escurecidas e desfocadas (no celular nada muda) */
 .gx-jogo.pc{background:
@@ -522,6 +526,13 @@ html.rolando::-webkit-scrollbar-track{background:transparent}
   box-shadow:0 0 0 1px rgba(255,255,255,.08),0 30px 90px rgba(0,0,0,.6)}
 /* Tela cheia: a barra flutua por cima e o jogo usa a altura toda */
 .gx-jogo.cheia .gx-jogo-barra{position:absolute;top:0;left:0;right:0;z-index:2;background:linear-gradient(rgba(0,0,0,.55),transparent)}
+/* Jogo em pé no computador (ex.: Network Snake): o quadro fica no meio e sobra espaço dos lados. Em tela cheia o título
+   não cobre o alto do jogo (os botões já ficam nos cantos, fora do quadro), e o aviso de ranking vai para o canto de
+   baixo, à esquerda, fora do quadro, em vez de cobrir o botão de reiniciar do jogo. */
+.gx-jogo.pc.proporcional.cheia .gx-jogo-barra strong{visibility:hidden}
+.gx-jogo.pc.proporcional .gx-jogo-toast{left:24px;right:auto;bottom:24px;transform:none;max-width:max(220px,calc((100vw - 100vh * var(--prop)) / 2 - 48px));
+  border-radius:16px;animation-name:gx-toast-canto}
+@keyframes gx-toast-canto{0%{opacity:0;transform:translateY(8px)}8%,85%{opacity:1;transform:none}100%{opacity:0;transform:translateY(8px)}}
 
 /* =====================================================================
    Diagramação (mesma grade do flixfibra.com.br)

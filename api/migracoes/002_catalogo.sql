@@ -1,6 +1,6 @@
 -- Catálogo de trabalho G01–G15 (docs/prompt-inicio-minigames-flix.md, seção 10).
 -- Nomes são "de trabalho" (validar com marketing). Todos nascem NÃO publicados:
--- publicar é decisão da equipe (G10 só depois do parecer do jurídico, Q47).
+-- publicar é decisão da equipe.
 -- [H] Limites de pontuação e duração mínima são provisórios: servem para recusar valor absurdo
 --     enviado pelo navegador (seção 6.4). Ajustar por jogo quando cada um estiver pronto.
 

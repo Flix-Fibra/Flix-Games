@@ -67,6 +67,14 @@ export function createHubBridge(options: BridgeOptions): HubBridge {
         meta: payload.meta,
       });
     },
+    /** Pede ao hub a tela toda, sem a barra dele (o jogo passa a ter o próprio botão de voltar: sendExit). */
+    sendLayout(imersivo: boolean) {
+      post({ source: 'flix-game', v: 2, type: 'layout', gameId: options.gameId, imersivo });
+    },
+    /** Fecha o jogo e volta ao hub (botão do próprio jogo). */
+    sendExit() {
+      post({ source: 'flix-game', v: 2, type: 'exit', gameId: options.gameId });
+    },
     onHubMessage(listener: (msg: HubToGame) => void) {
       const handler = (ev: MessageEvent) => {
         const msg = parseHubMessage(ev, hubOrigin, window.parent);

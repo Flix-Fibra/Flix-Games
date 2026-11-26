@@ -4,6 +4,7 @@ import game_json from '../game.json';
 import { COLORS, GAME_H, GAME_W, MARGEM_X, definirLargura } from './theme';
 import { ajustarCamera, RENDER } from './camera';
 import { aoGirar, esperarPaisagem } from './girar';
+import { telaCheiaNoToque } from '@flix/game-kit/src/telaCheia';
 
 const bridge = createHubBridge({
   gameId: game_json.id,
@@ -50,6 +51,8 @@ bridge.onHubMessage((msg: HubToGame) => {
 // "pronto" já agora: o hub não fica esperando enquanto a pessoa gira o celular
 bridge.sendReady();
 window.addEventListener('contextmenu', (e) => e.preventDefault());
+// antes de esperar o giro: o toque na tela do aviso "GIRE O CELULAR" já pode abrir a tela cheia
+telaCheiaNoToque();
 
 // Celular em pé: pede para girar e só cria o jogo deitado (o formato da tela define a largura do mundo).
 const toque = 'ontouchstart' in window || navigator.maxTouchPoints > 0;

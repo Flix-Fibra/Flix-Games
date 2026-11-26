@@ -19,7 +19,11 @@ export type GameToHub =
       score: number;
       durationMs: number;
       meta?: Record<string, number | string>;
-    };
+    }
+  /** O jogo pede para ocupar a tela toda (o hub esconde a própria barra). Opcional; hub antigo ignora. */
+  | { source: 'flix-game'; v: 2; type: 'layout'; gameId: string; imersivo: boolean }
+  /** O jogador pediu para voltar ao hub pelo botão do próprio jogo (jogos imersivos não têm a barra do hub). */
+  | { source: 'flix-game'; v: 2; type: 'exit'; gameId: string };
 
 /**
  * Personagem que o jogador criou no editor da plataforma, já desenhado pelo hub (PNG em data URL, pixel art).
@@ -65,6 +69,10 @@ export interface HubBridge {
   sendReady(): void;
   sendStarted(runId: string): void;
   sendGameOver(payload: GameOverPayload): void;
+  /** Pede ao hub a tela toda, sem a barra dele (o jogo precisa ter o próprio botão de voltar). */
+  sendLayout(imersivo: boolean): void;
+  /** Fecha o jogo e volta ao hub. */
+  sendExit(): void;
   /** Registra um ouvinte de mensagens válidas do hub. Devolve a função que remove o ouvinte. */
   onHubMessage(listener: (msg: HubToGame) => void): () => void;
   newRunId(): string;

@@ -17,7 +17,7 @@
  *   "cores":    ["#5B12D6", "#1C037C"]  opcional: cor do card (degradê de cima para baixo), em #rrggbb
  *   "previa":   "img/previa.webp"  opcional: animação curta (WebP ou GIF, sem som) do jogo em ação, na galeria da página "Ver"
  *   "imagens":  ["img/telas/tela-1.webp", ...]  opcional: até 8 telas do jogo (png, jpg ou webp), na mesma galeria
- * Não é publicado aqui: publicar continua sendo decisão do catálogo (ex.: G10 depende do jurídico).
+ * Não é publicado aqui: publicar continua sendo decisão do catálogo.
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';

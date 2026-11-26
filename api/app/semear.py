@@ -2,7 +2,7 @@
 
 Uso: docker compose exec api python -m app.semear
 Cria a conta DEV-0001 (RafaPlayer e Ana_Gamer), outros jogadores de exemplo com partidas,
-e publica os jogos (menos o G10, que depende do jurídico, Q47).
+e publica todos os jogos.
 """
 import random
 import uuid
@@ -26,7 +26,7 @@ def semear() -> None:
             c.commit()
             print("Já semeado (pastas de teste conferidas).")
             return
-        c.execute("UPDATE jogos SET publicado = (id <> 'g10')")
+        c.execute("UPDATE jogos SET publicado = TRUE")
         jogos = c.execute("SELECT id, ordem, pontos_min, pontos_max, duracao_min_ms FROM jogos WHERE publicado AND tem_ranking").fetchall()
 
         def jogador(ref: str, apelidos: list[tuple[str, str]], partidas: int) -> list[uuid.UUID]:

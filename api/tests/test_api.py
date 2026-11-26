@@ -172,6 +172,16 @@ def test_partida_valida_entra_no_ranking(app_ativo):
     assert any(l["eu"] and l["pontos"] == 120 for l in linhas)
 
 
+
+def test_partida_de_zero_pontos_nao_entra_no_ranking(app_ativo):
+    c, _ = com_perfil(app_ativo, "Zerado")
+    r = _jogar(c, "g03", pontos=0, duracao_ms=3500, espera=1.6)
+    assert r["aceita"] is True and r["posicao"] is None  # a partida vale (conta como jogada), mas não ranqueia
+    assert not any(l["eu"] for l in c.get("/api/ranking/g03").json())
+    assert c.get("/api/sessao").json()["perfis"][0]["partidas"] == 1
+    r = _jogar(c, "g03", pontos=40, duracao_ms=3500, espera=1.6)
+    assert r["posicao"] is not None and r["melhor"] == 40
+
 def test_run_id_repetido_e_recusado(app_ativo):
     c, _ = com_perfil(app_ativo, "Repetido")
     run = str(uuid.uuid4())
@@ -237,7 +247,7 @@ def test_capa_nao_aceita_caminho_fora_da_pasta_do_jogo(app_ativo):
 def test_jogo_nao_publicado_nao_aceita_partida(app_ativo):
     c, _ = com_perfil(app_ativo, "Curioso")
     r = c.post("/api/partidas/inicio", json={"jogoId": "g10", "runId": str(uuid.uuid4())})
-    assert r.status_code == 404  # G10 só após parecer do jurídico (Q47)
+    assert r.status_code == 404  # nos testes o G10 fica sem publicar (conftest.py)
 
 
 def test_ranking_de_menor_vence(app_ativo):

@@ -1,5 +1,5 @@
 /**
- * Identidade visual do Faixa a Faixa (obra de fibra ótica na rua). Gráfico vetorial liso, desenhado por código em
+ * Identidade visual do Sinal Verde (obra de fibra ótica na rua). Gráfico vetorial liso, desenhado por código em
  * `art.ts` e `laneView.ts`; sem arquivos de arte de terceiros. Para mudar o tema (cores, tipos de faixa), é aqui.
  */
 import { COLS } from './logic';

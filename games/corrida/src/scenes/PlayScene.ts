@@ -5,6 +5,8 @@ import { Itens, type Evento, type Piloto } from '../itens';
 import { criarArteItens } from '../itensArte';
 import { chaveArte, criarPista, PISTAS, type PistaPronta } from '../pistas';
 import { MAPA_H, Minimapa, type PontoMapa } from '../minimapa';
+import { MenuCorrida, type Escolha } from '../menu';
+import { CaixaHud, caixaBotao, caixaPad, caixaPista, caixaTeclas, caixaTempo, caixaVelocidade, type TipoPad } from '../hud';
 import { ALTURA_ARTE, ALTURA_REFERENCIA_UI, LARGURA_ARTE, COLORS, FONT } from '../theme';
 
 interface Rival {
@@ -61,16 +63,14 @@ const FILA_PASSOS = 14; // amostras (x4 px) entre uma fileira e a seguinte
 const FAIXA = 24;
 const DESVIO_MAX = 10;
 const ASFALTO_REF = 94;
-/** Pedal do acelerador na tela de toque: tamanho e posição (canto de baixo, à esquerda; o minimapa fica à direita). */
-const PEDAL = 104;
-const PEDAL_DX = 78;
-const PEDAL_DY = -78;
-/** Botão que alterna entre acelerar automático e acelerar manual (↑/W ou pedal): fica logo acima do pedal. */
-const AUTO_DY = PEDAL_DY - 82;
-const AUTO_W = 150;
-const AUTO_H = 34;
+/** Botões de toque (celular, tela deitada): lado e margem em pixels de uma tela de 540 de altura. */
+const PAD = 92;
+const PAD_MARGEM = 20;
+const PAD_VAO = 14;
 /** A corrida termina quando o jogador completa esta quantidade de voltas. */
 const VOLTAS_TOTAIS = 10;
+/** Treino (só o jogador, sem fim): teto de velocidade 30% acima do da corrida, e não sobe a cada volta. */
+const TREINO_VEL = 1.3;
 /** A cada volta completada o zoom do mundo diminui 10% (o jogador fica mais rápido); a mudança leva ~1 s, suave. */
 const ZOOM_POR_VOLTA = 0.9;
 const ZOOM_TRANSICAO_MS = 1000;
@@ -101,6 +101,34 @@ const ALCANCE_ATAQUE_PX = 360;
  * Cena de teste do carro e das pistas: acelera sozinho, setas ou A/D viram, S/espaço freiam, 1 e 2 trocam de pista.
  * No toque: arrastar para a esquerda ou direita vira.
  */
+/** Margens da área segura (câmera, entalhe, barra de gestos) em pixels do jogo; lidas do CSS env() a cada meio segundo. */
+let margens = { esq: 0, dir: 0, topo: 0, base: 0 };
+let margensEm = -1;
+function areaSegura(): typeof margens {
+  const agora = performance.now();
+  if (agora - margensEm < 500) return margens;
+  margensEm = agora;
+  const el = document.getElementById('area-segura');
+  if (!el) return margens;
+  const cs = getComputedStyle(el);
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  const v = (n: string) => (parseFloat(n) || 0) * dpr;
+  margens = { esq: v(cs.paddingLeft), dir: v(cs.paddingRight), topo: v(cs.paddingTop), base: v(cs.paddingBottom) };
+  return margens;
+}
+
+/** O pedaço do SDK do hub que a corrida usa (vem pelo registry, de main.ts). */
+interface Ponte {
+  sendLayout?: (imersivo: boolean) => void;
+  sendExit?: () => void;
+  newRunId?: () => string;
+  sendStarted?: (runId: string) => void;
+  sendGameOver?: (p: { runId: string; score: number; durationMs: number; meta?: Record<string, number | string> }) => void;
+}
+
+/** Acima de tudo do mundo (os carros usam 1 + y, até ~2.500) e do minimapa. */
+const PROFUNDIDADE_PLACAR = 100_000;
+
 export class PlayScene extends Phaser.Scene {
   private pista!: PistaPronta;
   private carro!: Carro;
@@ -110,24 +138,30 @@ export class PlayScene extends Phaser.Scene {
   private voltas!: Voltas;
   private indice = 0;
   private keys!: Record<'left' | 'right' | 'a' | 'd' | 'up' | 'w' | 'down' | 's' | 'space' | 'enter' | 'n' | 'p', Phaser.Input.Keyboard.Key>;
-  /** Pedal do acelerador na tela (só em aparelho de toque) e o dedo que está nele. */
-  private pedal?: Phaser.GameObjects.Image;
-  private dedoPedal: number | null = null;
-  /** Aceleração automática: o carro acelera sem segurar nada (tecla T ou botão na tela). Falso = ↑/W ou pedal. */
+  /** Aceleração automática (tecla T, só no computador): o carro acelera sem segurar nada. No celular são os botões. */
   private autoAcelera = true;
-  private btnAuto!: Phaser.GameObjects.Text;
-  /** Dedo que vira o carro (arrastar para os lados). */
-  private dedoGiro: number | null = null;
-  private hud!: Phaser.GameObjects.Text;
-  private hud2!: Phaser.GameObjects.Text;
+  /** Celular: botões na tela (esquerda, direita, freio, acelerar e turbo) no lugar de arrastar o dedo. */
+  private toque = false;
+  private pads: Array<{ tipo: TipoPad; cx: CaixaHud; fx: number; dx: number; ox: number; dy: number }> = [];
+  private padsAntes = new Set<TipoPad>();
+  private imgMapa!: Phaser.GameObjects.Image;
+  /** Celular: botão de reiniciar a corrida (pede um 2º toque em até 2 s, para não reiniciar sem querer). */
+  private cxReiniciar: CaixaHud | null = null;
+  private confirmaReiniciarMs = 0;
+  /** Celular: botão de voltar ao menu no meio da corrida (também pede o 2º toque: a corrida se perde). */
+  private cxMenu: CaixaHud | null = null;
+  private confirmaMenuMs = 0;
+  // placar em caixas com a fonte pixel (hud.ts); a barra de teclas só existe no computador
+  private cxPista!: CaixaHud;
+  private cxTempo!: CaixaHud;
+  private cxVel!: CaixaHud;
+  private cxTeclas: CaixaHud | null = null;
   private pistaAtual = 0;
   /** Arte da pista ainda baixando: o jogo espera (nada anda). */
   private carregando = false;
   private minimapa!: Minimapa;
   /** Desvio máximo dos rivais nesta pista (DESVIO_MAX na proporção do asfalto). */
   private desvioMax = DESVIO_MAX;
-  private toqueX0: number | null = null;
-  private giroToque = 0;
   private rivais: Rival[] = [];
   private progJogador!: Progresso;
   private tempoCorrida = 0;
@@ -135,6 +169,7 @@ export class PlayScene extends Phaser.Scene {
   private posicaoAtual = 1;
   private aviso!: Phaser.GameObjects.Text;
   private avisoMs = 0;
+  private novaVoltaMs = 0; // "NOVA VOLTA!" na caixa do tempo
   private jogadorBateu = false;
   /** Triângulo amarelo acima do carro do jogador. */
   private marcador!: Phaser.GameObjects.Image;
@@ -155,6 +190,13 @@ export class PlayScene extends Phaser.Scene {
   private ordem: number[] = [];
   private etapa = 0;
   private classificado = false;
+  /** Campeonato (24 pistas sorteadas) ou corrida livre (pista escolhida no menu). */
+  private modo: 'campeonato' | 'livre' | 'treino' = 'campeonato';
+  private menu!: MenuCorrida;
+  private noMenu = false; // com o menu aberto o jogo fica parado
+  /** Ranking: cada corrida do Campeonato ou da Corrida livre é uma partida no hub (o Treino não conta: carro mais rápido). */
+  private bridge: Ponte | null = null;
+  private runId: string | null = null;
   private posicaoFinal = 99;
   /** Escolha livre de pista (?livre na URL): teclas N e P, para testes. */
   private livre = new URLSearchParams(window.location.search).has('livre');
@@ -169,7 +211,7 @@ export class PlayScene extends Phaser.Scene {
   private zoomT = ZOOM_TRANSICAO_MS;
   private voltasDoZoom = 0;
   /** Objetos da interface fixos na tela (a escala e a posição acompanham o zoom). */
-  private ui: Array<{ obj: Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Transform; fx: number; fy: number; dx: number; dy: number; mult: number; fonte?: { px: number; stroke: number } }> = [];
+  private ui: Array<{ obj: Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Transform; fx: number; fy: number; dx: number; dy: number; mult: number; fonte?: { px: number; stroke: number }; nativo?: boolean }> = [];
   private tempoFim = 0;
   private resultado!: Phaser.GameObjects.Text;
   private veu!: Phaser.GameObjects.Rectangle;
@@ -245,80 +287,58 @@ export class PlayScene extends Phaser.Scene {
     kb.on('keydown-T', () => this.alternarAuto());
     kb.on('keydown-M', () => this.modelo.forEach((m) => m.setVisible(!m.visible)));
     kb.on('keydown-R', () => this.carregarPista(this.pistaAtual));
+    kb.on('keydown-ESC', () => this.abrirMenu());
 
-    // Toque: um dedo no pedal (acelera) e outro arrastando para os lados (vira); toque rápido fora do pedal = turbo
-    this.input.addPointer(1);
+    // Toque: botões na tela (lidos a cada quadro em padsApertados, vários dedos ao mesmo tempo). Tocar fora deles no
+    // fim da corrida segue adiante, como o ENTER.
+    this.input.addPointer(3);
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
-      if (this.noBotaoAuto(p.x, p.y)) {
-        this.alternarAuto();
+      if (this.cxMenu?.img.visible && this.noBotao(this.cxMenu, p.x, p.y)) {
+        if (this.confirmaMenuMs > 0) {
+          this.confirmaMenuMs = 0;
+          this.abrirMenu();
+        } else this.confirmaMenuMs = 2000;
         return;
       }
-      if (this.pedal && this.pedal.visible && this.dedoPedal === null && this.noPedal(p.x, p.y)) {
-        this.dedoPedal = p.id;
-        this.pedal.setAlpha(1);
-        return;
-      }
-      if (this.dedoGiro === null) {
-        this.dedoGiro = p.id;
-        this.toqueX0 = p.x;
-      }
+      if (!this.cxReiniciar?.img.visible || !this.noBotao(this.cxReiniciar, p.x, p.y)) return;
+      if (this.confirmaReiniciarMs > 0) {
+        this.confirmaReiniciarMs = 0;
+        this.carregarPista(this.pistaAtual);
+      } else this.confirmaReiniciarMs = 2000;
     });
-    this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
-      if (p.isDown && p.id === this.dedoGiro && this.toqueX0 !== null) this.giroToque = Phaser.Math.Clamp((p.x - this.toqueX0) / 40, -1, 1);
+    this.input.on('pointerup', () => {
+      if (this.fim && this.tempoCorrida - this.tempoFim > 1200) this.continuar();
     });
-    const soltar = (p: Phaser.Input.Pointer) => {
-      if (p.id === this.dedoPedal) {
-        this.dedoPedal = null;
-        this.pedal?.setAlpha(0.55);
-        return;
+    this.toque = !!this.sys.game.device.input.touch;
+    if (this.toque) {
+      this.autoAcelera = false; // no celular quem acelera é o botão ACELERAR
+      const passo = PAD + PAD_VAO;
+      const base = -PAD_MARGEM;
+      const pads: Array<[TipoPad, number, number, number, number]> = [
+        ['esq', 0, PAD_MARGEM, 0, base],
+        ['dir', 0, PAD_MARGEM + passo, 0, base],
+        ['acel', 1, -PAD_MARGEM, 1, base],
+        ['freio', 1, -PAD_MARGEM - passo, 1, base],
+        ['turbo', 1, -PAD_MARGEM, 1, base - passo],
+      ];
+      this.cxReiniciar = this.fixarNativo(new CaixaHud(this, 'hud_reiniciar'), 1, 0, 1, -12, 10);
+      this.cxMenu = this.fixarNativo(new CaixaHud(this, 'hud_menu'), 1, 0, 1, -12, 10);
+      for (const [tipo, fx, dx, ox, dy] of pads) {
+        const cx = this.fixarNativo(new CaixaHud(this, `pad_${tipo}`), fx, 1, ox, dx, dy, 1);
+        this.pads.push({ tipo, cx, fx, dx, ox, dy });
       }
-      if (p.id !== this.dedoGiro) return;
-      if (this.fim && this.tempoCorrida - this.tempoFim > 1200) {
-        this.dedoGiro = null;
-        this.toqueX0 = null;
-        this.continuar();
-        return;
-      }
-      // toque rápido, sem arrastar: ativa o turbo guardado
-      if (this.toqueX0 !== null && Math.abs(p.x - this.toqueX0) < 10 && p.getDuration() < 300) this.ativarTurbo();
-      this.dedoGiro = null;
-      this.toqueX0 = null;
-      this.giroToque = 0;
-    };
-    this.input.on('pointerup', soltar);
-    this.input.on('pointerupoutside', soltar);
-    if (this.sys.game.device.input.touch) {
-      if (!this.textures.exists('pedal')) {
-        const t = this.textures.createCanvas('pedal', PEDAL, PEDAL)!;
-        const g = t.getContext();
-        const r = PEDAL / 2;
-        g.fillStyle = 'rgba(10,12,18,0.75)';
-        g.beginPath(); g.arc(r, r, r - 2, 0, Math.PI * 2); g.fill();
-        g.strokeStyle = '#ffffff'; g.lineWidth = 3;
-        g.beginPath(); g.arc(r, r, r - 4, 0, Math.PI * 2); g.stroke();
-        // seta para cima
-        g.fillStyle = '#ffffff';
-        g.beginPath(); g.moveTo(r, r - 28); g.lineTo(r + 20, r - 4); g.lineTo(r + 8, r - 4); g.lineTo(r + 8, r + 10); g.lineTo(r - 8, r + 10); g.lineTo(r - 8, r - 4); g.lineTo(r - 20, r - 4); g.closePath(); g.fill();
-        g.font = 'bold 12px sans-serif'; g.textAlign = 'center';
-        g.fillText('ACELERAR', r, r + 30);
-        t.refresh();
-      }
-      this.pedal = this.fixar(this.add.image(0, 0, 'pedal'), 0, 1, PEDAL_DX, PEDAL_DY, 1500).setAlpha(0.55);
     }
-    this.btnAuto = this.fixar(
-      this.add.text(0, 0, '', { fontFamily: FONT, fontSize: '15px', color: '#ffffff', backgroundColor: 'rgba(10,12,18,0.75)', padding: { x: 10, y: 8 }, align: 'center' }).setOrigin(0.5),
-      0, 1, PEDAL_DX, AUTO_DY, 1500, 1, { px: 15, stroke: 0 },
-    );
-    this.atualizarBotaoAuto();
 
     // interface: a câmera do mundo tem zoom; os textos ficam sem zoom (escala 1/zoom compensa), então saem nítidos.
     // Posição = fração da tela + deslocamento em pixels de uma tela de 540 de altura (escalado pela altura real).
     const fonte = { fontFamily: FONT, fontSize: '18px', color: COLORS.text, stroke: '#000', strokeThickness: 4 };
     // minimapa no canto de baixo, à direita: ~24% da altura da tela
     this.minimapa = new Minimapa(this);
-    this.fixar(this.add.image(0, 0, this.minimapa.chave).setOrigin(1, 1), 1, 1, -12, -12, 1500, (0.24 * ALTURA_REFERENCIA_UI) / MAPA_H);
-    this.hud = this.fixar(this.add.text(0, 0, '', fonte), 0, 0, 12, 8, 1000, 1, { px: 18, stroke: 4 });
-    this.hud2 = this.fixar(this.add.text(0, 0, '', { ...fonte, align: 'right' }).setOrigin(1, 0), 1, 0, -12, 8, 1000, 1, { px: 18, stroke: 4 });
+    this.imgMapa = this.fixar(this.add.image(0, 0, this.minimapa.chave).setOrigin(1, 1), 1, 1, -12, -12, 1500, (0.24 * ALTURA_REFERENCIA_UI) / MAPA_H);
+    this.cxPista = this.fixarNativo(new CaixaHud(this, 'hud_pista'), 0, 0, 0, 12, 10);
+    this.cxTempo = this.fixarNativo(new CaixaHud(this, 'hud_tempo'), 0.5, 0, 0.5, 0, 10);
+    this.cxVel = this.fixarNativo(new CaixaHud(this, 'hud_vel'), 1, 0, 1, -12, 10);
+    if (!this.sys.game.device.input.touch) this.cxTeclas = this.fixarNativo(new CaixaHud(this, 'hud_teclas'), 0, 1, 0, 12, -12, 1);
     this.dicaTurbo = this.fixar(this.add.text(0, 0, '', { ...fonte, color: '#7FCAFF' }).setOrigin(0.5), 0.5, 1, 0, -56, 1000, 1, { px: 28, stroke: 5 });
     this.aviso = this.fixar(this.add.text(0, 0, '', { ...fonte, color: '#FFD23F' }).setOrigin(0.5), 0.5, 0, 0, 110, 1000, 1, { px: 28, stroke: 5 });
     this.veu = this.fixar(this.add.rectangle(0, 0, 10, 10, 0x000000, 0.7), 0.5, 0.5, 0, 0, 3000).setVisible(false);
@@ -337,10 +357,80 @@ export class PlayScene extends Phaser.Scene {
     }
     this.scale.on('resize', () => this.recalcular());
     this.recalcular();
+    // Jogo imersivo: pede ao hub a tela toda (sem a barra dele); voltar ao hub é o botão do menu
+    const bridge = this.registry.get('bridge') as Ponte | undefined;
+    this.bridge = bridge ?? null;
+    bridge?.sendLayout?.(true);
+    this.menu = new MenuCorrida(PISTAS, () => bridge?.sendExit?.());
+    // ?pista=N e ?livre (testes) entram direto na corrida; o normal é abrir o menu
+    if (this.livre || new URLSearchParams(window.location.search).has('pista')) this.carregarPista(this.ordem[0]!);
+    else {
+      // abertura: uma pista sorteada passa ao fundo (a câmera percorre o traçado) com os carros parados no grid
+      this.abrirMenu('abertura');
+      this.carregarPista(this.ordem[0]!);
+    }
+  }
+
+  /** Menu do começo: o jogo para e o teclado do jogo é desligado (as setas e o Enter passam a ser do menu). */
+  private abrirMenu(tela: 'abertura' | 'modos' = 'modos'): void {
+    if (this.menu.aberto) return;
+    this.noMenu = true;
+    this.mostrarUi(false);
+    this.menu.avisoGirar(false);
+    const kb = this.input.keyboard!;
+    kb.enabled = false;
+    kb.disableGlobalCapture();
+    this.menu.abrir((e) => this.iniciar(e), tela);
+  }
+
+  /** Placar, botões e minimapa somem com o menu aberto (a abertura mostra só a pista). */
+  private mostrarUi(sim: boolean): void {
+    for (const { obj } of this.ui) (obj as unknown as Phaser.GameObjects.Components.Alpha).setAlpha?.(sim ? 1 : 0);
+    this.marcador?.setAlpha(sim ? 1 : 0);
+  }
+
+  /** Fundo da abertura: a câmera percorre a linha central da pista, afastada, com os carros parados onde estão. */
+  private vitrineT = 0;
+  private vitrine(delta: number): void {
+    const am = this.pista.amostras;
+    if (!am.length) return;
+    this.vitrineT += delta;
+    const pos = (this.vitrineT * 0.09) / PASSO_AMOSTRA; // ~90 px/s pelo traçado
+    const a = am[Math.floor(pos) % am.length]!, b = am[(Math.floor(pos) + 1) % am.length]!, f = pos % 1;
+    const cam = this.cameras.main;
+    cam.setRotation(0);
+    this.camRot = 0;
+    cam.setZoom(this.zoomBase * 0.8);
+    cam.centerOn(a.x + (b.x - a.x) * f, a.y + (b.y - a.y) * f);
+    const visuais = [{ car: this.carro, spr: this.sprite }, ...this.rivais.map((r) => ({ car: r.carro, spr: r.sprite }))];
+    visuais.forEach(({ car, spr }, i) => {
+      spr.setPosition(car.x, car.y).setRotation(car.ang).setDepth(1 + Math.round(car.y)).setScale(ESCALA_HD);
+      this.sombras[i]?.setPosition(car.x + 2, car.y + 3).setRotation(car.ang).setDepth(0.5).setVisible(true);
+    });
+  }
+
+  private iniciar(e: Escolha): void {
+    const kb = this.input.keyboard!;
+    kb.enabled = true;
+    kb.enableGlobalCapture();
+    kb.resetKeys();
+    this.noMenu = false;
+    this.mostrarUi(true);
+    this.menu.fecharAcoes();
+    this.modo = e.modo;
+    if (e.modo === 'livre' || e.modo === 'treino') {
+      this.carregarPista(e.pista);
+      return;
+    }
+    this.ordem = embaralhar(PISTAS.length);
+    this.etapa = 0;
     this.carregarPista(this.ordem[0]!);
   }
 
   private carregarPista(i: number): void {
+    this.confirmaReiniciarMs = 0;
+    this.confirmaMenuMs = 0;
+    this.menu?.fecharAcoes(); // R no fim da corrida também tira os botões do resultado
     const def = PISTAS[i]!;
     // Arte da pista: só a da corrida atual fica na memória (as 24 juntas passariam de 90 MB de vídeo no celular).
     if (def.arte && !this.textures.exists(chaveArte(def))) {
@@ -398,8 +488,8 @@ export class PlayScene extends Phaser.Scene {
     this.rivais.forEach((r) => r.sprite.destroy());
     this.sombras.forEach((s) => s.destroy());
     // sombra de cada carro (a mesma imagem, escura e transparente, um pouco deslocada)
-    this.sombras = Array.from({ length: RIVAIS.length + 1 }, () => this.add.image(0, 0, `hd_${CARRO_JOGADOR}`).setScale(ESCALA_HD).setTint(0x000000).setAlpha(0.3));
-    this.rivais = RIVAIS.map((r, i) => {
+    this.sombras = Array.from({ length: (this.modo === 'treino' ? 0 : RIVAIS.length) + 1 }, () => this.add.image(0, 0, `hd_${CARRO_JOGADOR}`).setScale(ESCALA_HD).setTint(0x000000).setAlpha(0.3));
+    this.rivais = (this.modo === 'treino' ? [] : RIVAIS).map((r, i) => {
       const k = i < SLOT_JOGADOR ? i : i + 1; // pula o slot do jogador
       const { passos, lateral } = slot(k);
       return {
@@ -438,21 +528,41 @@ export class PlayScene extends Phaser.Scene {
     this.resultado.setVisible(false);
     this.camRot = this.girar ? -Math.PI / 2 - this.carro.ang : 0; // começa já alinhado
     this.aplicarLimites();
+    // partida no hub: só corrida de verdade (não a pista de fundo da abertura, nem o treino). Corrida reiniciada ou
+    // largada no meio fica sem resultado (o hub descarta).
+    this.runId = null;
+    if (!this.noMenu && this.modo !== 'treino' && this.bridge?.newRunId && this.bridge.sendStarted) {
+      this.runId = this.bridge.newRunId();
+      this.bridge.sendStarted(this.runId);
+    }
   }
 
   update(_t: number, delta: number): void {
     if (this.carregando || !this.pista) return;
+    if (this.noMenu) {
+      this.vitrine(delta);
+      return;
+    }
+    const emPe = this.toque && this.W < this.H;
+    this.menu.avisoGirar(emPe);
+    if (emPe) return; // corrida parada até o celular deitar
     const dt = Math.min(delta, 50) / 1000;
     const k = this.keys;
     let giro = (k.right.isDown || k.d.isDown ? 1 : 0) - (k.left.isDown || k.a.isDown ? 1 : 0);
-    if (giro === 0) giro = this.giroToque;
-    const freio = this.fim || k.down.isDown || k.s.isDown;
-    const acelera = !this.fim && (this.autoAcelera || k.up.isDown || k.w.isDown || this.dedoPedal !== null);
+    const ap = this.toque ? this.padsApertados() : new Set<TipoPad>();
+    if (giro === 0) giro = (ap.has('dir') ? 1 : 0) - (ap.has('esq') ? 1 : 0);
+    const freio = this.fim || k.down.isDown || k.s.isDown || ap.has('freio');
+    const acelera = !this.fim && !ap.has('freio') && (this.autoAcelera || k.up.isDown || k.w.isDown || ap.has('acel'));
+    if (!this.fim && ap.has('turbo') && !this.padsAntes.has('turbo')) this.ativarTurbo();
+    this.padsAntes = ap;
+    if (this.confirmaReiniciarMs > 0) this.confirmaReiniciarMs -= delta;
+    if (this.confirmaMenuMs > 0) this.confirmaMenuMs -= delta;
     if (this.fim) giro = 0;
     if (!this.fim && Phaser.Input.Keyboard.JustDown(k.space)) this.ativarTurbo();
 
     this.tempoCorrida += delta;
-    const teto = fatorTeto(this.tempoCorrida, this.voltas.voltas);
+    // treino: mais rápido e sem o acréscimo por volta (as voltas não têm fim)
+    const teto = this.modo === 'treino' ? fatorTeto(this.tempoCorrida, 0) * TREINO_VEL : fatorTeto(this.tempoCorrida, this.voltas.voltas);
     const c = this.carro;
     const meuProg = this.progJogador.valor();
     const rodavaJogador = ESTA_RODANDO(c);
@@ -535,11 +645,12 @@ export class PlayScene extends Phaser.Scene {
 
     this.indice = amostraMaisProxima(this.pista.amostras, c.x, c.y, this.indice);
     const fechou = this.voltas.atualizar(this.indice, delta);
+    if (this.novaVoltaMs > 0) this.novaVoltaMs -= delta;
     const meu = this.progJogador.atualizar(this.indice);
     const posicao = 1 + this.rivais.filter((r) => r.prog.valor() > meu).length;
     this.posicaoAtual = posicao;
     this.atualizarMinimapa(delta, meu);
-    if (!this.fim && this.voltas.voltas >= VOLTAS_TOTAIS) this.terminar(posicao);
+    if (!this.fim && this.modo !== 'treino' && this.voltas.voltas >= VOLTAS_TOTAIS) this.terminar(posicao);
 
     // quando o rodopio acaba, o carro volta a apontar na direção da pista
     if (rodavaJogador && !ESTA_RODANDO(c)) this.indice = this.fimDoRodopio(c, this.indice);
@@ -644,12 +755,66 @@ export class PlayScene extends Phaser.Scene {
     else this.dicaTurbo.setText('');
 
     const v = this.voltas;
-    this.hud.setText(`${this.pista.def.nome}  (pista ${this.etapa + 1}/${PISTAS.length})
-Volta ${Math.min(v.voltas + 1, VOLTAS_TOTAIS)}/${VOLTAS_TOTAIS}   ${formatarTempo(v.tempo)}
-Posição ${posicao}/${this.rivais.length + 1}`);
-    this.hud2.setText(`${Math.round(velocidade(c))} px/s
-Melhor ${v.melhor === null ? '--' : formatarTempo(v.melhor)}${fechou ? '  NOVA VOLTA' : ''}
-${this.livre ? '[N] [P] pista  ' : ''}[R] reiniciar  [T] acel. auto  ↑ acelera  ↓ freia`);
+    // tamanho das caixas: pela altura da tela, mas sem passar da largura (celular em pé: as 3 caixas de cima cabem)
+    const ku = Math.min(this.H / ALTURA_REFERENCIA_UI, this.W / 620);
+    caixaPista(this.cxPista, ku, {
+      nome: this.pista.def.nome,
+      pista: this.modo === 'livre' ? 'CORRIDA LIVRE' : this.modo === 'treino' ? 'TREINO' : `PISTA ${this.etapa + 1}/${PISTAS.length}`,
+      volta: this.modo === 'treino' ? String(v.voltas + 1) : `${Math.min(v.voltas + 1, VOLTAS_TOTAIS)}/${VOLTAS_TOTAIS}`,
+      posicao: this.modo === 'treino' ? '-' : `${posicao}/${this.rivais.length + 1}`,
+    });
+    if (fechou) this.novaVoltaMs = 2000;
+    caixaTempo(this.cxTempo, ku, { tempo: formatarTempo(v.tempo), melhor: v.melhor === null ? '--' : formatarTempo(v.melhor), novaVolta: this.novaVoltaMs > 0 });
+    caixaVelocidade(this.cxVel, ku, { vel: Math.round(velocidade(c)) });
+    if (this.cxTeclas) {
+      caixaTeclas(this.cxTeclas, ku, [
+        ...(this.livre ? [{ tecla: 'N', texto: 'Pista' }, { tecla: 'P', texto: 'Volta pista' }] : []),
+        { tecla: 'R', texto: 'Reiniciar' },
+        { tecla: 'ESC', texto: 'Menu' },
+        { tecla: 'T', texto: this.autoAcelera ? 'Auto: sim' : 'Auto: não' },
+        { tecla: '▲', texto: 'Acelerar' },
+        { tecla: '▼', texto: 'Frear' },
+      ]);
+    }
+    if (this.toque) {
+      const kp = this.H / ALTURA_REFERENCIA_UI;
+      for (const pad of this.pads) {
+        const ver = pad.tipo !== 'turbo' || this.turboGuardado;
+        pad.cx.img.setVisible(ver && !this.fim);
+        if (ver) caixaPad(pad.cx, kp, PAD * kp, pad.tipo, this.padsAntes.has(pad.tipo));
+      }
+      if (this.cxReiniciar) {
+        this.cxReiniciar.img.setVisible(!this.fim);
+        caixaBotao(this.cxReiniciar, ku, this.confirmaReiniciarMs > 0 ? 'TOQUE DE NOVO' : 'REINICIAR', this.confirmaReiniciarMs > 0);
+        const eR = this.ui.find((u) => u.obj === this.cxReiniciar!.img);
+        if (eR) eR.dy = 10 + (this.cxVel.img.height + 8) / kp; // logo abaixo da caixa da velocidade
+      }
+      if (this.cxMenu && this.cxReiniciar) {
+        this.cxMenu.img.setVisible(!this.fim);
+        caixaBotao(this.cxMenu, ku, this.confirmaMenuMs > 0 ? 'TOQUE DE NOVO' : 'MENU', this.confirmaMenuMs > 0);
+        const eM = this.ui.find((u) => u.obj === this.cxMenu!.img);
+        if (eM) eM.dy = 10 + (this.cxVel.img.height + 8 + this.cxReiniciar.img.height + 8) / kp; // abaixo do reiniciar
+      }
+      // celular: os botões ocupam os cantos de baixo; o minimapa sobe para baixo da caixa da pista
+      const eMapa = this.ui.find((u) => u.obj === this.imgMapa);
+      if (eMapa) {
+        eMapa.fx = 0;
+        eMapa.fy = 0;
+        eMapa.dx = 12;
+        eMapa.dy = 10 + (this.cxPista.img.height + 8) / kp;
+        eMapa.mult = (0.2 * ALTURA_REFERENCIA_UI) / MAPA_H;
+        this.imgMapa.setOrigin(0, 0);
+      }
+    }
+    // celular em pé: as 3 caixas não cabem lado a lado; o tempo desce para baixo da velocidade
+    const eTempo = this.ui.find((u) => u.obj === this.cxTempo.img);
+    if (eTempo) {
+      const empe = this.W < this.H;
+      eTempo.fx = empe ? 1 : 0.5;
+      eTempo.dx = empe ? -12 : 0;
+      eTempo.dy = empe ? 10 + (this.cxVel.img.height + 6) / (this.H / ALTURA_REFERENCIA_UI) : 10;
+      this.cxTempo.img.setOrigin(empe ? 1 : 0.5, 0);
+    }
   }
 
   private mostrarAviso(texto: string): void {
@@ -669,6 +834,11 @@ ${this.livre ? '[N] [P] pista  ' : ''}[R] reiniciar  [T] acel. auto  ↑ acelera
       poca: 'DERRAPOU NA POÇA!',
     };
     if (e === 'roleta') {
+      // treino: sem rivais não há posição para sortear (antes travava o jogo ao terminar de girar)
+      if (!this.rivais.length) {
+        this.mostrarAviso('ROLETA: SÓ VOCÊ NA PISTA!');
+        return;
+      }
       if (this.roletaMs <= 0) this.roletaMs = ROLETA_GIRO_MS;
     }
     else if (e === 'turbo') {
@@ -682,6 +852,7 @@ ${this.livre ? '[N] [P] pista  ' : ''}[R] reiniciar  [T] acel. auto  ↑ acelera
   private roleta(): void {
     const am = this.pista.amostras;
     const n = am.length;
+    if (!this.rivais.length) return; // segurança: sem rivais não há com quem trocar de lugar
     const alvo = 1 + Math.floor(Math.random() * (this.rivais.length + 1));
     const outros = [...this.rivais].sort((a, b) => b.prog.valor() - a.prog.valor());
     // para ficar em alvo-ésimo: logo atrás de quem fica à frente (ou à frente de todos, no 1º lugar)
@@ -740,17 +911,32 @@ ${this.livre ? '[N] [P] pista  ' : ''}[R] reiniciar  [T] acel. auto  ↑ acelera
     this.aviso.setText('');
     const v = this.voltas;
     this.classificado = classificou(posicao);
+    // resultado para o ranking do hub: a melhor volta, em ms (no catálogo, g12 = "Melhor volta", menor vence)
+    if (this.runId && v.melhor !== null && this.bridge?.sendGameOver) {
+      this.bridge.sendGameOver({
+        runId: this.runId,
+        score: Math.round(v.melhor),
+        durationMs: Math.round(this.tempoCorrida),
+        meta: { posicao, pista: this.pista.def.id, modo: this.modo },
+      });
+    }
+    this.runId = null;
     this.posicaoFinal = posicao;
     const prox = proximaEtapa(this.etapa, PISTAS.length, posicao);
     let situacao: string;
-    if (!this.classificado) situacao = `Fora dos ${LIMITE_CLASSIFICACAO} primeiros: você precisa ficar\nentre os ${LIMITE_CLASSIFICACAO} primeiros para avançar.\n\nENTER ou toque: tentar esta pista de novo`;
-    else if (prox === null) situacao = `CAMPEONATO COMPLETO! Você passou pelas ${PISTAS.length} pistas.\n\nENTER ou toque: novo campeonato (nova ordem)`;
-    else situacao = `CLASSIFICADO! Próxima pista: ${PISTAS[this.ordem[prox]!]!.nome} (${prox + 1}/${PISTAS.length})\n\nENTER ou toque: seguir`;
+    let seguir: string;
+    if (this.modo === 'livre') situacao = '';
+    else if (!this.classificado) situacao = `Fora dos ${LIMITE_CLASSIFICACAO} primeiros: você precisa ficar\nentre os ${LIMITE_CLASSIFICACAO} primeiros para avançar.`;
+    else if (prox === null) situacao = `CAMPEONATO COMPLETO! Você passou pelas ${PISTAS.length} pistas.`;
+    else situacao = `CLASSIFICADO! Próxima pista: ${PISTAS[this.ordem[prox]!]!.nome} (${prox + 1}/${PISTAS.length})`;
     this.resultado.setText(
       `CORRIDA TERMINADA!\n\n${this.pista.def.nome}\nPosição: ${posicao}º de ${this.rivais.length + 1}\nTempo total: ${formatarTempo(this.tempoCorrida)}\nMelhor volta: ${v.melhor === null ? '--' : formatarTempo(v.melhor)}\n\n${situacao}`,
     );
+    if (this.modo === 'livre') seguir = 'CORRER DE NOVO';
+    else seguir = !this.classificado ? 'TENTAR DE NOVO' : prox === null ? 'NOVO CAMPEONATO' : 'SEGUIR';
     this.veu.setVisible(true);
     this.resultado.setVisible(true);
+    this.menu.mostrarAcoes(seguir, () => this.continuar(), () => this.abrirMenu());
   }
 
   private get W(): number {
@@ -774,6 +960,13 @@ ${this.livre ? '[N] [P] pista  ' : ''}[R] reiniciar  [T] acel. auto  ↑ acelera
     obj.setScrollFactor(0).setDepth(depth);
     this.ui.push({ obj, fx, fy, dx, dy, mult, fonte });
     return obj;
+  }
+
+  /** Caixa do placar desenhada no tamanho real da tela: só desfaz o zoom (sem ampliar), para a letra ficar nítida. */
+  private fixarNativo(cx: CaixaHud, fx: number, fy: number, ox: number, dx: number, dy: number, oy = 0): CaixaHud {
+    cx.img.setOrigin(ox, oy).setScrollFactor(0).setDepth(PROFUNDIDADE_PLACAR);
+    this.ui.push({ obj: cx.img, fx, fy, dx, dy, mult: 1, nativo: true });
+    return cx;
   }
 
   /** Zoom inteiro conforme a altura da janela (arte nítida) e tamanho da interface proporcional. Roda no início e ao redimensionar. */
@@ -801,13 +994,13 @@ ${this.livre ? '[N] [P] pista  ' : ''}[R] reiniciar  [T] acel. auto  ↑ acelera
     const rot = this.camRot;
     const k = this.H / ALTURA_REFERENCIA_UI;
     const cos = Math.cos(-rot), sin = Math.sin(-rot);
-    for (const { obj, fx, fy, dx, dy, mult } of this.ui) {
+    for (const { obj, fx, fy, dx, dy, mult, nativo } of this.ui) {
       // a câmera gira e dá zoom também nos objetos sem rolagem: desfaz os dois para o texto ficar reto e nítido
       if (obj instanceof Phaser.GameObjects.Rectangle) obj.setSize(this.W, this.H);
-      const sx = fx * this.W + dx * k, sy = fy * this.H + dy * k;
+      const { x: sx, y: sy } = this.naTela(fx, fy, dx, dy);
       const px = (sx - this.W / 2) / z, py = (sy - this.H / 2) / z;
       // textos já têm a fonte escalada por k; imagens escalam aqui
-      obj.setScale((obj instanceof Phaser.GameObjects.Image ? mult * k : mult) / z).setRotation(-rot);
+      obj.setScale((nativo ? 1 : obj instanceof Phaser.GameObjects.Image ? mult * k : mult) / z).setRotation(-rot);
       obj.setPosition(this.W / 2 + px * cos - py * sin, this.H / 2 + px * sin + py * cos);
     }
   }
@@ -829,25 +1022,46 @@ ${this.livre ? '[N] [P] pista  ' : ''}[R] reiniciar  [T] acel. auto  ↑ acelera
   /** O ponto (x, y) da tela está sobre o pedal? (área um pouco maior que o desenho, para acertar fácil) */
   private alternarAuto(): void {
     this.autoAcelera = !this.autoAcelera;
-    this.atualizarBotaoAuto();
     this.mostrarAviso(this.autoAcelera ? 'Aceleração automática: LIGADA' : 'Aceleração automática: DESLIGADA (↑ ou W)');
   }
 
-  private atualizarBotaoAuto(): void {
-    this.btnAuto.setText(this.autoAcelera ? 'ACELERAÇÃO AUTO: SIM [T]' : 'ACELERAÇÃO AUTO: NÃO [T]');
-    this.pedal?.setVisible(!this.autoAcelera);
-    if (this.autoAcelera) this.dedoPedal = null;
+  /**
+   * Ponto da tela para um item da interface: fração da tela (fx, fy) + deslocamento (dx, dy) numa tela de 540 de altura,
+   * afastado da área da câmera/entalhe do celular (o jogo desenha atrás dela, mas placar e botões não ficam lá).
+   */
+  private naTela(fx: number, fy: number, dx: number, dy: number): { x: number; y: number } {
+    const k = this.H / ALTURA_REFERENCIA_UI;
+    const m = areaSegura();
+    const x = fx * this.W + dx * k + (fx === 0 ? m.esq : fx === 1 ? -m.dir : 0);
+    const y = fy * this.H + dy * k + (fy === 0 ? m.topo : fy === 1 ? -m.base : 0);
+    return { x, y };
   }
 
-  /** O ponto (x, y) da tela está sobre o botão da aceleração automática? */
-  private noBotaoAuto(x: number, y: number): boolean {
-    const k = this.H / ALTURA_REFERENCIA_UI;
-    return Math.abs(x - PEDAL_DX * k) < (AUTO_W / 2 + 20) * k && Math.abs(y - (this.H + AUTO_DY * k)) < (AUTO_H / 2 + 10) * k;
+  /** O toque (x, y) caiu neste botão da interface? (com folga, para acertar fácil; botões ancorados à direita) */
+  private noBotao(cx: CaixaHud, x: number, y: number): boolean {
+    const img = cx.img;
+    const e = this.ui.find((u) => u.obj === img);
+    if (!e) return false;
+    const t = this.naTela(e.fx, e.fy, e.dx, e.dy);
+    const folga = 6 * (this.H / ALTURA_REFERENCIA_UI);
+    return x >= t.x - img.width - folga && x <= t.x + folga && y >= t.y - folga && y <= t.y + img.height + folga;
   }
 
-  private noPedal(x: number, y: number): boolean {
-    const k = this.H / ALTURA_REFERENCIA_UI;
-    return Math.hypot(x - PEDAL_DX * k, y - (this.H + PEDAL_DY * k)) < PEDAL * 0.6 * k;
+  /** Botões de toque com algum dedo em cima agora (o dedo pode escorregar de um botão para o outro). */
+  private padsApertados(): Set<TipoPad> {
+    const ap = new Set<TipoPad>();
+    const ponteiros = this.input.manager.pointers.filter((p) => p.isDown);
+    if (!ponteiros.length) return ap;
+    const kp = this.H / ALTURA_REFERENCIA_UI;
+    for (const pad of this.pads) {
+      if (!pad.cx.img.visible) continue;
+      const w = pad.cx.img.width, h = pad.cx.img.height;
+      const t = this.naTela(pad.fx, 1, pad.dx, pad.dy);
+      const x0 = t.x - pad.ox * w, y0 = t.y - h;
+      const folga = 6 * kp; // um pouco maior que o desenho: dedo no canto ainda conta
+      if (ponteiros.some((p) => p.x >= x0 - folga && p.x <= x0 + w + folga && p.y >= y0 - folga && p.y <= y0 + h + folga)) ap.add(pad.tipo);
+    }
+    return ap;
   }
 
   /** Minimapa: carros (jogador com seta, líder com anel) e itens na pista. */
@@ -873,6 +1087,11 @@ ${this.livre ? '[N] [P] pista  ' : ''}[R] reiniciar  [T] acel. auto  ↑ acelera
 
   /** Depois da corrida: avança se ficou entre os 6 primeiros (ou recomeça o campeonato ao fim), senão repete a pista. */
   private continuar(): void {
+    this.menu.fecharAcoes();
+    if (this.modo === 'livre') {
+      this.carregarPista(this.pistaAtual); // corrida livre: a mesma pista de novo
+      return;
+    }
     const prox = proximaEtapa(this.etapa, PISTAS.length, this.posicaoFinal);
     if (prox === null) {
       this.ordem = embaralhar(PISTAS.length); // campeonato completo: nova ordem

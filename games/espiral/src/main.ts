@@ -21,6 +21,21 @@ const bridge = createHubBridge({
   avatarViews: game_json.avatarViews as Array<'portrait'>,
 });
 
+// Fullscreen on phones: browsers only allow it after a user gesture, so it starts on the first touch (on desktop the hub has its own button).
+// Inside the hub iframe it works because the iframe has allow="fullscreen"; if it fails (e.g. iPhone) the game just carries on.
+if (window.matchMedia('(pointer: coarse)').matches) {
+  const enterFullscreen = () => {
+    window.removeEventListener('pointerup', enterFullscreen);
+    try {
+      if (document.fullscreenElement || !document.fullscreenEnabled) return;
+      void document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
+    } catch {
+      /* not supported */
+    }
+  };
+  window.addEventListener('pointerup', enterFullscreen);
+}
+
 // ---------- Painel (HTML por cima do canvas) ----------
 const hud = document.getElementById('hud')!;
 hud.innerHTML = `

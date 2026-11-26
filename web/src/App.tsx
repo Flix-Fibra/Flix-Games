@@ -194,7 +194,7 @@ function Portal() {
       {jogando && perfil && <Jogando entrando={!!lancando} jogo={jogando} avatar={perfil.avatar} personagem={perfil.personagem} onFechar={fecharJogo} />}
       {lancando && <Lancamento jogo={lancando} onFim={() => setLancando(null)} />}
       {(quemAberto || !perfil) && (
-        <QuemVaiJogar perfis={perfis} maxPerfis={maxPerfis} cores={cores} atualId={perfilId} onEntrar={entrar} onCriar={criar} onEditar={editarPerfil} onExcluir={excluir} />
+        <QuemVaiJogar perfis={perfis} maxPerfis={maxPerfis} cores={cores} atualId={perfilId} onEntrar={entrar} onCriar={criar} onEditar={editarPerfil} onExcluir={excluir} onSair={sair} />
       )}
     </>
   );

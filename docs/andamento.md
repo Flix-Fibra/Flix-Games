@@ -22,7 +22,7 @@ Uma parte só está ✅ com todos os critérios aplicáveis ✅; qualquer crité
 
 ## 2. Próxima fase
 
-**Fase 3 — jogos, em andamento [F].** Entrega imediata [H]: levar o G03 (Fibra Conecta) a “testado em celular e integrado ao hub real” e fechar a onda 1 (G01 Runner já jogável; faltam G02 Flappy-like e G15 Cesta de um toque) com o mesmo fluxo de cada jogo: ficha de gameplay → código → teste → revisão do jurídico → publicação (tabela por jogo na [Fase 3](#fase-3--jogos-e-ranking)). A Fase 0 segue parcial: faltam escopo e aceite da v1 (Q43), documentação da API de login (Q01–Q10) e conferência de licenças (Q12) [D].
+**Fase 3 — jogos, em andamento [F].** Entrega imediata [H]: levar o G03 (Fibra Conecta) a “testado em celular e integrado ao hub real” e fechar a onda 1 (G01 Runner já jogável; faltam G02 Flappy-like e G15 Cesta de um toque) com o mesmo fluxo de cada jogo: ficha de gameplay → código → teste → publicação (tabela por jogo na [Fase 3](#fase-3--jogos-e-ranking)). A Fase 0 segue parcial: faltam escopo e aceite da v1 (Q43), documentação da API de login (Q01–Q10) e conferência de licenças (Q12) [D].
 
 **Pré-requisitos:** Node.js e npm (usados Node 26 e npm 11) [F]; ler o [prompt dos minigames](prompt-inicio-minigames-flix.md) (decisões de 16/11 no topo), [DECISIONS](DECISIONS.md), [HUB_CONTRACT](HUB_CONTRACT.md) e [hub-iframe](hub-iframe.md); escrever a ficha de gameplay do jogo antes de codar [C]. O designer do kit do personagem ainda não foi definido [D].
 
@@ -54,11 +54,97 @@ Portal (`web/`) e API (`api/`): comandos no README e nas entradas de “Onde par
 | 0 | Descoberta e escopo | 0/3 partes | 🟡 Contexto e perguntas Q01–Q49 registrados; aceite da v1 e integração real pendentes [C/D] |
 | 1 | Base técnica reproduzível | 0/3 partes | 🟡 `web/`, `api/` e o monorepo dos jogos existem e têm testes; faltam verificações automáticas em conjunto, homologação e deploy [F/D] |
 | 2 | Acesso do cliente e portal | 0/3 partes | 🟡 Portal com login simulado, perfis e catálogo; login real depende da API do App Flix [F/D] |
-| 3 | Jogos e ranking | 0/5 partes | 🟡 G01, G03 e G10 jogáveis e testados no simulador; 12 jogos do catálogo ainda sem código; kit do designer e jurídico pendentes [F/D] |
+| 3 | Jogos e ranking | 0/5 partes | 🟡 G01, G03 e G10 jogáveis e testados no simulador; 12 jogos do catálogo ainda sem código; kit do designer pendente [F/D] |
 | 4 | Piloto e lançamento | 0/3 partes | ⬜ Depende dos fluxos anteriores e aceite operacional [D] |
 | **Total** | **Plano preliminar** | **0/17 partes** | **[F] Fluxos parciais em portal, API e jogos G01, G03 e G10; nenhuma parte validada nem entregável (17/11)** |
 
 ## 4. Onde parou
+
+**26/11/2026 — [F]** G06 **Minigolfe Flix em 3D**, a pedido do solicitante:
+
+- **Física:** a pá do moinho atravessava a bola parada (com a bola parada o passo não checava colisão) e a tratava como parede fixa. Agora pás, blocos móveis e pistões empurram a bola de verdade, inclusive parada, sem contar tacada (`bounceMoving`, `pushResting` em `logic.ts`); teste novo.
+- **3D (Three.js 0.170):** campo com trilhos de madeira, luz e sombra, bola que rola, bandeira, moinho, bombas, portais, pistões, lava e esteiras animados (`mundo3d.ts`); placar, menu e fim de percurso em HTML/CSS (`telas.ts`); Phaser saiu deste jogo. Sem pixel; o retrato do personagem não aparece mais.
+- **Leveza:** resolução até 1,5x, sombras leves e qualidade que se ajusta sozinha ao aparelho (baixa resolução e, no limite, tira as sombras).
+- **Percurso de 25 buracos**, do mais fácil ao mais difícil: 9 fases novas de aprender e as 16 antigas reordenadas (`ORDEM` em `levels.ts`; `docs/MINIGOLFE_FASES.md`).
+- Validação: 56 testes; robô `SOLVE=1` encaçapou as 25; prints em celular e no hub. [D] Teste em celular real; ranking do mês mistura totais de 16 e de 25 buracos até zerar no dia 1.
+
+**26/11/2026 — [F]** G10 **Estoque Flix com visual novo**, a pedido do solicitante ("não quero esse visual pixelado"); mesmas regras, pontos, velocidade e controles (`logic.ts` não mudou):
+
+- Desenha na resolução real da tela (`camera.ts` calcula pela tela e pela densidade do aparelho), sem esticar imagem.
+- O tema de cabos continua, redesenhado liso em canvas 2D (`art.ts`): bloco = pedaço de cabo com degradê e brilho, conector RJ45 nas bordas, roteador e computador que acendem na linha completa, com o sinal correndo.
+- Fundo escuro com luz vermelha, tabuleiro de vidro, fonte do sistema; placar (PONTOS, CONEXÕES, NÍVEL com barra), RECORDE e PRÓXIMA; menu e fim de jogo novos (`ui.ts`).
+- Saíram a fonte pixel e o retrato pixelado do personagem (o jogo não mostra mais o personagem).
+- Capa nova do hub (G10) e do Flix Grid (G12).
+- Validação: 17 testes, typecheck; prints de menu, partida, linha completa e fim de jogo, sozinho e dentro do hub (computador e celular). [D] Teste em celular real; o Tobias deve revisar.
+
+**26/11/2026 — [F]** **Login do cliente com a regra nova** (decisão do Marcio): todo cliente Flix com contrato ativo pode jogar, sem serviço na Voalle. A rota `flix-games/confere` mantém o mesmo formato; mudaram só as mensagens de recusa:
+
+- bloqueado por débito (`contrato_bloqueado`): "Seu acesso está suspenso por fatura em aberto. Pague pelo Minha Flix e o acesso volta sozinho.";
+- ex-cliente, só com contrato cancelado (`sem_flix_games`): "Não encontramos um contrato ativo na sua conta Flix. O Flix Games é para clientes Flix.".
+
+Também entram a capa nova do Nest Shot (G15) e a imagem da página "Ver". Testes de login passam. [D] Chave da API Própria (Marcio). Dois testes de ranking falham às vezes (`test_partida_de_zero_pontos_nao_entra_no_ranking`, `test_catalogo_conta_as_partidas_terminadas`), também sem esta mudança; causa a investigar.
+
+**26/11/2026 — [C]** Decisão do solicitante: **revogada a regra que condicionava a publicação dos jogos à revisão ou ao parecer do jurídico** (inclusive o G10, Q47). Entradas anteriores a esta data que citam a trava ficam só como histórico e não valem mais.
+
+**25/11/2026 — [F]** G06 Minigolfe Flix com **16 fases** e as mecânicas pedidas pelo gestor (imagens da pasta `Fases Mini Golf/`, fora do Git): **bomba** (prende a bola e mira sozinha, girando; o jogador só escolhe a força, e um toque vale 0,6), **moinho**, **esteira**, **portais** (mesma velocidade e direção na saída), **bloco móvel** (desliza pela trilha do chão), **rampa de salto** (a bola voa por cima de água, lava, pistão e moinho; o tempo no ar cresce com a força), **pistão** e **lava** (acende e apaga, em dois grupos que se alternam). Fases 1 a 7 recriam os 7 campos desenhados; 8 a 16 combinam as mecânicas, cada uma com caminho seguro e atalho arriscado (`docs/MINIGOLFE_FASES.md`). O relógio da fase corre sempre. Robô `games/minigolfe/tools/levels.solve.test.ts` (`SOLVE=1`) encaçapou as 16; 55 testes, typecheck e build passam; as 16 fases conferidas no navegador, bomba e salto testados com tacada de verdade. Capa e o `catalogo` `g06` no `game.json`. [D] Dificuldade e par só se ajustam jogando; teste em celular; som das mecânicas novas provisório; nome e capa a validar; jurídico. Rodar: `npm run dev:minigolfe`.
+
+**25/11/2026 — [F]** G02 **Voo Rasante** (`games/voo`, Phaser 3.90 + TypeScript, retrato 720x1280) jogável: avião de aviador-pássaro que sobe ao toque, passando entre prédios (embaixo) e braços de guindaste (em cima), 5 de cada sorteados. Proporções conferidas no flappybird.io (altura do campo = 1280): espaçamento 723 px, vão visível 358 px (fecha 10 px por par até 260), velocidade constante de 420 px/s; o fundo anda a 12% da velocidade dos obstáculos, com a imagem normal e a espelhada alternadas para não haver emenda. Colisão pelo contorno real dos sprites (caixas em faixas de 12 px geradas por `games/voo/tools/preparar-assets.py` a partir de `Voo Rasante Assets/`, fora do Git); tecla H mostra as hitboxes. 10 testes, typecheck e build. Ligado ao catálogo como g02 (sem capa ainda). [D] Ficha de gameplay, som, celular, capa, jurídico (G02 exige parecer antes de publicar), nome definitivo, gravidade e impulso (não medidos no original). Rodar: `npm run dev:voo`.
+
+**25/11/2026 — [F]** **Network Snake no Safari e tela cheia:**
+
+- **Setas.** No Safari as setas rolavam a página do hub atrás do jogo. A cobra passou a usar `addCapture` do Phaser (ele lê a tecla e só depois cancela a rolagem), e o hub trava `html` e `body` com o jogo aberto.
+- **Tentativa errada.** A 1ª tentativa, cancelar a tecla no SDK, desligou as setas: o Phaser ignora tecla já cancelada. Foi desfeita antes de subir.
+- **Tela cheia de jogo em pé no computador.** O título do hub não cobre mais o placar, e o aviso de ranking vai para o canto de baixo, fora do quadro do jogo.
+
+[D] Pendências: conferir no Safari real (só testado no Chrome); "jogo descentralizado" relatado pelo solicitante, sem print, não reproduzido.
+
+**25/11/2026 — [F]** **Ranking**, depois do relato do solicitante ("alguns jogos não aparecem e não deixa clicar em outros"):
+
+1. **Lista do seletor por baixo do rodapé.** A lista de jogos do seletor abria por baixo do rodapé ("Créditos e Licenças"), que roubava o clique dos últimos jogos quando o ranking era curto. `main` passou para `z-index: 2`. Reproduzido e conferido no site no ar: Flix Grid bloqueado sem a correção, clicável com ela.
+2. **Flix Grid no ranking.** O G12 não enviava resultado e o ranking dele ficava sempre vazio. Agora manda `started`/`gameover` com a melhor volta em ms (catálogo: menor vence). Só valem Campeonato e Corrida livre; o Treino não conta. Conferido pelo hub local: início 201, fim 200, "4º no ranking".
+3. **Partida de 0 pontos.** Conta como jogada, mas não entra no ranking (decisão do solicitante). 80 testes da API.
+
+**25/11/2026 — [F]** G09 **Sinal Verde** (ex-Faixa a Faixa), tela de início no visual do modelo enviado pelo solicitante, adaptado à tela em pé:
+
+- título em fonte pixel com barra laranja ("SINAL" em creme, "VERDE" em verde);
+- a cena da obra animada no meio;
+- botão verde COMEÇAR e os controles embaixo.
+
+Só com as peças que o jogo já tem: cones, cavalete e semáforo do modelo não existem na arte. O rosto do personagem saiu da abertura. 35 testes.
+
+**25/11/2026 — [F]** G12 Flix Grid:
+
+- **Tela de abertura dentro do jogo.** Uma pista sorteada passa ao fundo com os carros no grid. Por cima ficam o título pixel, o botão JOGAR e "Voltar ao hub".
+- **Escolha do modo.** Abre ao tocar em JOGAR, com "Voltar" para a abertura. O MENU e o ESC no meio da corrida vão direto para ela.
+- **Correção.** A roleta travava o Treino (sem rivais não havia com quem trocar de lugar). Agora ela só avisa "só você na pista".
+- **Capa nova no hub.** O card ficou vermelho e grafite.
+- **Validação.** 128 testes; abertura, modos e roleta conferidos no computador e no celular simulado.
+
+**25/11/2026 — [F]** **Acesso da equipe** ao site no ar enquanto o login do cliente espera a API Própria:
+
+- A tela de entrada ganhou "Sou da equipe Flix Games", com usuário e senha (`POST /api/entrar-equipe`, conta `EQUIPE-<USUARIO>`).
+- No servidor fica só o hash scrypt de cada senha (segredo do compose), trocado com `scripts/deploy/codigo_equipe.py`.
+- Usuários criados: rafael, tobias e ian (ian acrescentado no mesmo dia, sem mudança de código). As senhas ficaram só com o solicitante.
+- A trava é por IP (5 erros em 15 min).
+- **Jogos publicados em produção:** G01, G03, G04, G09, G12, G14 e G15. O G10 segue fora (jurídico, Q47); o jogo de teste (G02) também.
+- 79 testes da API.
+
+**25/11/2026 — [F]** G12 Flix Grid, a pedido do solicitante, depois do teste no celular:
+
+- **Painel.** Caixas no estilo do modelo enviado, com a fonte pixel da plataforma: pista, volta, posição, tempo, velocidade e barra de teclas no computador.
+- **Menu inicial.**
+  - **Campeonato:** 24 pistas sorteadas.
+  - **Corrida livre:** escolhe a pista vendo o traçado.
+  - **Treino:** só o jogador, 30% mais rápido e sem limite de voltas.
+  - Botões no fim da corrida e **Voltar ao hub**.
+- **Celular.**
+  - Botões na tela (◀ ▶, FREIO, ACELERAR e TURBO) no lugar de arrastar.
+  - REINICIAR e MENU pedem um 2º toque, para não perder a corrida sem querer.
+  - O jogo ocupa a tela toda e afasta placar e botões da câmera.
+  - Tela cheia e tela deitada automáticas no Android. No iPhone isso não é possível, então o jogo avisa "Gire o celular".
+- **Jogo imersivo.** Mensagens novas do SDK, `layout` e `exit` (ver [HUB_CONTRACT](HUB_CONTRACT.md)): o hub esconde a própria barra e fecha o jogo pelo botão do jogo.
+- **Validação.** 128 testes da Corrida e 154 com o SDK; typecheck do jogo, SDK e portal; conferido em navegador no computador e em celular simulado (deitado, em pé e com câmera simulada).
+- **[D] Pendências.** Teste em celular real (Android e iPhone). Avisos no meio da tela e texto do resultado ainda na fonte antiga. O Tobias deve revisar (a Corrida é dele).
 
 **24/11/2026 — [F]** Login real e preparação do deploy em `https://games.flixfibra.com.br` (servidor compartilhado `132.255.110.226`), a pedido do solicitante.
 
@@ -166,7 +252,7 @@ Portal (`web/`) e API (`api/`): comandos no README e nas entradas de “Onde par
 | Parte | Funciona | Validado | Testado | Entregável | Data | Obs. |
 |---|---|---|---|---|---|---|
 | F1.1 Projeto local e comandos documentados | 🟡 | ⬜ | 🟡 | ⬜ | 16/11 | [F] Portal: `web/` em React 19 + TypeScript 5.9 + Vite 6.4 com versões fixas e `package-lock.json`; `npm run verificar` e `npm run build` sem erros; comandos no README. [F] Jogos: monorepo npm na raiz (`games/`, `packages/`) com Vite, Phaser 3, TypeScript e Vitest; comandos em `games/snake/README.md`; 61 testes e typecheck passam; decisões em [DECISIONS.md](DECISIONS.md). [D] Compose e deploy dos jogos ainda não ensaiados juntos. |
-| F1.2 Persistência e evolução de dados | 🟡 | ⬜ | 🟡 | ⬜ | 16/11 | [F] PostgreSQL 16 com migrações SQL numeradas (`api/migracoes/`), catálogo G01–G15 (todos não publicados; G10 bloqueado até o jurídico), perfis, sessões por aparelho, partidas, favoritos e progresso. [C] 19 testes automáticos passando em banco real. [D] Backup/restauração ainda não ensaiados. |
+| F1.2 Persistência e evolução de dados | 🟡 | ⬜ | 🟡 | ⬜ | 16/11 | [F] PostgreSQL 16 com migrações SQL numeradas (`api/migracoes/`), catálogo G01–G15 (todos não publicados), perfis, sessões por aparelho, partidas, favoritos e progresso. [C] 19 testes automáticos passando em banco real. [D] Backup/restauração ainda não ensaiados. |
 | F1.3 Verificações e homologação | ⬜ | ⬜ | ⬜ | ⬜ | 13/11 | [F] Sem automação; [D] ambiente depende de Q39–Q42. |
 
 | Item | Situação | Data | Obs. |
@@ -189,7 +275,7 @@ Portal (`web/`) e API (`api/`): comandos no README e nas entradas de “Onde par
 
 ### Fase 3 — jogos e ranking
 
-Fluxo de cada jogo [C]: ficha de gameplay (`docs/GAMEPLAY_SHEETS/`) → código em `games/<id>/` → testes e relatório (`docs/TEST_REPORTS/`) → registro de assets e licenças (`ASSETS.md`, `LICENSES/`) → revisão do jurídico → publicação em `/games/<id>/` e registro no catálogo da API.
+Fluxo de cada jogo [C]: ficha de gameplay (`docs/GAMEPLAY_SHEETS/`) → código em `games/<id>/` → testes e relatório (`docs/TEST_REPORTS/`) → registro de assets e licenças (`ASSETS.md`, `LICENSES/`) → publicação em `/games/<id>/` e registro no catálogo da API.
 
 | Parte | Funciona | Validado | Testado | Entregável | Data | Obs. |
 |---|---|---|---|---|---|---|
@@ -210,8 +296,6 @@ Fluxo de cada jogo [C]: ficha de gameplay (`docs/GAMEPLAY_SHEETS/`) → código 
 | Fichas de gameplay G01–G15 | 🟡 | 17/11 | [F] 1 de 15 (rascunho, G03); o G01 e o G10 foram codados sem ficha. [H] Escrever a do G01 com as regras abaixo e depois G02 e G15 (onda 1). |
 | Validar o nome “Network Snake” com o marketing | 🟡 | 16/11 | [F] O logo enviado pelo gestor usa “FLIX Network Snake”; [D] confirmar como nome oficial (Q52). |
 | Frases de game over | 🟡 | 16/11 | [F] Três causas em `GameOverScene.ts` (`CAUSE_TEXT`: equipamento, cabo enrolado, tempo esgotado); [C] o solicitante vai sugerir alternativas (Q54). |
-| Revisão do jurídico por jogo (G02, G03, G04, G05, G10, G13, G14, G15) | ⬜ | 16/11 | [C] Obrigatória antes de publicar; apresentar o jogo pronto. |
-| Tetris-like (G10): desenvolver e apresentar ao jurídico | ⬜ | 16/11 | [C] Pode ser desenvolvido agora; a API o mantém bloqueado até o parecer. |
 
 #### Jogos do catálogo (G01–G15)
 
@@ -220,15 +304,15 @@ Colunas: **Ficha** = ficha de gameplay revisada; **Código** = jogo executa o ci
 | ID | Jogo (nome de trabalho) | Onda | Risco | Ficha | Código | Testado | Arte Flix | Jurídico | No portal | Data | Obs. |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | G01 | Runner infinito (Flix Runner, `games/runner`) | 1 | baixo | ⬜ | 🟡 | 🟡 | 🟡 | ⬜ | ⬜ | 17/11 | [F] Jogável do início ao fim de partida: tela de início (logo flutuando, personagem e cenário sorteado escurecido; volta a ela ao perder), corrida lateral com cenário infinito (18 cenários do gestor, cada um repetido duas vezes, com torre 5G em primeiro plano nas emendas e ponte sobre o rio em Resende), personagem de lado com corrida, deslize ao abaixar, corrida e salto com arma (GIFs e quadros do gestor; também com jetpack), roteador que vira jetpack de ondas wifi (barra de uso, só gasta no ar), arma de wifi com 10 disparos no espaço, energia (distância x3 por 15 s), vírus inimigo (encostar = fim; envia `gameover` com pontuação e vírus abatidos), pontuação = distância em metros x vírus abatidos, vírus +10% a cada 10 s até +40%, botão “?” com os controles, botão de reiniciar. 20 testes da lógica; verificado no navegador desktop. [H] Velocidade inicial, intervalo de bônus e população de vírus são valores de teste. [D] Ficha, obstáculos (próxima etapa; poste caído já recebido), som, celular, personagem do kit/avatar, orientação e hub real, licença das imagens (geradas por IA). |
-| G02 | Flappy-like (voo com um toque) | 1 | médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Evitar pássaro, canos e paleta do original. |
+| G02 | Flappy-like (Voo Rasante, `games/voo`) | 1 | médio | ⬜ | 🟡 | 🟡 | ⬜ | ⬜ | ⬜ | 25/11 | [F] Jogável: avião sobe ao toque/espaço, passa entre prédios (embaixo) e braços de guindaste (em cima), 5 de cada sorteados; vão fecha e velocidade sobe com os pontos; fundo da cidade andando devagar, imagem normal e espelhada alternadas. Envia `started` e `gameover` ao hub; 10 testes. [D] Ficha de gameplay, som, celular, catálogo do hub (falta `catalogo`/capa), jurídico, nome definitivo. Rodar: `npm run dev:voo`. |
 | G03 | Network Snake (tipo Snake) | 1 | baixo | 🟡 | 🟡 | 🟡 | 🟡 | ⬜ | 🟡 | 16/11 | [F] Jogável com o cenário e os modelos do gestor: cobra RJ45 nas duas pontas com corpo contínuo, 7 itens de pontuação sorteados, muro provisório, logo, onda vermelha e LEVEL UP. Ficha é rascunho; 75 testes passam; simulador do hub ok. [D] Faltam muro, peça de curva e demais assets; celular; jurídico; hub real; origem/licença das imagens. |
 | G04 | Space Ping (quebra-blocos, `games/blocos`) | 2 | médio | ⬜ | 🟡 | 🟡 | 🟡 | ⬜ | ⬜ | 19/11 | [F] Jogável: jogadora com raquete sobre prancha voadora segue o mouse (ou o dedo) e vira para o lado em que anda; bola de raios sai sozinha; 10 fases com chefão nas fases 5 e 10 (atira e trava a jogadora), blocos de 1, 2 e 3 batidas e de aço; bônus multibolinha, supervelocidade (atravessa blocos), escudo e ímã; mini bolas-raio (20 = vida extra). 13 testes da lógica; partida simulada no navegador desktop. Arte da jogadora, prancha e bola do gestor (`Space Ping Assets/`, originais fora do Git), o resto por código. [C] Sem temática de internet por enquanto (solicitante, 19/11). [D] Som, celular, ficha, jurídico, hub real; imagens são miniaturas do OpenArt (a da bola com marca d'água): confirmar origem e licença. |
 | G05 | Frogger-like (travessia clássica) | 2 | médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Usa a visão `top` do personagem (kit do designer). |
-| G06 | Minigolfe em pixel art | 2 | baixo | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Ranking pelo menor número de tacadas. |
+| G06 | Minigolfe Flix (`games/minigolfe`) | 2 | baixo | 🟡 | 🟡 | 🟡 | ⬜ | ⬜ | ⬜ | 25/11 | [F] 16 fases jogáveis (as 7 primeiras recriam os campos desenhados pelo gestor) e mecânicas: paredes, diagonais, postes, areia, gelo, água, esteiras, ímãs, portais, **bomba** (mira sozinha; o jogador só dá a força), moinho, bloco móvel, rampa de salto, pistão e lava; 55 testes e robô que prova que as 16 têm solução (`SOLVE=1`). Conceito de cada fase em `docs/MINIGOLFE_FASES.md`; fases em grade de texto (`docs/ADDING_LEVELS.md`). [D] Ficha de gameplay, dificuldade e par (só jogando), som das mecânicas novas, celular, jurídico, nome, hub real. |
 | G07 | Plataforma com mapas | 3 | baixo a médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Mapas no Tiled; precisa de `docs/ADDING_LEVELS.md`. |
 | G08 | Plataforma com tiro (run and gun curto) | 3 | médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Inimigos temáticos, sem violência gráfica. |
 | G09 | Travessia infinita em grade | 3 | médio | 🟡 | ⬜ | 🟡 | ⬜ | ⬜ | ⬜ | 24/11 | [F] `games/faixa` (Faixa a Faixa): mapa procedural infinito em `logic.ts` (grama, estrada, rio com troncos ou vitórias-régias, trilho com aviso do trem), câmera que sobe sozinha, dificuldade crescente; 29 testes do gerador e das regras, build ok, partida conferida no navegador desktop. [F] Ficha em `docs/GAMEPLAY_SHEETS/faixa.md`. [D] Sem capa, celular, hub real; nome e jurídico a validar. |
-| G10 | Estoque Flix (jogo clássico de linhas, `games/estoque`) | 3 | alto | 🟡 | 🟡 | 🟡 | ⬜ | ⛔ | ⛔ | 19/11 | [C] Nova direção do solicitante em 19/11: jogo clássico de linhas, com as 7 peças de 4 blocos e setas (↑ gira, ↓ desce, espaço derruba); substitui a de 16/11 (combinar 3 iguais). [F] Jogável: prateleira 10 x 20, cada bloco é um pedaço de cabo (cor por formato), conector RJ45 na lateral e linha completa liga roteador e computador, saco de 7, giro com encaixe, sombra, tempo para travar, sem limite de tempo; 16 testes, partida conferida no navegador desktop. [D] Celular, ficha, jurídico (Q47) bloqueia publicar. |
+| G10 | Estoque Flix (jogo clássico de linhas, `games/estoque`) | 3 | alto | 🟡 | 🟡 | 🟡 | ⬜ | ⬜ | ⬜ | 19/11 | [C] Nova direção do solicitante em 19/11: jogo clássico de linhas, com as 7 peças de 4 blocos e setas (↑ gira, ↓ desce, espaço derruba); substitui a de 16/11 (combinar 3 iguais). [F] Jogável: prateleira 10 x 20, cada bloco é um pedaço de cabo (cor por formato), conector RJ45 na lateral e linha completa liga roteador e computador, saco de 7, giro com encaixe, sombra, tempo para travar, sem limite de tempo; 16 testes, partida conferida no navegador desktop. [D] Celular, ficha. |
 | G11 | Arena em primeira pessoa (Doom-like com menos violência) | 4 | médio a alto | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [C] Inimigo e projétil diferentes, sem arma de fogo; sem assets nem nome do original. |
 | G12 | Corrida top-down em pixel art (`games/corrida`) | 3 | baixo a médio | ⬜ | 🟡 | ⬜ | 🟡 | ⬜ | ⬜ | 23/11 | [F] Carro em sprite stacking e 2 pistas dirigíveis com cronômetro; sem adversários, bônus, menu nem hub. [H] Referência com GPL/CC BY-SA: só gameplay. |
 | G13 | Futebol de cabeça 1 contra 1 | 2 | médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Adversário por IA; sem multiplayer na v1 (Q28). |
@@ -333,7 +417,7 @@ Siga [como-manter-andamento.md](como-manter-andamento.md). Atualizar tabelas, to
 | Q44. O repositório deve permanecer público? Qual política de licença, materiais e contribuição? | Diretoria e gestão do GitHub FLIX | [C: solicitante, 16/11] O repositório deve ser privado. [F] Estava público em 16/11; mudança de visibilidade pendente. | 16/11 |
 | Q45. Quais revisões e verificações serão obrigatórias na branch Principal, sem donos fixos por área? | Equipe e gestão do GitHub FLIX | [C: solicitante, 16/11] Seguir o padrão de revisão e deploy já usado pela equipe FLIX. | 16/11 |
 | Q46. Qual arquitetura e stack serão adotadas e com quais critérios para revisar a escolha? | Equipe técnica e produto FLIX | [C: solicitante, 16/11] Stack escolhida: interface React + TypeScript + Vite; backend Python + FastAPI + Uvicorn; PostgreSQL; nginx + HTTPS na entrada; Docker Compose na implantação; processo Python separado para revalidar clientes no CRM e reconciliar acessos após indisponibilidade. [H] Cuidados no servidor: Docker publica portas por fora do ufw, então Postgres sem porta publicada e API só em 127.0.0.1; HTTPS no nginx já existente do servidor (vhost novo), não um segundo nginx disputando 80/443; limites de CPU/memória por serviço; backup por pg_dump. [D] Docker ainda não confirmado no servidor. | 16/11 |
-| Q47. O Tetris-like (G10) pode ser desenvolvido antes do parecer do jurídico? | Solicitante, jurídico FLIX | [C: solicitante, 16/11] Sim: será feito, apresentado pronto e depois avaliado pelo jurídico. [H] Não publicar sem o parecer. [D] Data e responsável do parecer. | 16/11 |
+| Q47. O Tetris-like (G10) pode ser desenvolvido antes do parecer do jurídico? | Solicitante, jurídico FLIX | [C: solicitante, 16/11] Sim: será feito, apresentado pronto e depois avaliado pelo jurídico. [C: solicitante, 26/11] Regra revogada: publicar não depende do parecer do jurídico. | 26/11 |
 | Q48. Como o time deve usar o código dos jogos de referência e identificar os assets para trocar pela identidade Flix? | Solicitante e equipe técnica | [C: solicitante, 16/11] Pode usar e colar trechos pontuais de código das referências, sem copiar grande parte ou toda a obra. A IA deve explicar onde ficam os assets de cada jogo para o time trocá-los. Ver decisões no início do prompt dos minigames. | 16/11 |
 | Q49. Quem cuida de cada área, em especial do hub? | Solicitante | [C: solicitante, 16/11] Não há donos fixos por área; o Rafael foi originalmente encarregado do hub, mas qualquer pessoa pode atuar em qualquer área. | 16/11 |
 | Q50. A sugestão de personagem pela câmera (leitura do rosto só no aparelho, sem enviar nem guardar imagem) está adequada à LGPD? Que consentimento e que regra para menores de 18? | Jurídico e privacidade FLIX | [C: solicitante, 16/11] Câmera **retirada**: o personagem é montado só com as opções do catálogo, sem câmera nem leitura de rosto. Nenhuma imagem é tratada. Pergunta encerrada; reabrir se a ideia voltar. | 16/11 |

@@ -1,8 +1,9 @@
 {
   "id": "estoque",
   "catalogo": "g10",
+  "capa": "img/capa-cheia.png",
   "name": "Estoque Flix",
-  "_nome_de_trabalho": "Validar o nome com o marketing e o jurídico antes de publicar. G10: só publicar após o parecer do jurídico (Q47).",
+  "_nome_de_trabalho": "G10. Validar o nome com o marketing antes de publicar.",
   "avatarTier": "B",
   "avatarViews": ["portrait"],
   "rankingMetric": "score",

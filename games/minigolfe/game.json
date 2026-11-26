@@ -1,0 +1,12 @@
+{
+  "id": "minigolfe",
+  "catalogo": "g06",
+  "capa": "img/capa-cheia.png",
+  "name": "Minigolfe Flix",
+  "cores": ["#10B981", "#065F46"],
+  "_nome_de_trabalho": "G06. Minigolfe de arrastar e soltar; fases em grade de texto (src/levels.ts, docs/ADDING_LEVELS.md). Nome e fases a validar com o marketing antes de publicar.",
+  "avatarTier": "B",
+  "avatarViews": ["portrait"],
+  "rankingMetric": "strokes_total",
+  "sdkVersion": "0.1.0"
+}

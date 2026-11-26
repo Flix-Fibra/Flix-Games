@@ -94,9 +94,10 @@ def test_senha_errada(app_ativo):
 
 
 def test_sem_games_e_bloqueado(app_ativo):
-    assert _entrar(_cliente(), CPF_SEM_GAMES, CPF_SEM_GAMES).status_code == 403
-    r = _entrar(_cliente(), CPF_BLOQUEADO, CPF_BLOQUEADO)
-    assert r.status_code == 403 and "pendência" in r.json()["detail"]
+    r = _entrar(_cliente(), CPF_SEM_GAMES, CPF_SEM_GAMES)  # ex-cliente: só contrato cancelado
+    assert r.status_code == 403 and "contrato ativo" in r.json()["detail"]
+    r = _entrar(_cliente(), CPF_BLOQUEADO, CPF_BLOQUEADO)  # bloqueado por débito
+    assert r.status_code == 403 and "fatura em aberto" in r.json()["detail"]
 
 
 def test_sistema_fora_nunca_diz_senha_errada(app_ativo, monkeypatch):
@@ -244,3 +245,61 @@ def test_chamada_real_manda_so_o_contrato(monkeypatch, tmp_path):
     assert visto["corpo"] == {"documento": CPF_OK, "senha": "senha1"}
     assert visto["chave"] == "chave-de-teste"
     assert visto["timeout"] <= 15
+
+
+# ---------- acesso da equipe ----------
+def _arquivo_equipe(tmp_path, pessoas: dict[str, str]):
+    from app.equipe import hash_codigo
+
+    linhas = []
+    for nome, codigo in pessoas.items():
+        sal = bytes(range(16))
+        linhas.append(f"{nome}:{sal.hex()}:{hash_codigo(codigo, sal).hex()}")
+    arq = tmp_path / "equipe"
+    arq.write_text("\n".join(linhas) + "\n")
+    return str(arq)
+
+
+def _entrar_equipe(c: TestClient, codigo: str, usuario: str | None = None):
+    # nos testes a senha "codigo-do-<nome>" pertence ao usuário <nome>
+    u = usuario or (codigo.removeprefix("codigo-do-") if codigo.startswith("codigo-do-") else "rafael")
+    return c.post("/api/entrar-equipe", json={"usuario": u, "senha": codigo})
+
+
+def test_equipe_entra_com_o_proprio_codigo(app_ativo, monkeypatch, tmp_path):
+    from app import config as cfg
+
+    monkeypatch.setattr(cfg.config, "equipe_arquivo", _arquivo_equipe(tmp_path, {"rafael": "codigo-do-rafael", "tobias": "codigo-do-tobias"}))
+    c = _cliente()
+    assert _entrar_equipe(c, "codigo-do-tobias").status_code == 204
+    assert c.get("/api/sessao").status_code == 200
+    with psycopg.connect(URL_TESTE) as b:
+        assert b.execute("SELECT 1 FROM contas WHERE cliente_ref = 'EQUIPE-TOBIAS'").fetchone()
+
+
+def test_equipe_codigo_errado_e_trava_por_ip(app_ativo, monkeypatch, tmp_path):
+    from app import config as cfg
+
+    monkeypatch.setattr(cfg.config, "equipe_arquivo", _arquivo_equipe(tmp_path, {"rafael": "codigo-do-rafael"}))
+    c = _cliente("198.51.100.99")
+    for _ in range(5):
+        r = _entrar_equipe(c, "codigo-errado")
+        assert r.status_code == 401 and "set-cookie" not in r.headers
+    assert _entrar_equipe(c, "codigo-do-rafael").status_code == 429  # travado neste IP
+    assert _entrar_equipe(_cliente("198.51.100.100"), "codigo-do-rafael").status_code == 204  # outro IP entra
+
+
+def test_equipe_sem_arquivo_ninguem_entra(app_ativo, monkeypatch, tmp_path):
+    from app import config as cfg
+
+    monkeypatch.setattr(cfg.config, "equipe_arquivo", str(tmp_path / "nao-existe"))
+    assert _entrar_equipe(_cliente(), "qualquer-codigo").status_code == 401
+
+
+def test_equipe_senha_de_um_nao_abre_o_outro(app_ativo, monkeypatch, tmp_path):
+    from app import config as cfg
+
+    monkeypatch.setattr(cfg.config, "equipe_arquivo", _arquivo_equipe(tmp_path, {"rafael": "codigo-do-rafael", "tobias": "codigo-do-tobias"}))
+    assert _entrar_equipe(_cliente("203.0.113.77"), "codigo-do-rafael", usuario="tobias").status_code == 401
+    assert _entrar_equipe(_cliente("203.0.113.78"), "codigo-do-rafael", usuario="RAFAEL").status_code == 204
+

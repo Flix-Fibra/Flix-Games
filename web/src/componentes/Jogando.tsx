@@ -38,13 +38,16 @@ interface Props {
 type MsgJogo =
   | { source: 'flix-game'; v: 2; type: 'ready' }
   | { source: 'flix-game'; v: 2; type: 'started'; runId: string }
-  | { source: 'flix-game'; v: 2; type: 'gameover'; runId: string; score: number; durationMs: number };
+  | { source: 'flix-game'; v: 2; type: 'gameover'; runId: string; score: number; durationMs: number }
+  | { source: 'flix-game'; v: 2; type: 'layout'; imersivo: boolean }
+  | { source: 'flix-game'; v: 2; type: 'exit' };
 
 function lerMensagem(d: unknown): MsgJogo | null {
   if (!d || typeof d !== 'object') return null;
   const m = d as Record<string, unknown>;
   if (m.source !== 'flix-game' || m.v !== 2 || typeof m.type !== 'string') return null;
-  if (m.type === 'ready') return m as MsgJogo;
+  if (m.type === 'ready' || m.type === 'exit') return m as MsgJogo;
+  if (m.type === 'layout') return typeof m.imersivo === 'boolean' ? (m as MsgJogo) : null;
   if (typeof m.runId !== 'string' || !RE_UUID.test(m.runId)) return null;
   if (m.type === 'started') return m as MsgJogo;
   if (m.type === 'gameover' && Number.isSafeInteger(m.score) && (m.score as number) >= 0
@@ -72,6 +75,8 @@ export function Jogando({ jogo, avatar, personagem, onFechar, entrando = false }
   const quadro = useRef<HTMLIFrameElement>(null);
   const [fase, setFase] = useState<Fase>({ tipo: 'carregando' });
   const [mudo, setMudo] = useState(false);
+  // Jogo imersivo (pedido pelo próprio jogo): sem a barra do hub; o jogo tem o próprio botão de voltar
+  const [imersivo, setImersivo] = useState(false);
   const runAtual = useRef<string | null>(null);   // partida aberta (registrada no "started")
   const inicioOk = useRef<Promise<unknown> | null>(null);
   const houvePartida = useRef(false);
@@ -101,6 +106,10 @@ export function Jogando({ jogo, avatar, personagem, onFechar, entrando = false }
         // avatar null = jogo usa o personagem padrão; personagem null = o jogador não criou (ou "Sem avatar")
         void imagens.current.catch(() => null).then((p) => enviar({ type: 'init', avatar, personagem: p, muted: mudo, locale: 'pt-BR' }));
         setFase((f) => (f.tipo === 'carregando' ? { tipo: 'jogando' } : f));
+      } else if (m.type === 'layout') {
+        setImersivo(m.imersivo);
+      } else if (m.type === 'exit') {
+        onFechar(houvePartida.current);
       } else if (m.type === 'started') {
         runAtual.current = m.runId;
         houvePartida.current = true;
@@ -120,7 +129,7 @@ export function Jogando({ jogo, avatar, personagem, onFechar, entrando = false }
     };
     window.addEventListener('message', ouvir);
     return () => window.removeEventListener('message', ouvir);
-  }, [enviar, jogo.id, mudo, avatar]);
+  }, [enviar, jogo.id, mudo, avatar, onFechar]);
 
   // Se o jogo não se apresentar, avisa em vez de ficar travado
   useEffect(() => {
@@ -140,8 +149,14 @@ export function Jogando({ jogo, avatar, personagem, onFechar, entrando = false }
   useEffect(() => {
     const tecla = (e: KeyboardEvent) => { if (e.key === 'Escape') onFechar(houvePartida.current); };
     document.addEventListener('keydown', tecla);
+    // trava a página de trás inteira (no Safari só o body não bastava: a rolagem passava para o documento)
     document.body.style.overflow = 'hidden';
-    return () => { document.removeEventListener('keydown', tecla); document.body.style.overflow = ''; };
+    document.documentElement.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', tecla);
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    };
   }, [onFechar]);
 
   // O aviso de resultado some sozinho (o jogo segue na tela de fim dele)
@@ -178,7 +193,7 @@ export function Jogando({ jogo, avatar, personagem, onFechar, entrando = false }
 
   return (
     <div ref={raiz} role="dialog" aria-modal="true" aria-label={`Jogando ${jogo.nome}`}
-      className={'gx-jogo' + (computador ? ' pc' : '') + (telaCheia ? ' cheia' : '') + (computador && proporcao ? ' proporcional' : '') + (comEntrada ? ' entrando' : '')}
+      className={'gx-jogo' + (computador ? ' pc' : '') + (telaCheia ? ' cheia' : '') + (computador && proporcao ? ' proporcional' : '') + (comEntrada ? ' entrando' : '') + (imersivo ? ' imersivo' : '')}
       style={{ '--t1': jogo.cor1, '--t2': jogo.cor2, '--prop': proporcao ?? 1 } as CSSProperties}>
       <div className="gx-jogo-barra">
         <button className="gx-jogo-btn" type="button" onClick={() => onFechar(houvePartida.current)} aria-label="Sair do jogo"><Fechar /></button>

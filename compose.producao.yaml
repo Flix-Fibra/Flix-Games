@@ -39,8 +39,10 @@ services:
       MODO: producao
       CONFERIDOR: api_propria
       CHAVE_API_PROPRIA_ARQUIVO: /run/secrets/api_propria_chave
+      EQUIPE_ARQUIVO: /run/secrets/equipe
     secrets:
       - api_propria_chave
+      - equipe
     ports:
       - "127.0.0.1:8047:8000"
     depends_on:
@@ -61,6 +63,9 @@ services:
 secrets:
   api_propria_chave:
     file: /opt/flix-games/segredos/api_propria_chave
+  # códigos da equipe (só hashes), cadastrados com scripts/deploy/codigo_equipe.py
+  equipe:
+    file: /opt/flix-games/segredos/equipe
 
 volumes:
   db-dados:
