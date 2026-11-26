@@ -29,3 +29,7 @@ Voo Rasante Assets/
 
 # Imagens de referência das fases do G06 (Minigolfe) enviadas pelo gestor; as fases estão em games/minigolfe/src/levels.ts
 Fases Mini Golf/
+
+# Originais da arte do Zênite (geradas por IA, enviadas pelo gestor); o jogo usa as versões preparadas em games/zenite/public/img
+Vania Assets/
+VANIA ASSETS/

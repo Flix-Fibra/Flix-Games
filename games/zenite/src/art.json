@@ -1,0 +1,222 @@
+{
+ "iara-parada": {
+  "w": 44,
+  "h": 69,
+  "n": 3
+ },
+ "iara-corrida": {
+  "w": 64,
+  "h": 57,
+  "n": 8
+ },
+ "iara-pulo": {
+  "w": 46,
+  "h": 57,
+  "n": 5
+ },
+ "iara-escada": {
+  "w": 34,
+  "h": 72,
+  "n": 4
+ },
+ "iara-golpe": {
+  "w": 150,
+  "h": 71,
+  "n": 5
+ },
+ "iara-golpe-ar": {
+  "w": 68,
+  "h": 60,
+  "n": 3
+ },
+ "iara-pulso": {
+  "w": 66,
+  "h": 65,
+  "n": 3
+ },
+ "iara-dano": {
+  "w": 138,
+  "h": 66,
+  "n": 7
+ },
+ "faisca-anda": {
+  "w": 46,
+  "h": 46,
+  "n": 6
+ },
+ "faisca-aviso": {
+  "w": 48,
+  "h": 49,
+  "n": 3
+ },
+ "faisca-morre": {
+  "w": 58,
+  "h": 48,
+  "n": 5
+ },
+ "drone-voa": {
+  "w": 52,
+  "h": 25,
+  "n": 4
+ },
+ "drone-morre": {
+  "w": 60,
+  "h": 67,
+  "n": 3
+ },
+ "chefe-parado": {
+  "w": 86,
+  "h": 103,
+  "n": 1
+ },
+ "chefe-salto": {
+  "w": 104,
+  "h": 126,
+  "n": 2
+ },
+ "chefe-aviso": {
+  "w": 148,
+  "h": 138,
+  "n": 1
+ },
+ "chefe-caindo": {
+  "w": 144,
+  "h": 95,
+  "n": 1
+ },
+ "chefe-aberto": {
+  "w": 132,
+  "h": 82,
+  "n": 1
+ },
+ "chefe-dano": {
+  "w": 122,
+  "h": 116,
+  "n": 1
+ },
+ "chefe-furia": {
+  "w": 154,
+  "h": 137,
+  "n": 2
+ },
+ "chefe-morto": {
+  "w": 200,
+  "h": 87,
+  "n": 1
+ },
+ "chao-faisca": {
+  "w": 78,
+  "h": 19,
+  "n": 1
+ },
+ "iara-gancho": {
+  "w": 112,
+  "h": 59,
+  "n": 2
+ },
+ "rato-corre": {
+  "w": 60,
+  "h": 37,
+  "n": 5
+ },
+ "rato-morre": {
+  "w": 60,
+  "h": 26,
+  "n": 4
+ },
+ "bobina-parada": {
+  "w": 54,
+  "h": 40,
+  "n": 2
+ },
+ "bobina-aviso": {
+  "w": 64,
+  "h": 55,
+  "n": 2
+ },
+ "bobina-morre": {
+  "w": 86,
+  "h": 70,
+  "n": 3
+ },
+ "matriarca-parada": {
+  "w": 210,
+  "h": 97,
+  "n": 2
+ },
+ "matriarca-ataque": {
+  "w": 194,
+  "h": 108,
+  "n": 1
+ },
+ "matriarca-dano": {
+  "w": 180,
+  "h": 104,
+  "n": 1
+ },
+ "matriarca-furia": {
+  "w": 188,
+  "h": 150,
+  "n": 1
+ },
+ "matriarca-morta": {
+  "w": 218,
+  "h": 84,
+  "n": 1
+ },
+ "iara-repique": {
+  "w": 64,
+  "h": 84,
+  "n": 2
+ },
+ "pacote-anda": {
+  "w": 42,
+  "h": 42,
+  "n": 4
+ },
+ "pacote-morre": {
+  "w": 66,
+  "h": 44,
+  "n": 3
+ },
+ "cooler": {
+  "w": 60,
+  "h": 64,
+  "n": 3
+ },
+ "muro": {
+  "w": 154,
+  "h": 181,
+  "n": 1
+ },
+ "muro-furia": {
+  "w": 164,
+  "h": 180,
+  "n": 1
+ },
+ "fx-impacto": {
+  "w": 48,
+  "h": 30,
+  "n": 4
+ },
+ "fx-estouro": {
+  "w": 68,
+  "h": 35,
+  "n": 4
+ },
+ "fx-poeira": {
+  "w": 52,
+  "h": 22,
+  "n": 4
+ },
+ "fx-pulso": {
+  "w": 60,
+  "h": 20,
+  "n": 4
+ },
+ "fx-brilho": {
+  "w": 28,
+  "h": 27,
+  "n": 4
+ }
+}
