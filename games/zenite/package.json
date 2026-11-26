@@ -1,0 +1,16 @@
+{
+  "name": "@flix/game-zenite",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host"
+  },
+  "dependencies": {
+    "@flix/game-kit": "0.1.0",
+    "@flix/game-sdk": "0.2.0",
+    "phaser": "3.90.0"
+  }
+}

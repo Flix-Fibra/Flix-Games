@@ -1,0 +1,9 @@
+{
+  "id": "zenite",
+  "name": "Zênite",
+  "_nome_de_trabalho": "Zênite: A Torre do Sinal. Fases 1 a 3; ainda sem número no catálogo (sem \"catalogo\" o deploy ignora o jogo).",
+  "avatarTier": "A",
+  "avatarViews": ["side"],
+  "rankingMetric": "score",
+  "sdkVersion": "0.1.0"
+}
