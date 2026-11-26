@@ -1,151 +1,280 @@
 import type Phaser from 'phaser';
-import { ITEMS } from './theme';
-
-type G = Phaser.GameObjects.Graphics;
-type P = [number, number];
-
-/** Tamanho da textura de cada célula (desenhada em 64 unidades e ampliada 2x para ficar nítida em telas de alta densidade). */
-export const CELL_TEX = 128;
-const K = 2;
-
-/** Pedaço de cabo (um bloco da peça). */
-export const cellKey = (item: number): string => `cell_${item}`;
-/** Conector RJ45 apontando para a direita (o da esquerda é o mesmo, espelhado). */
-export const plugKey = (item: number): string => `plug_${item}`;
-/** Aparelhos que se ligam nas pontas de uma linha completa. */
-export const DEVICE_LEFT = 'dev_router';
-export const DEVICE_RIGHT = 'dev_pc';
-/** Proporção do conector (largura / altura). */
-export const PLUG_RATIO = 64 / 40;
-
-/** Pontos de uma elipse, com rotação em graus. */
-function ellipse(cx: number, cy: number, rx: number, ry: number, rotDeg = 0, from = 0, to = Math.PI * 2, n = 48): P[] {
-  const r = (rotDeg * Math.PI) / 180;
-  const pts: P[] = [];
-  for (let i = 0; i <= n; i++) {
-    const a = from + ((to - from) * i) / n;
-    const x = Math.cos(a) * rx;
-    const y = Math.sin(a) * ry;
-    pts.push([cx + x * Math.cos(r) - y * Math.sin(r), cy + x * Math.sin(r) + y * Math.cos(r)]);
-  }
-  return pts;
-}
-const fillPoly = (g: G, pts: P[]): void => {
-  g.fillPoints(pts.map(([x, y]) => ({ x, y })) as Phaser.Geom.Point[], true);
-};
-const strokePoly = (g: G, pts: P[], closed = false): void => {
-  g.strokePoints(pts.map(([x, y]) => ({ x, y })) as Phaser.Geom.Point[], closed);
-};
-const line = (g: G, w: number, color: number, pts: P[], alpha = 1): void => {
-  g.lineStyle(w, color, alpha);
-  strokePoly(g, pts);
-};
-
-
-/** Roteador preto com quatro antenas e LEDs. */
-function drawRouter(g: G): void {
-  for (const [bx, lean] of [[14, -4], [25, -1.5], [39, 1.5], [50, 4]] as const) {
-    line(g, 3.6, 0x14151a, [[bx, 38], [bx + lean, 11]]);
-    g.fillStyle(0x14151a, 1).fillCircle(bx + lean, 11, 2.4);
-    line(g, 1, 0x4a4e5c, [[bx - 0.6, 36], [bx + lean - 0.6, 13]], 0.8);
-  }
-  g.fillStyle(0x0d0e12, 1).fillRoundedRect(7, 38, 50, 17, 5);
-  g.fillStyle(0x23252e, 1).fillRoundedRect(7, 37, 50, 15, 5);
-  g.fillStyle(0x3b3e4b, 1).fillRoundedRect(9, 38, 46, 4, 2);
-  // grade de ventilação
-  for (let i = 0; i < 4; i++) line(g, 1, 0x0d0e12, [[34 + i * 5, 44], [37 + i * 5, 44]], 0.9);
-  // LEDs
-  g.fillStyle(0x35e07a, 1).fillCircle(15, 47, 1.9);
-  g.fillStyle(0xffb02e, 1).fillCircle(21, 47, 1.9);
-  g.fillStyle(0x35e07a, 1).fillCircle(27, 47, 1.9);
-  g.fillStyle(0x23252e, 1).fillRect(13, 54, 6, 2).fillRect(45, 54, 6, 2);
-}
-
-
-/** Monitor com paisagem na tela. */
-function drawMonitor(g: G): void {
-  g.fillStyle(0x0d0e12, 1).fillRoundedRect(6, 9, 52, 36, 4);
-  g.fillStyle(0x1b1d24, 1).fillRoundedRect(6, 9, 52, 34, 4);
-  // tela
-  g.fillStyle(0x4fa9f2, 1).fillRoundedRect(9.5, 12.5, 45, 26, 1.5);
-  g.fillStyle(0x8ccdfa, 1).fillRoundedRect(9.5, 12.5, 45, 11, 1.5);
-  // nuvem
-  g.fillStyle(0xffffff, 0.95);
-  g.fillCircle(40, 21, 3.1).fillCircle(44.5, 19.8, 4.2).fillCircle(49, 21.4, 3).fillRect(40, 21, 9, 3);
-  // colina (recortada nas bordas da tela)
-  const hill = ellipse(26, 47, 36, 15).map(([x, y]) => [Math.max(9.5, Math.min(54.5, x)), Math.min(38.5, y)] as P);
-  g.fillStyle(0x3fbf5b, 1);
-  fillPoly(g, hill);
-  const hill2 = ellipse(46, 48, 22, 12).map(([x, y]) => [Math.max(9.5, Math.min(54.5, x)), Math.min(38.5, y)] as P);
-  g.fillStyle(0x2ea34a, 1);
-  fillPoly(g, hill2);
-  g.fillStyle(0xffffff, 0.12).fillTriangle(9.5, 12.5, 30, 12.5, 9.5, 36);
-  // base
-  g.fillStyle(0x1b1d24, 1).fillRect(29, 43, 6, 8);
-  g.fillStyle(0x0d0e12, 1);
-  fillPoly(g, ellipse(32, 53, 14, 3.6));
-  g.fillStyle(0x2b2e38, 1);
-  fillPoly(g, ellipse(32, 52.4, 13, 2.6));
-  g.fillStyle(0x35e07a, 1).fillCircle(50, 41, 0.9);
-}
-
+import { RENDER } from './camera';
+import { CELL, COLORS, GAME_H, GAME_W, ITEMS, PLUG_W } from './theme';
 
 /**
- * Bloco = pedaço de cabo de rede deitado, de ponta a ponta da célula (os vizinhos na mesma linha emendam).
- * O fundo levemente colorido deixa ver o formato da peça.
+ * Texturas do jogo, desenhadas no canvas 2D com degradês reais e no tamanho exato em que aparecem na tela
+ * (CELL x RENDER pixels): nada é esticado, então fica liso em qualquer aparelho.
  */
-function drawCableCell(g: G, item: number): void {
-  const c = ITEMS[item]!;
-  g.fillStyle(c.card, 0.3).fillRoundedRect(1.5, 1.5, 61, 61, 8);
-  g.lineStyle(1.5, c.card, 0.5).strokeRoundedRect(1.5, 1.5, 61, 61, 8);
-  // tubo do cabo
-  g.fillStyle(0x000000, 0.35).fillRect(0, 24, 64, 22);
-  g.fillStyle(c.cardDark, 1).fillRect(0, 20, 64, 23);
-  g.fillStyle(c.card, 1).fillRect(0, 20, 64, 17);
-  g.fillStyle(0xffffff, 0.45).fillRect(0, 23, 64, 4);
-  g.fillStyle(0xffffff, 0.15).fillRect(0, 28, 64, 3);
-  // emenda nas pontas: mostra os pedaços
-  g.fillStyle(c.cardDark, 1).fillRect(0, 18.5, 3, 26).fillRect(61, 18.5, 3, 26);
-  g.fillStyle(0xffffff, 0.25).fillRect(3, 20, 1, 17).fillRect(60, 20, 1, 17);
+
+/** Bloco de cada cor (1 a 7): um pedaço de cabo de rede, que emenda com o vizinho da mesma linha. */
+export const cellKey = (item: number): string => `bloco_${item}`;
+/** Conector RJ45 apontando para a direita (o da esquerda é o mesmo, espelhado). */
+export const plugKey = (item: number): string => `conector_${item}`;
+/** Aparelhos que se ligam nas pontas de uma linha completa. */
+export const DEVICE_LEFT = 'roteador';
+export const DEVICE_RIGHT = 'computador';
+/** Proporção do conector (largura / altura). */
+export const PLUG_RATIO = 1.6;
+/** Tamanho (no mundo do jogo) em que os aparelhos são desenhados. */
+export const DEVICE_SIZE = 20;
+/** Contorno da sombra de aterrissagem de cada cor. */
+export const ghostKey = (item: number): string => `sombra_${item}`;
+/** Fundo da tela inteira. */
+export const BG_KEY = 'fundo';
+/** Ponto de luz suave (partículas e brilho do sinal). */
+export const GLOW_KEY = 'brilho';
+/** Faixa de luz horizontal (o sinal que corre pela linha completa). */
+export const BEAM_KEY = 'feixe';
+
+type Ctx = CanvasRenderingContext2D;
+
+function caminhoArredondado(c: Ctx, x: number, y: number, w: number, h: number, r: number): void {
+  const rr = Math.min(r, w / 2, h / 2);
+  c.beginPath();
+  c.moveTo(x + rr, y);
+  c.arcTo(x + w, y, x + w, y + h, rr);
+  c.arcTo(x + w, y + h, x, y + h, rr);
+  c.arcTo(x, y + h, x, y, rr);
+  c.arcTo(x, y, x + w, y, rr);
+  c.closePath();
 }
 
-/** Conector RJ45 visto de lado, com a ponta para a direita: capa colorida com nervuras, corpo transparente, pinos. */
-function drawPlug(g: G, item: number): void {
-  const c = ITEMS[item]!;
-  // capa (protege a emenda do cabo)
-  g.fillStyle(c.cardDark, 1).fillRoundedRect(0, 11, 24, 19, 3);
-  g.fillStyle(c.card, 1).fillRoundedRect(0, 10, 24, 16, 3);
-  for (let i = 0; i < 4; i++) g.fillStyle(c.cardDark, 0.9).fillRect(4 + i * 4.6, 11, 1.8, 17);
-  g.fillStyle(0xffffff, 0.35).fillRect(1, 12, 22, 2.5);
+function desenharBloco(c: Ctx, s: number, item: number): void {
+  const cor = ITEMS[item]!;
+  const p = s * 0.05;
+  const w = s - p * 2;
+  const r = s * 0.2;
+  // corpo: degradê de cima (claro) para baixo (escuro)
+  const g = c.createLinearGradient(0, p, 0, p + w);
+  g.addColorStop(0, cor.base);
+  g.addColorStop(1, cor.dark);
+  caminhoArredondado(c, p, p, w, w, r);
+  c.globalAlpha = 0.55;
+  c.fillStyle = g;
+  c.fill();
+  c.globalAlpha = 1;
+  // o cabo: tubo deitado de ponta a ponta (passa pelo vão e emenda com o bloco vizinho)
+  const ty = s * 0.38;
+  const th = s * 0.24;
+  const tubo = c.createLinearGradient(0, ty, 0, ty + th);
+  tubo.addColorStop(0, cor.light);
+  tubo.addColorStop(0.35, cor.base);
+  tubo.addColorStop(1, cor.dark);
+  c.fillStyle = 'rgba(0,0,0,0.28)';
+  c.fillRect(0, ty + th * 0.15, s, th);
+  c.fillStyle = tubo;
+  c.fillRect(0, ty, s, th);
+  c.fillStyle = 'rgba(255,255,255,0.5)';
+  c.fillRect(0, ty + th * 0.16, s, Math.max(1, th * 0.16));
+  // brilho de vidro na metade de cima
+  const m = s * 0.12;
+  const brilho = c.createLinearGradient(0, p + m * 0.6, 0, s * 0.55);
+  brilho.addColorStop(0, 'rgba(255,255,255,0.32)');
+  brilho.addColorStop(1, 'rgba(255,255,255,0)');
+  caminhoArredondado(c, p + m, p + m * 0.6, w - m * 2, s * 0.42, r * 0.7);
+  c.fillStyle = brilho;
+  c.fill();
+  // borda clara fina
+  caminhoArredondado(c, p + 0.5, p + 0.5, w - 1, w - 1, r);
+  c.lineWidth = Math.max(1, s * 0.03);
+  c.strokeStyle = cor.light;
+  c.globalAlpha = 0.7;
+  c.stroke();
+  c.globalAlpha = 1;
+}
+
+/** Conector RJ45 visto de lado, ponta para a direita: capa colorida, corpo transparente, fios e pinos dourados. */
+function desenharConector(c: Ctx, w: number, h: number, item: number): void {
+  const cor = ITEMS[item]!;
+  const u = w / 64; // desenhado numa grade de 64 x 40
+  // capa (com nervuras) que protege a emenda do cabo
+  const capa = c.createLinearGradient(0, 10 * u, 0, 30 * u);
+  capa.addColorStop(0, cor.light);
+  capa.addColorStop(0.4, cor.base);
+  capa.addColorStop(1, cor.dark);
+  caminhoArredondado(c, 0, 10 * u, 24 * u, 19 * u, 4 * u);
+  c.fillStyle = capa;
+  c.fill();
+  c.fillStyle = 'rgba(0,0,0,0.22)';
+  for (let i = 0; i < 4; i++) c.fillRect((5 + i * 4.6) * u, 12 * u, 1.6 * u, 15 * u);
   // corpo transparente
-  g.fillStyle(0x9fb0c0, 1).fillRoundedRect(22, 6, 40, 29, 3);
-  g.fillStyle(0xe4edf5, 1).fillRoundedRect(22, 6, 40, 26, 3);
+  const corpo = c.createLinearGradient(0, 6 * u, 0, 35 * u);
+  corpo.addColorStop(0, 'rgba(245,250,255,0.98)');
+  corpo.addColorStop(1, 'rgba(170,190,210,0.95)');
+  caminhoArredondado(c, 22 * u, 6 * u, 40 * u, 29 * u, 5 * u);
+  c.fillStyle = corpo;
+  c.fill();
   // fios coloridos dentro
-  const wires = [0xf28c28, 0x3fbf5b, 0x2b86ff, 0x8a5a2b];
-  wires.forEach((w, i) => line(g, 1.6, w, [[24, 12 + i * 4.5], [50, 12 + i * 4.5]], 0.85));
-  g.fillStyle(0xffffff, 0.55).fillRect(24, 8, 36, 3);
+  ['#F28C28', '#3FBF5B', '#2B86FF', '#8A5A2B'].forEach((f, i) => {
+    c.fillStyle = f;
+    c.globalAlpha = 0.8;
+    c.fillRect(25 * u, (12 + i * 4.6) * u, 26 * u, 1.8 * u);
+  });
+  c.globalAlpha = 1;
   // trava em cima
-  g.fillStyle(0xb7c6d3, 1);
-  fillPoly(g, [[30, 6], [52, 6], [48, 1.5], [33, 1.5]]);
-  // pinos dourados na ponta
-  for (let i = 0; i < 4; i++) g.fillStyle(0xe2a93a, 1).fillRect(52, 10 + i * 5.2, 8, 2.4);
-  g.lineStyle(1, 0x000000, 0.25).strokeRoundedRect(22, 6, 40, 29, 3);
+  c.fillStyle = 'rgba(200,214,228,1)';
+  c.beginPath();
+  c.moveTo(30 * u, 6 * u);
+  c.lineTo(52 * u, 6 * u);
+  c.lineTo(48 * u, 1.5 * u);
+  c.lineTo(33 * u, 1.5 * u);
+  c.closePath();
+  c.fill();
+  // pinos dourados
+  const ouro = c.createLinearGradient(0, 0, 0, h);
+  ouro.addColorStop(0, '#FFE08A');
+  ouro.addColorStop(1, '#D99A1E');
+  c.fillStyle = ouro;
+  for (let i = 0; i < 4; i++) c.fillRect(53 * u, (10 + i * 5.2) * u, 8 * u, 2.6 * u);
+  // reflexo
+  c.fillStyle = 'rgba(255,255,255,0.7)';
+  c.fillRect(25 * u, 8 * u, 34 * u, 2 * u);
 }
 
-/** Cria as texturas do jogo (cabos, conectores e aparelhos). Chamar uma vez, antes do menu. */
-export function buildItemTextures(scene: Phaser.Scene): void {
-  const make = (key: string, w: number, h: number, draw: (g: G) => void) => {
-    if (scene.textures.exists(key)) return;
-    const g = scene.make.graphics({ x: 0, y: 0 }, false);
-    g.scaleCanvas(K, K);
-    draw(g);
-    g.generateTexture(key, w * K, h * K);
-    g.destroy();
-  };
-  for (let item = 1; item <= 7; item++) {
-    make(cellKey(item), 64, 64, (g) => drawCableCell(g, item));
-    make(plugKey(item), 64, 40, (g) => drawPlug(g, item));
+/** Roteador: corpo escuro arredondado, 4 antenas e LEDs verdes. */
+function desenharRoteador(c: Ctx, s: number): void {
+  const u = s / 64;
+  c.lineCap = 'round';
+  for (const [bx, lean] of [[16, -5], [26, -2], [38, 2], [48, 5]] as const) {
+    c.strokeStyle = '#2A2F42';
+    c.lineWidth = 4 * u;
+    c.beginPath();
+    c.moveTo(bx * u, 38 * u);
+    c.lineTo((bx + lean) * u, 10 * u);
+    c.stroke();
   }
-  make(DEVICE_LEFT, 64, 64, drawRouter);
-  make(DEVICE_RIGHT, 64, 64, drawMonitor);
+  const corpo = c.createLinearGradient(0, 34 * u, 0, 56 * u);
+  corpo.addColorStop(0, '#4A5070');
+  corpo.addColorStop(1, '#1A1E2E');
+  caminhoArredondado(c, 6 * u, 34 * u, 52 * u, 20 * u, 7 * u);
+  c.fillStyle = corpo;
+  c.fill();
+  c.fillStyle = 'rgba(255,255,255,0.18)';
+  c.fillRect(10 * u, 36 * u, 44 * u, 2 * u);
+  for (const [x, cor] of [[16, '#3DF58A'], [23, '#3DF58A'], [30, '#FFC23D']] as const) {
+    const led = c.createRadialGradient(x * u, 45 * u, 0, x * u, 45 * u, 5 * u);
+    led.addColorStop(0, cor);
+    led.addColorStop(0.4, cor);
+    led.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = led;
+    c.fillRect((x - 5) * u, 40 * u, 10 * u, 10 * u);
+  }
+}
+
+/** Computador: monitor com tela azul acesa e base. */
+function desenharComputador(c: Ctx, s: number): void {
+  const u = s / 64;
+  caminhoArredondado(c, 5 * u, 8 * u, 54 * u, 38 * u, 6 * u);
+  c.fillStyle = '#23283A';
+  c.fill();
+  const tela = c.createLinearGradient(0, 12 * u, 0, 42 * u);
+  tela.addColorStop(0, '#7CC8FF');
+  tela.addColorStop(1, '#2563EB');
+  caminhoArredondado(c, 9 * u, 12 * u, 46 * u, 30 * u, 3 * u);
+  c.fillStyle = tela;
+  c.fill();
+  // sinal de wi-fi na tela
+  c.strokeStyle = 'rgba(255,255,255,0.9)';
+  c.lineCap = 'round';
+  c.lineWidth = 2.6 * u;
+  for (const r of [5, 10, 15]) {
+    c.beginPath();
+    c.arc(32 * u, 36 * u, r * u, Math.PI * 1.25, Math.PI * 1.75);
+    c.stroke();
+  }
+  c.fillStyle = '#fff';
+  c.beginPath();
+  c.arc(32 * u, 36 * u, 2 * u, 0, Math.PI * 2);
+  c.fill();
+  // base
+  c.fillStyle = '#23283A';
+  c.fillRect(29 * u, 46 * u, 6 * u, 6 * u);
+  caminhoArredondado(c, 18 * u, 51 * u, 28 * u, 4 * u, 2 * u);
+  c.fill();
+}
+
+function desenharSombra(c: Ctx, s: number, item: number): void {
+  const cor = ITEMS[item]!;
+  const p = s * 0.09;
+  const w = s - p * 2;
+  caminhoArredondado(c, p, p, w, w, s * 0.18);
+  c.globalAlpha = 0.14;
+  c.fillStyle = cor.base;
+  c.fill();
+  c.globalAlpha = 0.75;
+  c.lineWidth = Math.max(1.5, s * 0.06);
+  c.strokeStyle = cor.base;
+  c.stroke();
+  c.globalAlpha = 1;
+}
+
+function desenharFundo(c: Ctx, w: number, h: number): void {
+  const g = c.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, COLORS.bgTop);
+  g.addColorStop(1, COLORS.bgBottom);
+  c.fillStyle = g;
+  c.fillRect(0, 0, w, h);
+  // luzes suaves (vermelho Flix em cima à direita, roxo embaixo à esquerda)
+  for (const [x, y, r, cor] of [
+    [w * 0.95, h * 0.04, w * 0.85, 'rgba(229,23,63,0.22)'],
+    [w * 0.0, h * 0.85, w * 0.95, 'rgba(99,72,255,0.18)'],
+  ] as const) {
+    const rg = c.createRadialGradient(x, y, 0, x, y, r);
+    rg.addColorStop(0, cor);
+    rg.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = rg;
+    c.fillRect(0, 0, w, h);
+  }
+}
+
+function desenharBrilho(c: Ctx, s: number): void {
+  const rg = c.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+  rg.addColorStop(0, 'rgba(255,255,255,1)');
+  rg.addColorStop(0.35, 'rgba(255,255,255,0.45)');
+  rg.addColorStop(1, 'rgba(255,255,255,0)');
+  c.fillStyle = rg;
+  c.fillRect(0, 0, s, s);
+}
+
+function desenharFeixe(c: Ctx, w: number, h: number): void {
+  const g = c.createLinearGradient(0, 0, w, 0);
+  g.addColorStop(0, 'rgba(160,230,255,0)');
+  g.addColorStop(0.75, 'rgba(160,230,255,0.55)');
+  g.addColorStop(1, 'rgba(255,255,255,1)');
+  c.fillStyle = g;
+  c.fillRect(0, 0, w, h);
+  const v = c.createLinearGradient(0, 0, 0, h);
+  v.addColorStop(0, 'rgba(0,0,0,1)');
+  v.addColorStop(0.5, 'rgba(0,0,0,0)');
+  v.addColorStop(1, 'rgba(0,0,0,1)');
+  c.globalCompositeOperation = 'destination-out';
+  c.fillStyle = v;
+  c.fillRect(0, 0, w, h);
+  c.globalCompositeOperation = 'source-over';
+}
+
+/** Cria as texturas do jogo. Chamar uma vez, antes do menu. */
+export function buildItemTextures(scene: Phaser.Scene): void {
+  const make = (key: string, w: number, h: number, draw: (c: Ctx, w: number, h: number) => void) => {
+    if (scene.textures.exists(key)) return;
+    const t = scene.textures.createCanvas(key, w, h);
+    if (!t) return;
+    draw(t.getContext(), w, h);
+    t.refresh();
+  };
+  const s = Math.round(CELL * RENDER);
+  for (let item = 1; item <= 7; item++) {
+    make(cellKey(item), s, s, (c) => desenharBloco(c, s, item));
+    make(ghostKey(item), s, s, (c) => desenharSombra(c, s, item));
+  }
+  const pw = Math.round(PLUG_W * RENDER * 1.25);
+  const ph = Math.round(pw / PLUG_RATIO);
+  for (let item = 1; item <= 7; item++) make(plugKey(item), pw, ph, (c) => desenharConector(c, pw, ph, item));
+  const ds = Math.round(DEVICE_SIZE * RENDER * 1.6);
+  make(DEVICE_LEFT, ds, ds, (c) => desenharRoteador(c, ds));
+  make(DEVICE_RIGHT, ds, ds, (c) => desenharComputador(c, ds));
+  make(BG_KEY, Math.round(GAME_W * RENDER), Math.round(GAME_H * RENDER), desenharFundo);
+  make(GLOW_KEY, 64, 64, (c) => desenharBrilho(c, 64));
+  make(BEAM_KEY, 256, 32, desenharFeixe);
 }

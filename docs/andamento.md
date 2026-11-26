@@ -60,6 +60,15 @@ Portal (`web/`) e API (`api/`): comandos no README e nas entradas de “Onde par
 
 ## 4. Onde parou
 
+**26/11/2026 — [F]** G10 **Estoque Flix com visual novo**, a pedido do solicitante ("não quero esse visual pixelado"); mesmas regras, pontos, velocidade e controles (`logic.ts` não mudou):
+
+- Desenha na resolução real da tela (`camera.ts` calcula pela tela e pela densidade do aparelho), sem esticar imagem.
+- O tema de cabos continua, redesenhado liso em canvas 2D (`art.ts`): bloco = pedaço de cabo com degradê e brilho, conector RJ45 nas bordas, roteador e computador que acendem na linha completa, com o sinal correndo.
+- Fundo escuro com luz vermelha, tabuleiro de vidro, fonte do sistema; placar (PONTOS, CONEXÕES, NÍVEL com barra), RECORDE e PRÓXIMA; menu e fim de jogo novos (`ui.ts`).
+- Saíram a fonte pixel e o retrato pixelado do personagem (o jogo não mostra mais o personagem).
+- Capa nova do hub (G10) e do Flix Grid (G12).
+- Validação: 17 testes, typecheck; prints de menu, partida, linha completa e fim de jogo, sozinho e dentro do hub (computador e celular). [D] Teste em celular real; o Tobias deve revisar.
+
 **26/11/2026 — [F]** **Login do cliente com a regra nova** (decisão do Marcio): todo cliente Flix com contrato ativo pode jogar, sem serviço na Voalle. A rota `flix-games/confere` mantém o mesmo formato; mudaram só as mensagens de recusa:
 
 - bloqueado por débito (`contrato_bloqueado`): "Seu acesso está suspenso por fatura em aberto. Pague pelo Minha Flix e o acesso volta sozinho.";
