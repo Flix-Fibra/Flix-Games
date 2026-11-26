@@ -6,6 +6,7 @@ import { BootScene } from './scenes/BootScene';
 import { MenuScene } from './scenes/MenuScene';
 import { PlayScene } from './scenes/PlayScene';
 import { COLORS, GAME_H, GAME_W } from './theme';
+import { telaCheiaNoToque } from '@flix/game-kit/src/telaCheia';
 
 const bridge = createHubBridge({
   gameId: game_json.id,
@@ -30,6 +31,7 @@ const game = new Phaser.Game({
 } as Phaser.Types.Core.GameConfig);
 
 game.registry.set('bridge', bridge);
+telaCheiaNoToque();
 
 bridge.onHubMessage((msg: HubToGame) => {
   switch (msg.type) {

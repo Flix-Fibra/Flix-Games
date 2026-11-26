@@ -3,6 +3,7 @@ import { createHubBridge, type HubToGame } from '@flix/game-sdk';
 import game_json from '../game.json';
 import { PlayScene } from './scenes/PlayScene';
 import { COLORS } from './theme';
+import { telaCheiaNoToque } from '@flix/game-kit/src/telaCheia';
 
 const bridge = createHubBridge({
   gameId: game_json.id,
@@ -34,6 +35,7 @@ window.addEventListener('resize', () => {
 });
 
 game.registry.set('bridge', bridge);
+telaCheiaNoToque();
 
 bridge.onHubMessage((msg: HubToGame) => {
   switch (msg.type) {
