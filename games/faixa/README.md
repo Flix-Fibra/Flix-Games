@@ -1,6 +1,6 @@
 # G09 — Faixa a Faixa
 
-Travessia infinita em grade, tema obra de fibra ótica na rua. O técnico avança faixa a faixa (9 colunas), desviando de carros e caminhões, pulando em paletes e troncos no rio ou em vitórias-régias, e atravessando trilhos antes do trem (o sinal vermelho avisa pelo menos 1 s antes). A base da tela sobe sozinha, cada vez mais rápido: quem demora é alcançado. Pontuação = faixas atravessadas. Teclado: setas ou WASD. Toque: tocar avança, deslizar muda de lado ou volta. **Nome de catálogo; validar com marketing e jurídico antes de publicar.** Contrato com o hub em `docs/HUB_CONTRACT.md`.
+Travessia infinita em grade, tema obra de fibra ótica na rua. O técnico avança faixa a faixa (9 colunas), desviando de carros e caminhões, pulando em paletes e troncos no rio ou em vitórias-régias, e atravessando trilhos antes do trem (o sinal vermelho avisa pelo menos 1 s antes). A base da tela sobe sozinha, cada vez mais rápido: quem demora é alcançado. Pontuação = faixas atravessadas. Teclado: setas ou WASD. Toque: tocar avança, deslizar muda de lado ou volta. **Nome de catálogo; validar com o marketing antes de publicar.** Contrato com o hub em `docs/HUB_CONTRACT.md`.
 
 ```bash
 npm run dev:faixa       # porta 5173; abra /dev-host.html para simular o hub

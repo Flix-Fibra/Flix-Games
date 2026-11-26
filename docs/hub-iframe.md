@@ -35,4 +35,4 @@ O jogo é a fonte do seu nome e da sua capa; o portal lê do catálogo (`jogos`)
 2. `npm run catalogo:conferir` valida tudo sem gravar; `npm run catalogo` grava nome, capa e pasta no banco local (`scripts/sincronizar-catalogo.mjs`). Em produção, o mesmo script roda no deploy.
 3. O portal mostra a capa a partir de `/games/<pasta>/<capa>`; sem capa, usa o ícone desenhado. O banco recusa caminhos que saiam da pasta do jogo (migração 006).
 
-Publicar continua sendo decisão do catálogo (ex.: G10 depende do jurídico), não do `game.json`. O hub só lista jogos com pasta real (não `_teste-hub`).
+Publicar continua sendo decisão do catálogo não do `game.json`. O hub só lista jogos com pasta real (não `_teste-hub`).

@@ -2,7 +2,7 @@
 
 > Como usar: coloque este arquivo na raiz do repositório dos jogos e passe-o ao agente de IA (por exemplo o Claude Code) como instrução inicial. Ele é escrito para o agente, mas também serve de guia para o time.
 >
-> Aviso: este documento organiza boas práticas de engenharia e de propriedade intelectual. Não é aconselhamento jurídico. O jurídico da Flix deve revisar cada jogo antes de publicar, e os jogos marcados com risco alto só começam depois da aprovação dele.
+> Aviso: este documento organiza boas práticas de engenharia e de propriedade intelectual. Não é aconselhamento jurídico. Em 26/11/2026 o solicitante revogou a exigência de revisão ou parecer do jurídico para publicar os jogos.
 >
 > Novidades da versão 2: sistema de personagem personalizado compartilhado entre os jogos (seção 9), catálogo com 15 jogos organizados em ondas (seção 10), contrato com o hub atualizado com a mensagem `init` (seção 6) e regras específicas para jogos clássicos muito protegidos (seção 2.2).
 
@@ -17,7 +17,7 @@
 5. **Equipe:** não há donos fixos por área. O Rafael foi originalmente encarregado do hub, mas qualquer pessoa pode atuar em qualquer área.
 6. **Código de referência:** é permitido usar e colar trechos pontuais de código dos jogos de referência quando facilitarem o desenvolvimento, desde que não reproduzam grande parte nem a totalidade da obra. Registrar origem e licença do trecho no `ASSETS.md`. Trechos de repositórios GPL, CC BY-SA ou sem licença são risco assumido pelo time; o jurídico avalia na revisão do jogo pronto. Sprites, sons, imagens e vídeos de terceiros continuam proibidos.
 7. **Assets:** o agente deve explicar ao time onde ficam os assets de cada jogo (manifesto `assets.manifest.json`, pastas de arte e de áudio) e como trocá-los para deixar tudo com a identidade da Flix.
-8. **Tetris-like (G10):** pode ser desenvolvido agora. Depois de pronto, o time apresenta e aguarda a avaliação do jurídico antes de publicar. Não publicar sem esse parecer.
+8. **Tetris-like (G10):** pode ser desenvolvido e publicado sem parecer do jurídico (decisão de 26/11/2026).
 9. **Código e git:** o agente gera código quando solicitado. Commit e push só quando o solicitante pedir.
 10. Itens não citados nesta lista seguem como estão. Se algo causar problema, perguntar de novo.
 
@@ -76,7 +76,7 @@
 
 Estes jogos pedem cuidado extra, porque os titulares têm histórico de defender suas marcas e sua aparência. O que a pesquisa encontrou:
 
-- **Tetris (risco alto).** Num caso dos Estados Unidos (Tetris Holding v. Xio Interactive, tribunal de New Jersey, 2012), o clone "Mino" foi considerado infração de copyright e de trade dress. O tribunal entendeu que regras e mecânica não são protegidas, mas a forma de expressá-las, a aparência e a sensação do jogo, são. Os desenvolvedores tinham tentado licenciar o jogo e a empresa recusou. Não basta trocar o nome e as cores. O jogo pode ser feito agora, mas só é publicado depois que o time o apresentar pronto e o jurídico avaliar (decisão de 16/11/2026).
+- **Tetris (risco alto).** Num caso dos Estados Unidos (Tetris Holding v. Xio Interactive, tribunal de New Jersey, 2012), o clone "Mino" foi considerado infração de copyright e de trade dress. O tribunal entendeu que regras e mecânica não são protegidas, mas a forma de expressá-las, a aparência e a sensação do jogo, são. Os desenvolvedores tinham tentado licenciar o jogo e a empresa recusou. Não basta trocar o nome e as cores.
 - **Flappy Bird (risco médio).** A discussão de desenvolvedores indica que copiar a mecânica é discutível, mas elementos artísticos que identificam o original (desenho do pássaro, esquema de cores, fonte, canos verdes) podem ser protegidos. Regra prática: se uma pessoa comum confundiria o seu jogo com o original, você está em risco.
 - **Arkanoid (risco médio).** Já houve disputa histórica entre a dona do Breakout e o Arkanoid. O nome Arkanoid é marca. Evite o nome, o desenho da raquete, as cápsulas de poder, as fases e as músicas.
 - **Frogger (risco médio).** Os titulares dos direitos (possivelmente Konami e Sega, a confirmar) devem ser tratados como donos do nome e do personagem. Não usar sapo nem o nome. O personagem do nosso jogo será o personagem personalizado do jogador.
@@ -87,7 +87,7 @@ Medidas para todos eles:
 1. Mudanças reais de regra, de tema e de apresentação, não só de cor ou de nome.
 2. Nada de elementos distintivos conhecidos (formas, cores, sons, efeitos, telas, tipografia do original).
 3. Nome, personagem, cenário e interface próprios da Flix.
-4. Revisão do jurídico antes de publicar. Para o Tetris-like, o desenvolvimento pode começar; a publicação espera o parecer do jurídico sobre o jogo pronto.
+4. A publicação não depende de revisão do jurídico (decisão de 26/11/2026).
 
 ### 2.3 Licenças
 
@@ -452,7 +452,7 @@ Os níveis de risco abaixo são uma estimativa interna do time, e não parecer j
 | G07 | Plataforma com mapas (metroidvania-lite depois) | Plataforma | Not-A-Vania Redux e plataformas laterais em geral | Baixo a médio | A (side) | Menor tempo para completar a fase, desempate por coletáveis | 3 |
 | G08 | Plataforma com tiro (run and gun curto) | Ação | metal-slug-js e Wishforge (só gameplay) | Médio | A (side, `shoot`) | Pontos por inimigo com multiplicador de sequência | 3 |
 | G09 | Travessia infinita em grade | Arcade | expo-crossy-road (só gameplay) | Médio | A (top) | Faixas atravessadas | 3 |
-| G10 | Tetris-like (blocos que encaixam) | Puzzle | Tetris (só como gênero) | **Alto** | B (portrait) | Pontos em modo cronometrado de 2 minutos | 3 (publicação só após parecer do jurídico) |
+| G10 | Tetris-like (blocos que encaixam) | Puzzle | Tetris (só como gênero) | **Alto** | B (portrait) | Pontos em modo cronometrado de 2 minutos | 3 |
 | G11 | Arena em primeira pessoa (ideia do CEO) | Tiro | ufocoder/fps e ideia tipo Doom | Médio a alto | B (fp_hands) | Inimigos eliminados por tempo de sobrevivência | 4 |
 | G12 | Corrida top-down em pixel art | Corrida | Pixel Wheels (só gameplay, licenças GPL e CC BY-SA) | Baixo a médio | B (portrait, piloto) | Melhor tempo de volta por pista | 3 |
 | G13 | Futebol de cabeça 1 contra 1 | Esporte | Head-Ball-Game e Head Ball (só gênero) | Médio | A (side, cabeça grande do personagem) | Gols em 2 minutos contra a IA, ou vitórias seguidas | 2 |
@@ -462,7 +462,7 @@ Os níveis de risco abaixo são uma estimativa interna do time, e não parecer j
 **Por que esta ordem:**
 - **Onda 1** valida o pipeline inteiro (SDK, contrato com o hub, personagem, relatório de teste) com jogos pequenos. G01 é o piloto de hoje. G02 reaproveita o toque e a física do runner. G03 é o mais simples de todos. G15 também é de um toque só e tem física simples.
 - **Onda 2** traz clássicos que dependem de mais arte e de mais regras, e já usa a visão `top` do personagem (G05). G13 aproveita bem o personagem, com a cabeça grande. G14 é um jogo curto e simples de fazer.
-- **Onda 3** traz os jogos com mapas e combate, o Tetris-like, que pode ser feito agora mas só é publicado após o parecer do jurídico sobre o jogo pronto, e a corrida top-down (G12), que dá mais trabalho de pistas e de arte.
+- **Onda 3** traz os jogos com mapas e combate, o Tetris-like e a corrida top-down (G12), que dá mais trabalho de pistas e de arte.
 - **Onda 4** é a ideia do CEO. É a mais pesada e a mais delicada.
 
 **Modos cronometrados:** sempre que possível, ofereça um modo de 2 a 3 minutos. Ranking de partidas com duração parecida é mais justo e combina com sessões curtas.
@@ -600,11 +600,11 @@ Os níveis de risco abaixo são uma estimativa interna do time, e não parecer j
 
 ### 10.10 G10 - Tetris-like (blocos que encaixam) - risco alto
 
-**Pode ser desenvolvido agora; só é publicado depois que o time apresentar o jogo pronto e o jurídico avaliar (seção 2.2, decisão de 16/11/2026).**
+**Pode ser desenvolvido e publicado sem parecer do jurídico (decisão de 26/11/2026).**
 
 **Inspiração geral (gênero):** encaixar peças feitas de blocos para completar linhas.
 
-- O conceito, as regras e a aparência precisam diferir **de verdade** do jogo original, e não só em cores e nome. Opções de partida para discutir com o jurídico: formato e tamanho do tabuleiro diferentes, conjunto de peças diferente, outra regra de queda ou de limpeza, interface e animações próprias.
+- O conceito, as regras e a aparência precisam diferir **de verdade** do jogo original, e não só em cores e nome. Opções de partida: formato e tamanho do tabuleiro diferentes, conjunto de peças diferente, outra regra de queda ou de limpeza, interface e animações próprias.
 - Alternativa de gênero: um quebra-cabeça de encaixar peças em um tabuleiro, escolhendo as peças em vez de caírem sozinhas.
 - Modo cronometrado de 2 minutos para ranking. Retrato do personagem reagindo no HUD (nível B).
 - Não usar o nome "Tetris" em lugar nenhum.
@@ -759,10 +759,8 @@ Siga na ordem. Em cada passo, termine com algo que roda e pode ser testado. Em c
 - [ ] Todos os arquivos estão em `ASSETS.md` com licença válida para uso comercial.
 - [ ] Nenhum nome, personagem, texto, som ou fase de terceiros.
 - [ ] Os cinco diferenciais estão implementados e visíveis.
-- [ ] Para G02, G03, G04, G05, G10, G13, G14 e G15: revisão específica do jurídico (seção 2.2).
 - [ ] O personagem personalizado aparece corretamente no nível previsto (A ou B), com configuração recebida e com o padrão.
 - [ ] Página de créditos e licenças preparada (atribuições exigidas por CC-BY, MIT e outras).
-- [ ] Revisão do jurídico da Flix.
 - [ ] Teste em pelo menos dois celulares reais (um simples) e em dois navegadores.
 - [ ] Peso do build medido e dentro da meta.
 - [ ] Contrato com o hub testado com o Rafael, de ponta a ponta.
@@ -776,7 +774,7 @@ Siga na ordem. Em cada passo, termine com algo que roda e pode ser testado. Em c
 
 ## 15. Perguntas em aberto (para Tobias e Rafael decidirem)
 
-Respondidas em 16/11/2026 (ver decisões no início do documento): 6 (sem anúncio por enquanto), 9 (perfil ligado à conta do cliente) e 12 (Tetris-like pode ser feito e vai ao jurídico depois de pronto). As demais continuam em aberto; o ranking da pergunta 5 é permanente por jogo, conforme o painel (Q18).
+Respondidas em 16/11/2026 (ver decisões no início do documento): 6 (sem anúncio por enquanto), 9 (perfil ligado à conta do cliente) e 12 (Tetris-like; a exigência de parecer foi revogada em 26/11/2026). As demais continuam em aberto; o ranking da pergunta 5 é permanente por jogo, conforme o painel (Q18).
 
 1. Confirmam Phaser 3 + TypeScript + Vite como padrão, ou preferem GDevelop?
 2. Onde ficará o repositório (conta e organização) e quem revisa o código?
@@ -789,7 +787,6 @@ Respondidas em 16/11/2026 (ver decisões no início do documento): 6 (sem anúnc
 9. **Personagem:** o perfil do jogador fica ligado à conta do cliente ou é anônimo (só apelido)? Onde o hub guarda o personagem?
 10. **Personagem:** quais itens e skins desbloqueiam por conquista (por exemplo ranking semanal)? Há skins temáticas de campanhas da Flix?
 11. **Personagem:** quantos corpos, cabelos e roupas entram na fase 1? Os números da seção 9.4 são só propostas.
-12. **Jurídico:** quando o Tetris-like pode ser avaliado? Os outros clássicos e os jogos inspirados em apps comerciais (G02, G04, G05, G13, G14, G15) podem seguir com as medidas da seção 2.2?
 13. As "8 referências citadas" da seção 10.0 estão certas? Se o time contou outras oito, ajustar o mapeamento.
 14. As 4 referências novas (Pixel Wheels, Head-Ball-Game, Helix-Jump, Dunkshot) são só inspiração mesmo? O Pixel Wheels tem licença GPL e CC BY-SA, e os outros três não têm licença confirmada. Se alguém quiser aproveitar algo, o jurídico precisa avaliar antes.
 

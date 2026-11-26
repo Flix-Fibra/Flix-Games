@@ -46,11 +46,11 @@ Tudo é desenhado por código (nenhum arquivo de terceiros; nada a registrar em 
 
 ## Próximos passos [H]
 
-**Lembrar o solicitante:** rampas com manobras do carro (os itens já estão), terceira pista (tema obra de fibra), adversários com IA, bônus (turbo, escudo), menu, contagem de largada, tempo de volta enviado ao hub (`rankingMetric: lap_time`), piloto com o personagem do perfil, som, teste em celular e parecer do jurídico.
+**Lembrar o solicitante:** rampas com manobras do carro (os itens já estão), terceira pista (tema obra de fibra), adversários com IA, bônus (turbo, escudo), menu, contagem de largada, tempo de volta enviado ao hub (`rankingMetric: lap_time`), piloto com o personagem do perfil, som e teste em celular.
 
 ## Pistas
 
-24 pistas com o formato dos circuitos do pôster da temporada 2026 (Melbourne, Xangai, Suzuka, Sakhir, Jeddah, Miami, Montreal, Mônaco, Barcelona, Spielberg, Silverstone, Spa, Budapeste, Zandvoort, Monza, Madri, Baku, Singapura, Austin, Cidade do México, São Paulo, Las Vegas, Lusail e Abu Dhabi). Os traçados são **aproximações** desenhadas a partir do formato geral (a imagem do pôster é pequena demais para decalcar): cada um é uma lista de pontos numa caixa de 1000 x 625, ampliada 2,8x no jogo, com a largura do asfalto fixa em 94 px. Voltas de ~4.500 a ~7.800 px. Suzuka cruza com ela mesma (oito), as outras não (um teste confere a distância entre trechos). Temas de cenário: gramado, pneus, obra (cones, carretéis e terra), cidade (prédios vistos de cima) e lago. [D] Os nomes dos circuitos e das cidades vêm do pôster; conferir com o jurídico antes de publicar. [D] Mônaco, Madri e outros têm traçado muito simplificado.
+24 pistas com o formato dos circuitos do pôster da temporada 2026 (Melbourne, Xangai, Suzuka, Sakhir, Jeddah, Miami, Montreal, Mônaco, Barcelona, Spielberg, Silverstone, Spa, Budapeste, Zandvoort, Monza, Madri, Baku, Singapura, Austin, Cidade do México, São Paulo, Las Vegas, Lusail e Abu Dhabi). Os traçados são **aproximações** desenhadas a partir do formato geral (a imagem do pôster é pequena demais para decalcar): cada um é uma lista de pontos numa caixa de 1000 x 625, ampliada 2,8x no jogo, com a largura do asfalto fixa em 94 px. Voltas de ~4.500 a ~7.800 px. Suzuka cruza com ela mesma (oito), as outras não (um teste confere a distância entre trechos). Temas de cenário: gramado, pneus, obra (cones, carretéis e terra), cidade (prédios vistos de cima) e lago. [D] Os nomes dos circuitos e das cidades vêm do pôster; validar com o marketing antes de publicar. [D] Mônaco, Madri e outros têm traçado muito simplificado.
 
 ## Perspectiva (teste)
 
