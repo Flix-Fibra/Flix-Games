@@ -4,6 +4,7 @@
   "catalogo": "g15",
   "capa": "img/capa-cheia.png",
   "cores": ["#0E8A55", "#0B4A30"],
+  "imagens": ["img/telas/abertura.webp"],
   "_nome_de_trabalho": "G15. Nome provisório; validar com o marketing antes de publicar.",
   "avatarTier": "A",
   "avatarViews": ["side"],

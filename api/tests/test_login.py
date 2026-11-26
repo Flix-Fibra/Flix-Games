@@ -94,9 +94,10 @@ def test_senha_errada(app_ativo):
 
 
 def test_sem_games_e_bloqueado(app_ativo):
-    assert _entrar(_cliente(), CPF_SEM_GAMES, CPF_SEM_GAMES).status_code == 403
-    r = _entrar(_cliente(), CPF_BLOQUEADO, CPF_BLOQUEADO)
-    assert r.status_code == 403 and "pendência" in r.json()["detail"]
+    r = _entrar(_cliente(), CPF_SEM_GAMES, CPF_SEM_GAMES)  # ex-cliente: só contrato cancelado
+    assert r.status_code == 403 and "contrato ativo" in r.json()["detail"]
+    r = _entrar(_cliente(), CPF_BLOQUEADO, CPF_BLOQUEADO)  # bloqueado por débito
+    assert r.status_code == 403 and "fatura em aberto" in r.json()["detail"]
 
 
 def test_sistema_fora_nunca_diz_senha_errada(app_ativo, monkeypatch):

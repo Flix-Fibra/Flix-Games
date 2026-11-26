@@ -156,8 +156,8 @@ MSG_CODIGO = "Usuário ou senha da equipe incorretos."
 # Mensagens para o cliente (a API Própria pede: com o sistema fora, nunca dizer que a senha está errada)
 MSG_SENHA = "CPF/CNPJ ou senha incorretos."
 MSG_ESPERA = "Muitas tentativas. Espere alguns minutos e tente de novo."
-MSG_SEM_GAMES = "Sua conta Flix ainda não tem o Flix Games. Fale com a Flix para ativar."
-MSG_BLOQUEADO = "O acesso está suspenso por pendência no contrato. Regularize pelo Minha Flix para jogar."
+MSG_SEM_GAMES = "Não encontramos um contrato ativo na sua conta Flix. O Flix Games é para clientes Flix."
+MSG_BLOQUEADO = "Seu acesso está suspenso por fatura em aberto. Pague pelo Minha Flix e o acesso volta sozinho."
 MSG_FORA = "Não conseguimos conferir seu acesso agora. Tente de novo em alguns minutos."
 
 

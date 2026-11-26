@@ -60,6 +60,13 @@ Portal (`web/`) e API (`api/`): comandos no README e nas entradas de “Onde par
 
 ## 4. Onde parou
 
+**26/11/2026 — [F]** **Login do cliente com a regra nova** (decisão do Marcio): todo cliente Flix com contrato ativo pode jogar, sem serviço na Voalle. A rota `flix-games/confere` mantém o mesmo formato; mudaram só as mensagens de recusa:
+
+- bloqueado por débito (`contrato_bloqueado`): "Seu acesso está suspenso por fatura em aberto. Pague pelo Minha Flix e o acesso volta sozinho.";
+- ex-cliente, só com contrato cancelado (`sem_flix_games`): "Não encontramos um contrato ativo na sua conta Flix. O Flix Games é para clientes Flix.".
+
+Também entram a capa nova do Nest Shot (G15) e a imagem da página "Ver". Testes de login passam. [D] Chave da API Própria (Marcio). Dois testes de ranking falham às vezes (`test_partida_de_zero_pontos_nao_entra_no_ranking`, `test_catalogo_conta_as_partidas_terminadas`), também sem esta mudança; causa a investigar.
+
 **26/11/2026 — [C]** Decisão do solicitante: **revogada a regra que condicionava a publicação dos jogos à revisão ou ao parecer do jurídico** (inclusive o G10, Q47). Entradas anteriores a esta data que citam a trava ficam só como histórico e não valem mais.
 
 **25/11/2026 — [F]** G06 Minigolfe Flix com **16 fases** e as mecânicas pedidas pelo gestor (imagens da pasta `Fases Mini Golf/`, fora do Git): **bomba** (prende a bola e mira sozinha, girando; o jogador só escolhe a força, e um toque vale 0,6), **moinho**, **esteira**, **portais** (mesma velocidade e direção na saída), **bloco móvel** (desliza pela trilha do chão), **rampa de salto** (a bola voa por cima de água, lava, pistão e moinho; o tempo no ar cresce com a força), **pistão** e **lava** (acende e apaga, em dois grupos que se alternam). Fases 1 a 7 recriam os 7 campos desenhados; 8 a 16 combinam as mecânicas, cada uma com caminho seguro e atalho arriscado (`docs/MINIGOLFE_FASES.md`). O relógio da fase corre sempre. Robô `games/minigolfe/tools/levels.solve.test.ts` (`SOLVE=1`) encaçapou as 16; 55 testes, typecheck e build passam; as 16 fases conferidas no navegador, bomba e salto testados com tacada de verdade. Capa e o `catalogo` `g06` no `game.json`. [D] Dificuldade e par só se ajustam jogando; teste em celular; som das mecânicas novas provisório; nome e capa a validar; jurídico. Rodar: `npm run dev:minigolfe`.
