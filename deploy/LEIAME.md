@@ -88,7 +88,7 @@ node scripts/sincronizar-catalogo.mjs | sudo docker compose -p flix-games -f com
   exec -T db psql -v ON_ERROR_STOP=1 -q -U flixgames -d flixgames
 ```
 
-Publicar um jogo é uma decisão, não um passo do deploy. Todos nascem sem publicar, e o G10 depende do jurídico:
+Publicar um jogo é uma decisão, não um passo do deploy. Todos nascem sem publicar:
 `UPDATE jogos SET publicado = TRUE WHERE id IN (...)`.
 
 ### Conferir depois de subir

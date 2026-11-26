@@ -247,7 +247,7 @@ def test_capa_nao_aceita_caminho_fora_da_pasta_do_jogo(app_ativo):
 def test_jogo_nao_publicado_nao_aceita_partida(app_ativo):
     c, _ = com_perfil(app_ativo, "Curioso")
     r = c.post("/api/partidas/inicio", json={"jogoId": "g10", "runId": str(uuid.uuid4())})
-    assert r.status_code == 404  # G10 só após parecer do jurídico (Q47)
+    assert r.status_code == 404  # nos testes o G10 fica sem publicar (conftest.py)
 
 
 def test_ranking_de_menor_vence(app_ativo):

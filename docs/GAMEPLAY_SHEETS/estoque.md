@@ -1,7 +1,7 @@
 # Ficha de gameplay — Estoque Flix (G10)
 
 Observador: a definir      Revisor: a definir      Data: 16/11/2026
-Observação: rascunho de projeto. Risco jurídico alto (gênero de peças que caem): apresentar o jogo pronto ao jurídico antes de publicar (Q47). Não usar o nome do jogo original em lugar nenhum. Direção definida pelo solicitante em 16/11: mistura de peças que caem com combinação de itens iguais, tema de estoque, gráfico liso (não pixelado).
+Observação: rascunho de projeto. Não usar o nome do jogo original em lugar nenhum. Direção definida pelo solicitante em 16/11: mistura de peças que caem com combinação de itens iguais, tema de estoque, gráfico liso (não pixelado).
 
 ## 1. Loop principal
 Um item de estoque por vez cai pela prateleira (7 x 11). O jogador escolhe a coluna. Quando 3 ou mais itens IGUAIS ficam ligados (lado a lado, em cima ou embaixo), eles são guardados: voam para a caixa de estoque e liberam espaço. O que estava em cima desce e pode formar novos grupos em cadeia.
