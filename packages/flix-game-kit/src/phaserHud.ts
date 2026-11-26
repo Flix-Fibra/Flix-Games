@@ -52,6 +52,8 @@ export interface TelaFimDeJogo {
   /** Imagem opcional acima do título (ex.: retrato do avatar). */
   retrato?: Phaser.GameObjects.Image;
   titulo?: string;
+  /** Texto embaixo do número grande (padrão "PONTOS"; jogos de menor-é-melhor podem usar "TACADAS", por exemplo). */
+  rotulo?: string;
   botao?: string;
   /** Cor e opacidade do véu sobre o jogo. */
   veu?: [number, number];
@@ -79,7 +81,7 @@ export function telaFimDeJogo(scene: Phaser.Scene, o: TelaFimDeJogo): Phaser.Gam
   const t = (s: string, px: number, cor = 0xffffff) => hudText(scene, cx, 0, s, px).setOrigin(0.5, 0).setTint(cor);
   itens.push({ obj: t(o.titulo ?? 'FIM DE JOGO', o.px.titulo, 0xf6e7c1), gap: 4 * o.px.texto });
   itens.push({ obj: t(String(o.pontos), o.px.pontos), gap: -2 * o.px.texto });
-  itens.push({ obj: t('PONTOS', o.px.texto), gap: 4 * o.px.texto });
+  itens.push({ obj: t(o.rotulo ?? 'PONTOS', o.px.texto), gap: 4 * o.px.texto });
   for (const l of o.linhas ?? []) itens.push({ obj: t(l.texto, o.px.texto, l.cor), gap: 2 * o.px.texto });
   if (itens.length) itens[itens.length - 1]!.gap = 6 * o.px.texto;
 

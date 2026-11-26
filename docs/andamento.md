@@ -60,7 +60,39 @@ Portal (`web/`) e API (`api/`): comandos no README e nas entradas de “Onde par
 
 ## 4. Onde parou
 
+**25/11/2026 — [F]** G06 Minigolfe Flix com **16 fases** e as mecânicas pedidas pelo gestor (imagens da pasta `Fases Mini Golf/`, fora do Git): **bomba** (prende a bola e mira sozinha, girando; o jogador só escolhe a força, e um toque vale 0,6), **moinho**, **esteira**, **portais** (mesma velocidade e direção na saída), **bloco móvel** (desliza pela trilha do chão), **rampa de salto** (a bola voa por cima de água, lava, pistão e moinho; o tempo no ar cresce com a força), **pistão** e **lava** (acende e apaga, em dois grupos que se alternam). Fases 1 a 7 recriam os 7 campos desenhados; 8 a 16 combinam as mecânicas, cada uma com caminho seguro e atalho arriscado (`docs/MINIGOLFE_FASES.md`). O relógio da fase corre sempre. Robô `games/minigolfe/tools/levels.solve.test.ts` (`SOLVE=1`) encaçapou as 16; 55 testes, typecheck e build passam; as 16 fases conferidas no navegador, bomba e salto testados com tacada de verdade. Capa e o `catalogo` `g06` no `game.json`. [D] Dificuldade e par só se ajustam jogando; teste em celular; som das mecânicas novas provisório; nome e capa a validar; jurídico. Rodar: `npm run dev:minigolfe`.
+
 **25/11/2026 — [F]** G02 **Voo Rasante** (`games/voo`, Phaser 3.90 + TypeScript, retrato 720x1280) jogável: avião de aviador-pássaro que sobe ao toque, passando entre prédios (embaixo) e braços de guindaste (em cima), 5 de cada sorteados. Proporções conferidas no flappybird.io (altura do campo = 1280): espaçamento 723 px, vão visível 358 px (fecha 10 px por par até 260), velocidade constante de 420 px/s; o fundo anda a 12% da velocidade dos obstáculos, com a imagem normal e a espelhada alternadas para não haver emenda. Colisão pelo contorno real dos sprites (caixas em faixas de 12 px geradas por `games/voo/tools/preparar-assets.py` a partir de `Voo Rasante Assets/`, fora do Git); tecla H mostra as hitboxes. 10 testes, typecheck e build. Ligado ao catálogo como g02 (sem capa ainda). [D] Ficha de gameplay, som, celular, capa, jurídico (G02 exige parecer antes de publicar), nome definitivo, gravidade e impulso (não medidos no original). Rodar: `npm run dev:voo`.
+
+**25/11/2026 — [F]** **Network Snake no Safari e tela cheia:**
+
+- **Setas.** No Safari as setas rolavam a página do hub atrás do jogo. A cobra passou a usar `addCapture` do Phaser (ele lê a tecla e só depois cancela a rolagem), e o hub trava `html` e `body` com o jogo aberto.
+- **Tentativa errada.** A 1ª tentativa, cancelar a tecla no SDK, desligou as setas: o Phaser ignora tecla já cancelada. Foi desfeita antes de subir.
+- **Tela cheia de jogo em pé no computador.** O título do hub não cobre mais o placar, e o aviso de ranking vai para o canto de baixo, fora do quadro do jogo.
+
+[D] Pendências: conferir no Safari real (só testado no Chrome); "jogo descentralizado" relatado pelo solicitante, sem print, não reproduzido.
+
+**25/11/2026 — [F]** **Ranking**, depois do relato do solicitante ("alguns jogos não aparecem e não deixa clicar em outros"):
+
+1. **Lista do seletor por baixo do rodapé.** A lista de jogos do seletor abria por baixo do rodapé ("Créditos e Licenças"), que roubava o clique dos últimos jogos quando o ranking era curto. `main` passou para `z-index: 2`. Reproduzido e conferido no site no ar: Flix Grid bloqueado sem a correção, clicável com ela.
+2. **Flix Grid no ranking.** O G12 não enviava resultado e o ranking dele ficava sempre vazio. Agora manda `started`/`gameover` com a melhor volta em ms (catálogo: menor vence). Só valem Campeonato e Corrida livre; o Treino não conta. Conferido pelo hub local: início 201, fim 200, "4º no ranking".
+3. **Partida de 0 pontos.** Conta como jogada, mas não entra no ranking (decisão do solicitante). 80 testes da API.
+
+**25/11/2026 — [F]** G09 **Sinal Verde** (ex-Faixa a Faixa), tela de início no visual do modelo enviado pelo solicitante, adaptado à tela em pé:
+
+- título em fonte pixel com barra laranja ("SINAL" em creme, "VERDE" em verde);
+- a cena da obra animada no meio;
+- botão verde COMEÇAR e os controles embaixo.
+
+Só com as peças que o jogo já tem: cones, cavalete e semáforo do modelo não existem na arte. O rosto do personagem saiu da abertura. 35 testes.
+
+**25/11/2026 — [F]** G12 Flix Grid:
+
+- **Tela de abertura dentro do jogo.** Uma pista sorteada passa ao fundo com os carros no grid. Por cima ficam o título pixel, o botão JOGAR e "Voltar ao hub".
+- **Escolha do modo.** Abre ao tocar em JOGAR, com "Voltar" para a abertura. O MENU e o ESC no meio da corrida vão direto para ela.
+- **Correção.** A roleta travava o Treino (sem rivais não havia com quem trocar de lugar). Agora ela só avisa "só você na pista".
+- **Capa nova no hub.** O card ficou vermelho e grafite.
+- **Validação.** 128 testes; abertura, modos e roleta conferidos no computador e no celular simulado.
 
 **25/11/2026 — [F]** **Acesso da equipe** ao site no ar enquanto o login do cliente espera a API Própria:
 
@@ -252,7 +284,7 @@ Colunas: **Ficha** = ficha de gameplay revisada; **Código** = jogo executa o ci
 | G03 | Network Snake (tipo Snake) | 1 | baixo | 🟡 | 🟡 | 🟡 | 🟡 | ⬜ | 🟡 | 16/11 | [F] Jogável com o cenário e os modelos do gestor: cobra RJ45 nas duas pontas com corpo contínuo, 7 itens de pontuação sorteados, muro provisório, logo, onda vermelha e LEVEL UP. Ficha é rascunho; 75 testes passam; simulador do hub ok. [D] Faltam muro, peça de curva e demais assets; celular; jurídico; hub real; origem/licença das imagens. |
 | G04 | Space Ping (quebra-blocos, `games/blocos`) | 2 | médio | ⬜ | 🟡 | 🟡 | 🟡 | ⬜ | ⬜ | 19/11 | [F] Jogável: jogadora com raquete sobre prancha voadora segue o mouse (ou o dedo) e vira para o lado em que anda; bola de raios sai sozinha; 10 fases com chefão nas fases 5 e 10 (atira e trava a jogadora), blocos de 1, 2 e 3 batidas e de aço; bônus multibolinha, supervelocidade (atravessa blocos), escudo e ímã; mini bolas-raio (20 = vida extra). 13 testes da lógica; partida simulada no navegador desktop. Arte da jogadora, prancha e bola do gestor (`Space Ping Assets/`, originais fora do Git), o resto por código. [C] Sem temática de internet por enquanto (solicitante, 19/11). [D] Som, celular, ficha, jurídico, hub real; imagens são miniaturas do OpenArt (a da bola com marca d'água): confirmar origem e licença. |
 | G05 | Frogger-like (travessia clássica) | 2 | médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Usa a visão `top` do personagem (kit do designer). |
-| G06 | Minigolfe em pixel art | 2 | baixo | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Ranking pelo menor número de tacadas. |
+| G06 | Minigolfe Flix (`games/minigolfe`) | 2 | baixo | 🟡 | 🟡 | 🟡 | ⬜ | ⬜ | ⬜ | 25/11 | [F] 16 fases jogáveis (as 7 primeiras recriam os campos desenhados pelo gestor) e mecânicas: paredes, diagonais, postes, areia, gelo, água, esteiras, ímãs, portais, **bomba** (mira sozinha; o jogador só dá a força), moinho, bloco móvel, rampa de salto, pistão e lava; 55 testes e robô que prova que as 16 têm solução (`SOLVE=1`). Conceito de cada fase em `docs/MINIGOLFE_FASES.md`; fases em grade de texto (`docs/ADDING_LEVELS.md`). [D] Ficha de gameplay, dificuldade e par (só jogando), som das mecânicas novas, celular, jurídico, nome, hub real. |
 | G07 | Plataforma com mapas | 3 | baixo a médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Mapas no Tiled; precisa de `docs/ADDING_LEVELS.md`. |
 | G08 | Plataforma com tiro (run and gun curto) | 3 | médio | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 16/11 | [H] Inimigos temáticos, sem violência gráfica. |
 | G09 | Travessia infinita em grade | 3 | médio | 🟡 | ⬜ | 🟡 | ⬜ | ⬜ | ⬜ | 24/11 | [F] `games/faixa` (Faixa a Faixa): mapa procedural infinito em `logic.ts` (grama, estrada, rio com troncos ou vitórias-régias, trilho com aviso do trem), câmera que sobe sozinha, dificuldade crescente; 29 testes do gerador e das regras, build ok, partida conferida no navegador desktop. [F] Ficha em `docs/GAMEPLAY_SHEETS/faixa.md`. [D] Sem capa, celular, hub real; nome e jurídico a validar. |

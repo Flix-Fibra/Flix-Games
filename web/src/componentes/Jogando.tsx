@@ -149,8 +149,14 @@ export function Jogando({ jogo, avatar, personagem, onFechar, entrando = false }
   useEffect(() => {
     const tecla = (e: KeyboardEvent) => { if (e.key === 'Escape') onFechar(houvePartida.current); };
     document.addEventListener('keydown', tecla);
+    // trava a página de trás inteira (no Safari só o body não bastava: a rolagem passava para o documento)
     document.body.style.overflow = 'hidden';
-    return () => { document.removeEventListener('keydown', tecla); document.body.style.overflow = ''; };
+    document.documentElement.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', tecla);
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    };
   }, [onFechar]);
 
   // O aviso de resultado some sozinho (o jogo segue na tela de fim dele)

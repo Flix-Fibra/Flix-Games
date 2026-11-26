@@ -117,6 +117,15 @@ function areaSegura(): typeof margens {
   return margens;
 }
 
+/** O pedaço do SDK do hub que a corrida usa (vem pelo registry, de main.ts). */
+interface Ponte {
+  sendLayout?: (imersivo: boolean) => void;
+  sendExit?: () => void;
+  newRunId?: () => string;
+  sendStarted?: (runId: string) => void;
+  sendGameOver?: (p: { runId: string; score: number; durationMs: number; meta?: Record<string, number | string> }) => void;
+}
+
 /** Acima de tudo do mundo (os carros usam 1 + y, até ~2.500) e do minimapa. */
 const PROFUNDIDADE_PLACAR = 100_000;
 
@@ -185,6 +194,9 @@ export class PlayScene extends Phaser.Scene {
   private modo: 'campeonato' | 'livre' | 'treino' = 'campeonato';
   private menu!: MenuCorrida;
   private noMenu = false; // com o menu aberto o jogo fica parado
+  /** Ranking: cada corrida do Campeonato ou da Corrida livre é uma partida no hub (o Treino não conta: carro mais rápido). */
+  private bridge: Ponte | null = null;
+  private runId: string | null = null;
   private posicaoFinal = 99;
   /** Escolha livre de pista (?livre na URL): teclas N e P, para testes. */
   private livre = new URLSearchParams(window.location.search).has('livre');
@@ -346,22 +358,55 @@ export class PlayScene extends Phaser.Scene {
     this.scale.on('resize', () => this.recalcular());
     this.recalcular();
     // Jogo imersivo: pede ao hub a tela toda (sem a barra dele); voltar ao hub é o botão do menu
-    const bridge = this.registry.get('bridge') as { sendLayout?: (i: boolean) => void; sendExit?: () => void } | undefined;
+    const bridge = this.registry.get('bridge') as Ponte | undefined;
+    this.bridge = bridge ?? null;
     bridge?.sendLayout?.(true);
     this.menu = new MenuCorrida(PISTAS, () => bridge?.sendExit?.());
     // ?pista=N e ?livre (testes) entram direto na corrida; o normal é abrir o menu
     if (this.livre || new URLSearchParams(window.location.search).has('pista')) this.carregarPista(this.ordem[0]!);
-    else this.abrirMenu();
+    else {
+      // abertura: uma pista sorteada passa ao fundo (a câmera percorre o traçado) com os carros parados no grid
+      this.abrirMenu('abertura');
+      this.carregarPista(this.ordem[0]!);
+    }
   }
 
   /** Menu do começo: o jogo para e o teclado do jogo é desligado (as setas e o Enter passam a ser do menu). */
-  private abrirMenu(): void {
+  private abrirMenu(tela: 'abertura' | 'modos' = 'modos'): void {
     if (this.menu.aberto) return;
     this.noMenu = true;
+    this.mostrarUi(false);
+    this.menu.avisoGirar(false);
     const kb = this.input.keyboard!;
     kb.enabled = false;
     kb.disableGlobalCapture();
-    this.menu.abrir((e) => this.iniciar(e));
+    this.menu.abrir((e) => this.iniciar(e), tela);
+  }
+
+  /** Placar, botões e minimapa somem com o menu aberto (a abertura mostra só a pista). */
+  private mostrarUi(sim: boolean): void {
+    for (const { obj } of this.ui) (obj as unknown as Phaser.GameObjects.Components.Alpha).setAlpha?.(sim ? 1 : 0);
+    this.marcador?.setAlpha(sim ? 1 : 0);
+  }
+
+  /** Fundo da abertura: a câmera percorre a linha central da pista, afastada, com os carros parados onde estão. */
+  private vitrineT = 0;
+  private vitrine(delta: number): void {
+    const am = this.pista.amostras;
+    if (!am.length) return;
+    this.vitrineT += delta;
+    const pos = (this.vitrineT * 0.09) / PASSO_AMOSTRA; // ~90 px/s pelo traçado
+    const a = am[Math.floor(pos) % am.length]!, b = am[(Math.floor(pos) + 1) % am.length]!, f = pos % 1;
+    const cam = this.cameras.main;
+    cam.setRotation(0);
+    this.camRot = 0;
+    cam.setZoom(this.zoomBase * 0.8);
+    cam.centerOn(a.x + (b.x - a.x) * f, a.y + (b.y - a.y) * f);
+    const visuais = [{ car: this.carro, spr: this.sprite }, ...this.rivais.map((r) => ({ car: r.carro, spr: r.sprite }))];
+    visuais.forEach(({ car, spr }, i) => {
+      spr.setPosition(car.x, car.y).setRotation(car.ang).setDepth(1 + Math.round(car.y)).setScale(ESCALA_HD);
+      this.sombras[i]?.setPosition(car.x + 2, car.y + 3).setRotation(car.ang).setDepth(0.5).setVisible(true);
+    });
   }
 
   private iniciar(e: Escolha): void {
@@ -370,6 +415,7 @@ export class PlayScene extends Phaser.Scene {
     kb.enableGlobalCapture();
     kb.resetKeys();
     this.noMenu = false;
+    this.mostrarUi(true);
     this.menu.fecharAcoes();
     this.modo = e.modo;
     if (e.modo === 'livre' || e.modo === 'treino') {
@@ -482,10 +528,21 @@ export class PlayScene extends Phaser.Scene {
     this.resultado.setVisible(false);
     this.camRot = this.girar ? -Math.PI / 2 - this.carro.ang : 0; // começa já alinhado
     this.aplicarLimites();
+    // partida no hub: só corrida de verdade (não a pista de fundo da abertura, nem o treino). Corrida reiniciada ou
+    // largada no meio fica sem resultado (o hub descarta).
+    this.runId = null;
+    if (!this.noMenu && this.modo !== 'treino' && this.bridge?.newRunId && this.bridge.sendStarted) {
+      this.runId = this.bridge.newRunId();
+      this.bridge.sendStarted(this.runId);
+    }
   }
 
   update(_t: number, delta: number): void {
-    if (this.carregando || !this.pista || this.noMenu) return;
+    if (this.carregando || !this.pista) return;
+    if (this.noMenu) {
+      this.vitrine(delta);
+      return;
+    }
     const emPe = this.toque && this.W < this.H;
     this.menu.avisoGirar(emPe);
     if (emPe) return; // corrida parada até o celular deitar
@@ -777,6 +834,11 @@ export class PlayScene extends Phaser.Scene {
       poca: 'DERRAPOU NA POÇA!',
     };
     if (e === 'roleta') {
+      // treino: sem rivais não há posição para sortear (antes travava o jogo ao terminar de girar)
+      if (!this.rivais.length) {
+        this.mostrarAviso('ROLETA: SÓ VOCÊ NA PISTA!');
+        return;
+      }
       if (this.roletaMs <= 0) this.roletaMs = ROLETA_GIRO_MS;
     }
     else if (e === 'turbo') {
@@ -790,6 +852,7 @@ export class PlayScene extends Phaser.Scene {
   private roleta(): void {
     const am = this.pista.amostras;
     const n = am.length;
+    if (!this.rivais.length) return; // segurança: sem rivais não há com quem trocar de lugar
     const alvo = 1 + Math.floor(Math.random() * (this.rivais.length + 1));
     const outros = [...this.rivais].sort((a, b) => b.prog.valor() - a.prog.valor());
     // para ficar em alvo-ésimo: logo atrás de quem fica à frente (ou à frente de todos, no 1º lugar)
@@ -848,6 +911,16 @@ export class PlayScene extends Phaser.Scene {
     this.aviso.setText('');
     const v = this.voltas;
     this.classificado = classificou(posicao);
+    // resultado para o ranking do hub: a melhor volta, em ms (no catálogo, g12 = "Melhor volta", menor vence)
+    if (this.runId && v.melhor !== null && this.bridge?.sendGameOver) {
+      this.bridge.sendGameOver({
+        runId: this.runId,
+        score: Math.round(v.melhor),
+        durationMs: Math.round(this.tempoCorrida),
+        meta: { posicao, pista: this.pista.def.id, modo: this.modo },
+      });
+    }
+    this.runId = null;
     this.posicaoFinal = posicao;
     const prox = proximaEtapa(this.etapa, PISTAS.length, posicao);
     let situacao: string;

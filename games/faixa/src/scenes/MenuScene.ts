@@ -1,20 +1,54 @@
 import Phaser from 'phaser';
+import { renderHudText } from '@flix/game-kit/src/hudFont';
 import { PAD, PLAYER, VEHICLE_LEN, logKey, propKey, vehicleKey } from '../art';
 import { unlockAudio } from '../audio';
 import { loadBest } from '../storage';
 import { CELL, COLORS, FONT, GAME_H, GAME_W } from '../theme';
-import { portraitKey } from './BootScene';
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
     super('Menu');
   }
 
+  /**
+   * Texto na fonte pixel da plataforma como imagem nítida (cada pixel da letra vira `px` x `px`). `contorno` da cor do
+   * fundo deixa a letra limpa (letra escura sobre o botão verde, por exemplo).
+   */
+  private pixel(chave: string, texto: string, cor: string, contorno: string, x: number, y: number, px: number): Phaser.GameObjects.Image {
+    if (this.textures.exists(chave)) this.textures.remove(chave);
+    // negrito: a mesma letra pintada duas vezes, a 2ª um pixel à direita (traço grosso, como no modelo)
+    const base = renderHudText(texto, cor, contorno);
+    const c = document.createElement('canvas');
+    c.width = base.width + 1;
+    c.height = base.height;
+    const ctx = c.getContext('2d')!;
+    ctx.drawImage(base, 0, 0);
+    ctx.drawImage(base, 1, 0);
+    this.textures.addCanvas(chave, c);
+    this.textures.get(chave).setFilter(Phaser.Textures.FilterMode.NEAREST);
+    return this.add.image(x, y, chave).setScale(px);
+  }
+
   create(): void {
+    // Visual do modelo enviado pelo solicitante (25/11/2026), adaptado à tela em pé: título pixel com a barra laranja,
+    // a cena da obra no meio e o botão verde COMEÇAR. Peças da cena: as mesmas do jogo (art.ts), nada desenhado de novo.
     this.cameras.main.setBackgroundColor(COLORS.background);
+    const fundo = '#10151F';
+
+    // título: barra laranja à esquerda, SINAL (creme) e VERDE (verde da logo)
+    // a célula da fonte tem 2 linhas de acento em cima: a letra começa 2 px (x escala) abaixo do y
+    this.add.rectangle(18, 26, 6, 86, 0xf28c28).setOrigin(0, 0);
+    this.pixel('titulo_1', 'SINAL', '#F4EAD5', fundo, 32, 16, 5).setOrigin(0, 0);
+    this.pixel('titulo_2', 'VERDE', '#7ED957', fundo, 32, 62, 5).setOrigin(0, 0);
+    const best = loadBest();
+    this.add
+      .text(20, 128, best > 0 ? `Seu melhor: ${best} faixas` : 'Atravesse a obra sem ser atingido!', {
+        fontFamily: FONT, fontSize: '13px', fontStyle: 'bold', color: COLORS.text,
+      })
+      .setOrigin(0, 0);
 
     // mini cenário: grama, estrada, rio, estrada e grama, com o técnico atravessando
-    const top = 96;
+    const top = 158;
     const bands: Array<'grass' | 'road' | 'river'> = ['grass', 'road', 'river', 'road', 'grass'];
     bands.forEach((kind, i) => {
       const y = top + i * CELL;
@@ -38,28 +72,25 @@ export class MenuScene extends Phaser.Scene {
     const hero = this.add.image(GAME_W / 2, mid(4), PLAYER).setDisplaySize(CELL, CELL);
     this.tweens.add({ targets: hero, y: mid(0), duration: 1400, yoyo: true, repeat: -1, hold: 300, ease: 'Sine.easeInOut' });
 
-    this.add
-      .text(GAME_W / 2, 40, 'SINAL', { fontFamily: FONT, fontSize: '38px', fontStyle: 'bold', color: COLORS.text })
-      .setOrigin(0.5);
-    this.add
-      .text(GAME_W / 2, 74, 'VERDE', { fontFamily: FONT, fontSize: '26px', fontStyle: 'bold', color: COLORS.flixRedText })
-      .setOrigin(0.5);
+    // botão COMEÇAR: verde com canto chanfrado e sombra embaixo; letra escura em pixel
+    const bx = GAME_W / 2, by = 352, bw = 216, bh = 50, ch = 6;
+    const g = this.add.graphics();
+    const chanfrado = (dy: number, cor: number): void => {
+      g.fillStyle(cor, 1);
+      g.fillPoints([
+        { x: bx - bw / 2 + ch, y: by - bh / 2 + dy }, { x: bx + bw / 2 - ch, y: by - bh / 2 + dy }, { x: bx + bw / 2, y: by - bh / 2 + ch + dy },
+        { x: bx + bw / 2, y: by + bh / 2 - ch + dy }, { x: bx + bw / 2 - ch, y: by + bh / 2 + dy }, { x: bx - bw / 2 + ch, y: by + bh / 2 + dy },
+        { x: bx - bw / 2, y: by + bh / 2 - ch + dy }, { x: bx - bw / 2, y: by - bh / 2 + ch + dy },
+      ], true);
+    };
+    chanfrado(4, 0x4e8f2e);
+    chanfrado(0, 0x7ac74f);
+    const rotulo = this.pixel('btn_comecar', 'COMEÇAR', '#16210F', '#7AC74F', bx, by, 3);
+    this.tweens.add({ targets: rotulo, alpha: 0.75, duration: 700, yoyo: true, repeat: -1 }); // convite discreto a tocar
 
-    this.add.image(GAME_W / 2, 268, portraitKey('happy')).setScale(2.5);
-    const best = loadBest();
     this.add
-      .text(GAME_W / 2, 330, best > 0 ? `Seu melhor: ${best} faixas` : 'Atravesse a obra sem ser atingido!', {
-        fontFamily: FONT, fontSize: '13px', color: COLORS.textMuted,
-      })
-      .setOrigin(0.5);
-
-    const tap = this.add
-      .text(GAME_W / 2, 386, 'TOQUE PARA COMEÇAR', { fontFamily: FONT, fontSize: '16px', fontStyle: 'bold', color: COLORS.text })
-      .setOrigin(0.5);
-    this.tweens.add({ targets: tap, alpha: 0.35, duration: 700, yoyo: true, repeat: -1 });
-    this.add
-      .text(GAME_W / 2, GAME_H - 38, '↑ ou W: avançar · ← → : lado · ↓ : voltar\nNo celular: toque para avançar,\ndeslize para os lados ou para baixo', {
-        fontFamily: FONT, fontSize: '10px', color: COLORS.textMuted, align: 'center', lineSpacing: 3,
+      .text(GAME_W / 2, GAME_H - 44, '↑ ou W para avançar · ← → para mover · ↓ para voltar\nNo celular, toque para avançar e deslize para mover.', {
+        fontFamily: FONT, fontSize: '10px', color: COLORS.text, align: 'center', lineSpacing: 4,
       })
       .setOrigin(0.5);
 

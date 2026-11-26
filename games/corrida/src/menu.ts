@@ -29,6 +29,16 @@ const CSS = `
 .fg-pista{justify-items:center;text-align:center;padding:10px}
 .fg-pista canvas.fg-tracado{width:100%;height:auto;aspect-ratio:8/5}
 .fg-num{color:#A3A8B2;font-size:12px}
+.fg-menu.abertura{background:linear-gradient(rgba(8,9,12,.15),rgba(8,9,12,.35) 45%,rgba(8,9,12,.8))} /* a pista aparece ao fundo */
+.fg-abertura{min-height:100%;display:grid;grid-template-rows:auto 1fr auto;justify-items:center;gap:12px;text-align:center}
+.fg-abertura .fg-voltar{justify-self:start}
+.fg-abertura-meio{display:grid;place-content:center;justify-items:center;gap:14px}
+.fg-jogar{appearance:none;border:0;cursor:pointer;background:#FFC83D;padding:16px 56px;min-height:56px;
+  clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px),0 10px);
+  box-shadow:0 6px 0 #B8860B;transition:transform .1s}
+.fg-jogar:hover,.fg-jogar:focus-visible{outline:none;filter:brightness(1.08)}
+.fg-jogar:active{transform:translateY(3px)}
+.fg-dica{color:#C9CDD4;margin:0;text-shadow:0 1px 2px #000}
 .fg-voltar{justify-self:start;padding:8px 14px;grid-auto-flow:column;align-items:center}
 .fg-girar{position:fixed;inset:0;z-index:11;display:grid;place-content:center;justify-items:center;gap:14px;background:rgba(8,9,12,.94);color:#A3A8B2;text-align:center;padding:24px}
 .fg-acoes{position:fixed;left:50%;top:76%;transform:translateX(-50%);z-index:10;display:flex;gap:12px} /* abaixo do resultado, acima da barra de teclas */
@@ -37,8 +47,8 @@ const CSS = `
 `;
 
 /** Texto na fonte pixel, como imagem nítida (cada pixel da letra = `escala` pixels de CSS). Maiúsculas, como no placar. */
-function letras(texto: string, escala: number, cor = '#F5F5F7'): HTMLCanvasElement {
-  const c = renderHudText(texto.toUpperCase(), cor, '#101217');
+function letras(texto: string, escala: number, cor = '#F5F5F7', contorno = '#101217'): HTMLCanvasElement {
+  const c = renderHudText(texto.toUpperCase(), cor, contorno);
   c.className = 'fg-px';
   c.style.width = `${c.width * escala}px`;
   c.style.height = 'auto'; // com max-width:100%, nome comprido (Spa-Francorchamps) encolhe para caber no cartão
@@ -107,6 +117,9 @@ export class MenuCorrida {
   private modoGrade: 'livre' | 'treino' = 'livre';
   private aoEscolher: ((e: Escolha) => void) | null = null;
   private readonly girar: HTMLDivElement;
+  /** Duas telas: a abertura (título + JOGAR, com a pista ao fundo) e a escolha do modo. */
+  private readonly telaAbertura: HTMLDivElement;
+  private readonly telaModos: HTMLDivElement;
 
   /** `aoSair`: volta ao hub (o jogo é imersivo: a barra do hub some, este é o único jeito de sair). */
   constructor(pistas: readonly PistaDef[], aoSair: () => void) {
@@ -117,6 +130,8 @@ export class MenuCorrida {
       document.head.appendChild(st);
     }
     const escala = window.innerWidth < 500 ? 2 : 3;
+    // abertura: título e JOGAR crescem com a altura da tela (no computador ficavam pequenos)
+    const grande = Math.max(escala + 1, Math.round(window.innerHeight / 140));
     this.raiz = document.createElement('div');
     this.raiz.className = 'fg-menu';
     this.raiz.setAttribute('role', 'dialog');
@@ -132,13 +147,33 @@ export class MenuCorrida {
       aoSair();
     });
 
+    // abertura: título grande, JOGAR e a pista de verdade passando ao fundo (o jogo desenha atrás desta camada)
+    this.telaAbertura = document.createElement('div');
+    this.telaAbertura.className = 'fg-abertura';
+    const meio = document.createElement('div');
+    meio.className = 'fg-abertura-meio';
+    const jogar = document.createElement('button');
+    jogar.type = 'button';
+    jogar.className = 'fg-jogar';
+    jogar.setAttribute('aria-label', 'Jogar');
+    jogar.append(letras('JOGAR', grande, '#1A1206', '#FFC83D')); // contorno da cor do botão: letra escura limpa
+    jogar.addEventListener('click', () => {
+      telaCheiaDeitada(); // no toque do jogador: o navegador só deixa assim
+      this.mostrar('modos');
+    });
+    const dica = document.createElement('p');
+    dica.className = 'fg-dica';
+    dica.textContent = 'Campeonato, corrida livre ou treino.';
+    meio.append(letras('FLIX GRID', grande + 3), jogar, dica);
+    this.telaAbertura.append(voltar, meio, document.createElement('span'));
+
+    const voltarAbertura = botao('fg-voltar', 'Voltar para a abertura');
+    voltarAbertura.append(letras('VOLTAR', 2));
+    voltarAbertura.addEventListener('click', () => this.mostrar('abertura'));
+
     const topo = document.createElement('div');
     topo.className = 'fg-topo';
-    topo.append(letras('FLIX GRID', escala + 2));
-    const sub = document.createElement('p');
-    sub.className = 'fg-sub';
-    sub.textContent = 'Escolha como quer correr.';
-    topo.append(sub);
+    topo.append(letras('ESCOLHA O MODO', escala + 1));
 
     const modos = document.createElement('div');
     modos.className = 'fg-modos';
@@ -185,8 +220,9 @@ export class MenuCorrida {
     });
     this.grade.addEventListener('keydown', (e) => this.navegar(e));
 
-    wrap.append(voltar, topo, modos, this.grade);
-    this.raiz.append(wrap);
+    wrap.append(voltarAbertura, topo, modos, this.grade);
+    this.telaModos = wrap;
+    this.raiz.append(this.telaAbertura, wrap);
     document.body.append(this.raiz);
 
     // botões do fim da corrida (por cima do resultado): seguir e voltar ao menu
@@ -215,13 +251,22 @@ export class MenuCorrida {
     return !this.raiz.hidden;
   }
 
-  abrir(aoEscolher: (e: Escolha) => void): void {
+  /** `tela`: a abertura (ao entrar no jogo) ou direto a escolha do modo (MENU no meio da corrida). */
+  abrir(aoEscolher: (e: Escolha) => void, tela: 'abertura' | 'modos' = 'abertura'): void {
     this.aoEscolher = aoEscolher;
     this.fecharAcoes();
-    this.mostrarGrade(false);
     this.raiz.hidden = false;
+    this.mostrar(tela);
+  }
+
+  private mostrar(tela: 'abertura' | 'modos'): void {
+    const abertura = tela === 'abertura';
+    this.telaAbertura.hidden = !abertura;
+    this.telaModos.hidden = abertura;
+    this.raiz.classList.toggle('abertura', abertura);
+    this.mostrarGrade(false);
     this.raiz.scrollTop = 0;
-    (this.raiz.querySelector('.fg-modo') as HTMLButtonElement | null)?.focus();
+    (this.raiz.querySelector(abertura ? '.fg-jogar' : '.fg-modo') as HTMLButtonElement | null)?.focus();
   }
 
   private escolher(e: Escolha): void {
