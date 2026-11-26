@@ -335,6 +335,31 @@ describe('moinho', () => {
     const ev = settle(h, 3);
     expect(tem(ev, 'bounce')).toBe(true);
   });
+  it('a pá que gira leva a bola parada junto (não atravessa) e não conta tacada', () => {
+    const rows = ['#######', '#.....#', '#..W..#', '#.....#', '#T...H#', '#######'];
+    const l = parseLevel({ id: 'm', name: 'm', par: 3, rows });
+    const h = createHole(l);
+    const w = l.windmills[0]!;
+    // bola parada no caminho da pá, a 1 bloco do centro
+    h.ball.x = w.x + 1;
+    h.ball.y = w.y;
+    h.strokes = 1;
+    let moveu = false;
+    for (let i = 0; i < 4 / DT; i++) {
+      step(h);
+      if (h.moving) moveu = true;
+      // nunca fica "dentro" de uma pá
+      for (const s of windmillBlades(w, h.clock)) {
+        const dx = s.b.x - s.a.x;
+        const dy = s.b.y - s.a.y;
+        const u = Math.max(0, Math.min(1, ((h.ball.x - s.a.x) * dx + (h.ball.y - s.a.y) * dy) / (dx * dx + dy * dy)));
+        expect(Math.hypot(h.ball.x - (s.a.x + dx * u), h.ball.y - (s.a.y + dy * u))).toBeGreaterThan(BALL_R * 0.9);
+      }
+    }
+    expect(moveu).toBe(true);
+    expect(Math.hypot(h.ball.x - (w.x + 1), h.ball.y - w.y)).toBeGreaterThan(0.3);
+    expect(h.strokes).toBe(1);
+  });
 });
 
 describe('bloco móvel', () => {

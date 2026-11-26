@@ -60,6 +60,14 @@ Portal (`web/`) e API (`api/`): comandos no README e nas entradas de “Onde par
 
 ## 4. Onde parou
 
+**26/11/2026 — [F]** G06 **Minigolfe Flix em 3D**, a pedido do solicitante:
+
+- **Física:** a pá do moinho atravessava a bola parada (com a bola parada o passo não checava colisão) e a tratava como parede fixa. Agora pás, blocos móveis e pistões empurram a bola de verdade, inclusive parada, sem contar tacada (`bounceMoving`, `pushResting` em `logic.ts`); teste novo.
+- **3D (Three.js 0.170):** campo com trilhos de madeira, luz e sombra, bola que rola, bandeira, moinho, bombas, portais, pistões, lava e esteiras animados (`mundo3d.ts`); placar, menu e fim de percurso em HTML/CSS (`telas.ts`); Phaser saiu deste jogo. Sem pixel; o retrato do personagem não aparece mais.
+- **Leveza:** resolução até 1,5x, sombras leves e qualidade que se ajusta sozinha ao aparelho (baixa resolução e, no limite, tira as sombras).
+- **Percurso de 25 buracos**, do mais fácil ao mais difícil: 9 fases novas de aprender e as 16 antigas reordenadas (`ORDEM` em `levels.ts`; `docs/MINIGOLFE_FASES.md`).
+- Validação: 56 testes; robô `SOLVE=1` encaçapou as 25; prints em celular e no hub. [D] Teste em celular real; ranking do mês mistura totais de 16 e de 25 buracos até zerar no dia 1.
+
 **26/11/2026 — [F]** G10 **Estoque Flix com visual novo**, a pedido do solicitante ("não quero esse visual pixelado"); mesmas regras, pontos, velocidade e controles (`logic.ts` não mudou):
 
 - Desenha na resolução real da tela (`camera.ts` calcula pela tela e pela densidade do aparelho), sem esticar imagem.

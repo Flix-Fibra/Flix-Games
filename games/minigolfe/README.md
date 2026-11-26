@@ -14,10 +14,11 @@ SOLVE=1 npx vitest run games/minigolfe/tools   # robô joga as 16 fases e prova 
 | O que mudar | Onde |
 |---|---|
 | Fases | `src/levels.ts` |
-| Física, pisos, limites, regras de pontuação | `src/logic.ts` (sem Phaser, com testes em `src/logic.test.ts`) |
+| Física, pisos, limites, regras de pontuação (inclui pás, blocos e pistões que empurram a bola, mesmo parada) | `src/logic.ts` (sem desenho, com testes em `src/logic.test.ts`) |
 | Cores e tamanhos | `src/theme.ts` |
-| Desenho do campo (pisos, postes, ímãs, portais, buraco) e dos engenhos que se mexem | `src/course.ts` |
-| Mira, bola, fluxo dos buracos | `src/scenes/PlayScene.ts` |
+| Campo em 3D (Three.js): chão, trilhos, postes, ímãs, portais, buraco, engenhos, câmera e efeitos | `src/mundo3d.ts` |
+| Mira (arrastar e soltar), fluxo dos buracos, hub | `src/main.ts` |
+| Placar, avisos, menu e fim de percurso (HTML/CSS por cima do 3D) | `src/telas.ts` |
 | Sons | `src/audio.ts` (WebAudio, sem arquivos) |
 
 Tudo é desenhado por código; nenhum arquivo de terceiros, nada a registrar em `ASSETS.md`.

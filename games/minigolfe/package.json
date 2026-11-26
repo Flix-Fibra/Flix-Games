@@ -12,6 +12,10 @@
     "@flix/avatar": "0.1.0",
     "@flix/game-kit": "0.1.0",
     "@flix/game-sdk": "0.2.0",
-    "phaser": "3.90.0"
+    "phaser": "3.90.0",
+    "three": "0.170.0"
+  },
+  "devDependencies": {
+    "@types/three": "0.170.0"
   }
 }

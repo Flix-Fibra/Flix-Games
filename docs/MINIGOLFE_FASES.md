@@ -1,4 +1,4 @@
-# Minigolfe Flix: as 16 fases e o conceito de cada uma
+# Minigolfe Flix: as fases e o conceito de cada uma
 
 Fases em `games/minigolfe/src/levels.ts` (grade de texto; ver `docs/ADDING_LEVELS.md`). As **7 primeiras recriam os campos desenhados pelo gestor** (pasta `Fases Mini Golf/`, imagens 1 a 7); da **8 em diante** combinam as mesmas mecânicas. O robô de `games/minigolfe/tools/levels.solve.test.ts` prova que todas têm solução. O par é estimativa; vale ajustar depois de jogadores reais.
 
@@ -7,7 +7,7 @@ Fases em `games/minigolfe/src/levels.ts` (grade de texto; ver `docs/ADDING_LEVEL
 | Mecânica | Letra na grade | Regra |
 |---|---|---|
 | **Bomba** | `B` | A bola que encosta é puxada para dentro e fica presa. A bomba gira sozinha e **a mira não é do jogador**: ele só escolhe a **força** (arrastar, ou um toque vale 0,6). A bola sai na direção em que a bomba aponta no instante da tacada. |
-| **Moinho** | `W` | Pás que giram; a bola bate nelas. É preciso passar na hora certa. |
+| **Moinho** | `W` | Pás que giram; a bola bate nelas e a pá que encosta leva a bola junto (mesmo parada). É preciso passar na hora certa. |
 | **Esteira** | `^ v < >` | Chão vermelho com setas: empurra a bola na direção apontada (desvia a tacada). |
 | **Portal** | `1` a `9` | Par de portais: a bola sai do outro com a **mesma velocidade e direção**. |
 | **Bloco móvel** | `blocks` na fase | Bloco branco que desliza pela trilha marcada no chão (faixa clara com engrenagem). Empurra a bola. |
@@ -49,3 +49,13 @@ Cada fase tem um **caminho seguro** (fecha no par) e um **atalho arriscado** (ch
 ## Como o robô confere as fases
 
 `SOLVE=1 npx vitest run games/minigolfe/tools` joga cada fase com tacadas aleatórias e escolhas gulosas (várias tentativas, com espera sorteada para pegar a janela de moinhos, blocos, pistões e lava). Todas as 16 fases foram encaçapadas, o que prova que existe caminho. Isso **não mede diversão nem dificuldade para gente**: depois de jogar, vale ajustar o par e as velocidades (`CANNON_SPEED`, `WINDMILL_SPEED`, `PISTON_PERIOD`, `LAVA_PERIOD` em `logic.ts`, ou `tune` na fase).
+
+## Percurso de 25 buracos, do mais fácil ao mais difícil (26/11/2026)
+
+A pedido do solicitante ("a primeira fase está muito difícil"), o percurso começa com 9 fases novas de aprender e as 16 anteriores foram reordenadas por dificuldade (ordem em `ORDEM`, no fim de `src/levels.ts`).
+
+1. **Fases de aprender (novas):** Primeira Tacada (reta), Esquina (uma curva), Tabela (bloco no meio, pode usar a parede), Banco de Areia, Postes, Ziguezague (duas curvas, par 4), Lago (água no caminho reto, desvio pela direita) e Patinação (gelo).
+2. **Uma mecânica por vez:** Esteira, Moinho Clássico (novo: só esperar a pá passar), Salto, Pistões, Dois Blocos, Lava, Pescoço e Teleporte e Esteira.
+3. **Combinações:** Moinho (antiga fase 1, com bombas), Bomba na Esteira, Portal dos Pistões, Gelo e Bomba, Lava e Rampa, Ímãs e Moinho, Moinho Duplo, Cruzamento e Grande Final.
+
+Robô (`SOLVE=1`): as 25 têm solução. O Ziguezague é o único em que o robô sofre (ele só mira o buraco, não planeja o caminho); para uma pessoa o caminho é claro, por isso o par 4.

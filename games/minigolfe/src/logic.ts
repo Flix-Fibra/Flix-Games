@@ -540,6 +540,74 @@ function bounceOff(b: Ball, p: Vec, r: number, e: number): number {
   return -vn;
 }
 
+/**
+ * Bola contra um ponto de um objeto que SE MOVE com velocidade (vx, vy) naquele ponto (ex.: a ponta da pá do moinho):
+ * empurra a bola para fora e reflete a velocidade RELATIVA. Se o objeto vem na direção da bola, ela sai levada por ele
+ * (a pá "varre" a bola), em vez de só ricochetear como numa parede parada.
+ */
+function bounceMoving(b: Ball, p: Vec, r: number, e: number, vx: number, vy: number): number {
+  let nx = b.x - p.x;
+  let ny = b.y - p.y;
+  const d = Math.hypot(nx, ny);
+  if (d >= r) return 0;
+  if (d < 1e-9) {
+    const s = Math.hypot(vx, vy);
+    nx = s > 1e-9 ? vx / s : 0;
+    ny = s > 1e-9 ? vy / s : -1;
+  } else {
+    nx /= d;
+    ny /= d;
+  }
+  b.x = p.x + nx * r;
+  b.y = p.y + ny * r;
+  const vn = (b.vx - vx) * nx + (b.vy - vy) * ny;
+  if (vn >= 0) return 0;
+  b.vx -= (1 + e) * vn * nx;
+  b.vy -= (1 + e) * vn * ny;
+  return -vn;
+}
+
+/** Velocidade de um ponto da pá do moinho (giro em torno do centro). */
+const bladePointVel = (w: Windmill, p: Vec): Vec => ({ x: -w.speed * (p.y - w.y), y: w.speed * (p.x - w.x) });
+
+/** Quanto a bola sai quicando de uma pá (a pá é de madeira: absorve um pouco). */
+const BLADE_RESTITUTION = 0.55;
+/** Velocidade com que o pistão, ao subir, joga para o lado a bola que estava em cima dele. */
+const PISTON_KICK = 2.2;
+
+/**
+ * Engenhos que se movem (pás, blocos, pistão subindo) também empurram a bola PARADA. Devolve true se ela foi
+ * empurrada (ela volta a rolar, sem contar tacada).
+ */
+function pushResting(h: HoleState): boolean {
+  const b = h.ball;
+  const l = h.level;
+  const t = h.clock;
+  let hit = false;
+  for (const w of l.windmills) {
+    for (const seg of windmillBlades(w, t)) {
+      const c = closestOnSeg(seg, b);
+      const v = bladePointVel(w, c);
+      if (bounceMoving(b, c, BALL_R + BLADE_R, BLADE_RESTITUTION, v.x, v.y) > 0) hit = true;
+    }
+  }
+  for (const bk of l.blocks) if (bounceRect(b, blockRect(bk, t), 0.4) > 0) hit = true;
+  for (const p of l.pistons) {
+    if (!pistonSolid(p, t)) continue;
+    const d = Math.hypot(b.x - p.x, b.y - p.y);
+    if (d < p.r + BALL_R) {
+      const nx = d > 1e-6 ? (b.x - p.x) / d : 0;
+      const ny = d > 1e-6 ? (b.y - p.y) / d : -1;
+      b.x = p.x + nx * (p.r + BALL_R);
+      b.y = p.y + ny * (p.r + BALL_R);
+      b.vx = nx * PISTON_KICK;
+      b.vy = ny * PISTON_KICK;
+      hit = true;
+    }
+  }
+  return hit;
+}
+
 const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v));
 
 /** Bola contra um retângulo que se move: empurra para fora e reflete a velocidade RELATIVA. Devolve a velocidade do impacto. */
@@ -586,7 +654,14 @@ export function step(h: HoleState, dt = DT): HoleEvent[] {
   const ev: HoleEvent[] = [];
   h.clock += dt;
   if (h.cannonCd > 0) h.cannonCd = Math.max(0, h.cannonCd - dt);
-  if (!h.moving || holeDone(h)) return ev;
+  if (holeDone(h)) return ev;
+  if (!h.moving) {
+    // bola parada: a pá, o bloco ou o pistão que encosta nela a leva junto
+    if (h.held !== null || !pushResting(h)) return ev;
+    h.moving = true;
+    h.roll = 0;
+    ev.push({ type: 'bounce', speed: Math.max(0.5, speedOf(h.ball)) });
+  }
   const b = h.ball;
   const l = h.level;
   const t = h.clock;
@@ -674,8 +749,10 @@ export function step(h: HoleState, dt = DT): HoleEvent[] {
       const imp = bounceOff(b, w, WINDMILL_HUB + BALL_R, 0.9);
       if (imp > 0.4) ev.push({ type: 'bounce', speed: imp });
     }
-    for (const { seg } of blades) {
-      const imp = bounceOff(b, closestOnSeg(seg, b), BALL_R + BLADE_R, 0.85);
+    for (const { seg, w } of blades) {
+      const c = closestOnSeg(seg, b);
+      const v = bladePointVel(w, c);
+      const imp = bounceMoving(b, c, BALL_R + BLADE_R, BLADE_RESTITUTION, v.x, v.y);
       if (imp > 0.4) ev.push({ type: 'bounce', speed: imp });
     }
     for (const r of rects) {
