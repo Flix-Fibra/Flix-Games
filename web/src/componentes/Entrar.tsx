@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { ErroApi, servico } from '../dados/servico';
+import '../estilos/entrar.css';
 
 /** Máscara de exibição: CPF 000.000.000-00 ou CNPJ 00.000.000/0000-00 (a API aceita com ou sem pontuação). */
 function mascarar(v: string): string {
@@ -42,10 +43,11 @@ export function Entrar({ onEntrou }: { onEntrou: () => void }) {
 
   const digitos = documento.replace(/\D/g, '').length;
   return (
-    <section className="gx-quem" aria-live="polite">
+    <section className="gx-quem gx-entrar" aria-live="polite">
+      <div className="gx-entrar-brilho" aria-hidden="true" />
       <img className="gx-quem-logo" src="/logo-flix-chapada.png" alt="Flix" width={218} height={84} />
-      <h1>Entrar no Flix Games</h1>
-      <p className="gx-quem-sub">{equipe ? 'Acesso da equipe Flix Games.' : 'Use o CPF ou CNPJ e a senha do Minha Flix.'}</p>
+      <h1>{equipe ? 'Bem-vindo, equipe.' : <>Seu próximo jogo<br /><span>começa aqui.</span></>}</h1>
+      <p className="gx-quem-sub">{equipe ? 'Acesso da equipe Flix Games.' : 'Entre com o CPF ou CNPJ e a senha do Minha Flix.'}</p>
       {equipe ? (
         <form className="gx-quem-novo" onSubmit={enviar} noValidate>
           <label className="gx-quem-campo">Usuário
@@ -70,7 +72,7 @@ export function Entrar({ onEntrou }: { onEntrou: () => void }) {
           <input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} autoComplete="current-password"
             maxLength={128} required />
         </label>
-        <p className="gx-quem-sub" style={{ margin: 0, fontSize: 13 }}>No primeiro acesso, a senha é o próprio CPF ou CNPJ, só números.</p>
+        <p className="gx-entrar-dica">No primeiro acesso, a senha é o próprio CPF ou CNPJ, só números.</p>
         {erro && <p className="perfil-msg erro" role="alert">{erro}</p>}
         <button className="btn" type="submit" disabled={enviando || (digitos !== 11 && digitos !== 14) || !senha}>
           {enviando ? 'Conferindo…' : 'Entrar'}

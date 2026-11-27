@@ -1,0 +1,147 @@
+/* Tela de login (Entrar.tsx): visual escuro, limpo e com brilho vermelho suave, no estilo Apple. */
+.gx-entrar {
+  position: relative;
+  isolation: isolate;
+  min-height: 100dvh;
+  max-width: none;
+  margin: 0;
+  padding: 72px 24px 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: #000;
+  color: #f5f5f7;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", system-ui, sans-serif;
+  overflow: hidden;
+}
+.gx-entrar-brilho {
+  position: absolute;
+  inset: -20% -10% auto;
+  height: 80%;
+  z-index: -1;
+  background:
+    radial-gradient(45% 55% at 50% 30%, rgba(229, 20, 43, .38), transparent 70%),
+    radial-gradient(30% 40% at 30% 10%, rgba(255, 80, 60, .16), transparent 70%),
+    radial-gradient(30% 40% at 72% 15%, rgba(160, 0, 40, .22), transparent 70%);
+  filter: blur(40px);
+  animation: gx-entrar-respira 9s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes gx-entrar-respira { from { opacity: .75; transform: scale(1); } to { opacity: 1; transform: scale(1.08); } }
+@keyframes gx-entrar-sobe { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+.gx-entrar > * { animation: gx-entrar-sobe .8s cubic-bezier(.2, .8, .2, 1) both; }
+.gx-entrar > h1 { animation-delay: .08s; }
+.gx-entrar > .gx-quem-sub { animation-delay: .16s; }
+.gx-entrar > form { animation-delay: .24s; }
+
+.gx-entrar .gx-quem-logo { width: 88px; height: auto; margin: 0 0 28px; filter: drop-shadow(0 8px 24px rgba(229, 20, 43, .35)); }
+.gx-entrar h1 {
+  margin: 0;
+  font-size: clamp(40px, 7vw, 68px);
+  line-height: 1.04;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  color: #f5f5f7;
+}
+.gx-entrar h1 span {
+  background: linear-gradient(90deg, #ff4d5e 0%, #e5142b 45%, #ff8a5c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.gx-entrar > .gx-quem-sub {
+  margin: 18px 0 40px;
+  font-size: 17px;
+  line-height: 1.5;
+  color: #a1a1a6;
+  letter-spacing: -0.01em;
+}
+
+.gx-entrar form {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 28px;
+  border-radius: 24px;
+  background: rgba(28, 28, 30, .55);
+  border: 1px solid rgba(255, 255, 255, .08);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .05);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  text-align: left;
+}
+.gx-entrar .gx-quem-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #a1a1a6;
+}
+.gx-entrar .gx-quem-campo input {
+  height: 50px;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  background: rgba(255, 255, 255, .06);
+  color: #f5f5f7;
+  font-size: 17px;
+  outline: none;
+  transition: border-color .2s, background .2s, box-shadow .2s;
+}
+.gx-entrar .gx-quem-campo input::placeholder { color: #6e6e73; }
+.gx-entrar .gx-quem-campo input:focus {
+  border-color: rgba(255, 77, 94, .8);
+  background: rgba(255, 255, 255, .09);
+  box-shadow: 0 0 0 4px rgba(229, 20, 43, .22);
+}
+.gx-entrar-dica { margin: -2px 0 4px; font-size: 12.5px; line-height: 1.45; color: #86868b; }
+
+.gx-entrar .btn {
+  height: 50px;
+  margin-top: 4px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #f0283d, #d10f24);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(229, 20, 43, .35);
+  transition: transform .15s ease, filter .2s, box-shadow .2s, opacity .2s;
+}
+.gx-entrar .btn:hover:not(:disabled) { filter: brightness(1.08); box-shadow: 0 14px 38px rgba(229, 20, 43, .45); }
+.gx-entrar .btn:active:not(:disabled) { transform: scale(.98); }
+.gx-entrar .btn:disabled { opacity: .4; cursor: default; box-shadow: none; }
+.gx-entrar .btn.light {
+  background: transparent;
+  color: #f5f5f7;
+  border: 1px solid rgba(255, 255, 255, .16);
+  box-shadow: none;
+}
+.gx-entrar .gx-quem-excluir {
+  align-self: center;
+  margin-top: 6px;
+  border: 0;
+  background: none;
+  color: #a1a1a6;
+  font-size: 14px;
+  cursor: pointer;
+  transition: color .2s;
+}
+.gx-entrar .gx-quem-excluir:hover { color: #ff4d5e; }
+.gx-entrar .perfil-msg.erro { margin: 0; font-size: 14px; color: #ff6961; }
+
+@media (max-width: 480px) {
+  .gx-entrar { padding-top: 56px; }
+  .gx-entrar form { padding: 22px; border-radius: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gx-entrar > *, .gx-entrar-brilho { animation: none; }
+}
