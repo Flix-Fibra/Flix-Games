@@ -60,6 +60,8 @@ Portal (`web/`) e API (`api/`): comandos no README e nas entradas de “Onde par
 
 ## 4. Onde parou
 
+**27/11/2026 — [F]** **Login do cliente ligado:** a chave da API Própria saiu do cofre do .232 para o .226 por uma entrada SSH restrita (só gravar o arquivo, só daquele IP), apagada logo depois, e foi instalada na API. Teste direto na rota: com a chave vem `401 {"erro":"login_invalido"}` (chave aceita); sem a chave, `401 {"error":"API key inválida ou ausente"}`. Como os dois são 401, o site agora só mostra "senha incorreta" com `login_invalido`; qualquer outro 401 vira "tente mais tarde" e um aviso no log (`conferidor.py`; teste em `test_login.py`). [D] Primeiro login real do solicitante voltou `login_invalido`: conferir a senha no Minha Flix.
+
 **26/11/2026 — [F]** G06 **Minigolfe Flix em 3D**, a pedido do solicitante:
 
 - **Física:** a pá do moinho atravessava a bola parada (com a bola parada o passo não checava colisão) e a tratava como parede fixa. Agora pás, blocos móveis e pistões empurram a bola de verdade, inclusive parada, sem contar tacada (`bounceMoving`, `pushResting` em `logic.ts`); teste novo.

@@ -193,7 +193,10 @@ def test_interpretar_respostas_do_contrato():
     assert ok == Resultado(Situacao.LIBERADO, "c-123")
     assert _interpretar(200, _j({"flix_games_ativo": False, "motivo": "sem_flix_games"})).situacao is Situacao.SEM_GAMES
     assert _interpretar(200, _j({"flix_games_ativo": False, "motivo": "contrato_bloqueado"})).situacao is Situacao.BLOQUEADO
-    assert _interpretar(401, b"").situacao is Situacao.SENHA_ERRADA
+    assert _interpretar(401, _j({"ok": False, "erro": "login_invalido"})).situacao is Situacao.SENHA_ERRADA
+    # chave recusada também vem como 401, mas não é culpa do cliente: "tente mais tarde", nunca "senha errada"
+    assert _interpretar(401, _j({"error": "API key inválida ou ausente"})).situacao is Situacao.INDISPONIVEL
+    assert _interpretar(401, b"").situacao is Situacao.INDISPONIVEL
     assert _interpretar(429, b"").situacao is Situacao.MUITAS_TENTATIVAS
     for st in (422, 500, 502, 503, 403):
         assert _interpretar(st, b"").situacao is Situacao.INDISPONIVEL
