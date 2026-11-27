@@ -42,6 +42,7 @@ export interface BallState {
   charge: number; // carga do foguete (0 a CHARGE_MAX)
   rocket: number; // andares que o foguete ainda vai quebrar (0 = desligado)
   safeLanding: boolean; // fim do foguete: o próximo pouso é seguro, até na alta tensão
+  impacto: boolean; // quebrou um andar com a sequência: o próximo pouso queima a alta tensão em vez de matar
 }
 
 export type StepEvent =
@@ -52,6 +53,7 @@ export type StepEvent =
   | { type: 'shield-got'; floor: number; seg: number }
   | { type: 'rocket-start' }
   | { type: 'rocket-end'; floor: number }
+  | { type: 'impact'; floor: number; seg: number }
   | { type: 'dead'; floor: number; seg: number; cause: DeathCause };
 
 /** Gerador pseudoaleatório com semente (mulberry32): a mesma semente gera a mesma torre. */
@@ -187,7 +189,7 @@ export class Tower {
 }
 
 export function newBall(): BallState {
-  return { y: floorY(0) + FLOOR_THICK + BALL_R + 1.2, vy: 0, streak: 0, shield: false, charge: 0, rocket: 0, safeLanding: false };
+  return { y: floorY(0) + FLOOR_THICK + BALL_R + 1.2, vy: 0, streak: 0, shield: false, charge: 0, rocket: 0, safeLanding: false, impacto: false };
 }
 
 /**
@@ -243,15 +245,21 @@ export function step(
     if (ball.streak >= FEVER_STREAK) {
       // Boost: atravessou andares seguidos e destrói este, qualquer que seja a fatia. A bola não quica no ar
       // onde estava o andar: segue caindo e quica no próximo (o boost acaba aqui).
+      // Pouso de impacto: a bola despenca rápido demais para desviar; o próximo pouso queima a alta tensão.
       floor.broken = true;
       ball.streak = 0;
+      ball.impacto = true;
       events.push({ type: 'break', floor: floor.index }, { type: 'pass', floor: floor.index });
       charge(ball, events);
       nextFloor++;
       continue;
     }
 
-    if (kind === 'danger' && !ball.safeLanding) {
+    if (kind === 'danger' && ball.impacto && !ball.safeLanding) {
+      // a placa de alta tensão queima com o impacto e vira placa comum
+      floor.segs[seg] = 'solid';
+      events.push({ type: 'impact', floor: floor.index, seg });
+    } else if (kind === 'danger' && !ball.safeLanding) {
       if (ball.shield) {
         ball.shield = false;
         events.push({ type: 'shield-used', floor: floor.index, seg });
@@ -267,6 +275,7 @@ export function step(
       events.push({ type: 'shield-got', floor: floor.index, seg });
     }
     ball.streak = 0;
+    ball.impacto = false;
     if (ball.safeLanding) {
       ball.safeLanding = false;
       events.push({ type: 'rocket-end', floor: floor.index });

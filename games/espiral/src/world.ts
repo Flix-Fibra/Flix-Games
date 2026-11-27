@@ -565,6 +565,13 @@ export class World {
     v.icons.delete(seg);
   }
 
+  /** Pouso de impacto: a placa de alta tensão queimou (virou placa comum); refaz o andar com as novas fatias. */
+  refazerAndar(tower: Tower, floorIndex: number): void {
+    if (!this.floors.has(floorIndex)) return;
+    this.dropFloor(floorIndex);
+    this.buildFloor(tower, floorIndex);
+  }
+
   /** Quebra o andar: as placas voam para fora e somem. */
   onBreak(floorIndex: number): void {
     const v = this.floors.get(floorIndex);

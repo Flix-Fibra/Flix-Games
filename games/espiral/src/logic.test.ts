@@ -150,6 +150,25 @@ describe('física', () => {
     expect(types.filter((e) => e === 'pass')).toHaveLength(4);
   });
 
+  it('pouso de impacto: depois da quebra pela sequência, cair na alta tensão queima a placa em vez de matar', () => {
+    const gap = withSeg('solid', 0, 'gap');
+    // o caso do jogo: 3 vãos alinhados, o 4º andar quebra e o 5º tem alta tensão bem embaixo
+    const t = fixedTower([gap, gap, gap, all('solid'), withSeg('solid', 0, 'danger'), all('solid')]);
+    const { ball, events } = dropOn(t, 0, rotationFor(0));
+    const types = events.map((e) => e.type);
+    expect(types).not.toContain('dead');
+    expect(events.find((e) => e.type === 'impact')).toMatchObject({ floor: 4, seg: 0 });
+    expect(t.get(4).segs[0]).toBe('solid');
+    expect(events.at(-1)).toMatchObject({ type: 'bounce', floor: 4 });
+    expect(ball.impacto).toBe(false); // vale só para um pouso
+  });
+
+  it('o impacto vale só para o pouso logo depois da quebra', () => {
+    const t = fixedTower([withSeg('solid', 0, 'danger')]);
+    const { events } = dropOn(t, 0, rotationFor(0), { impacto: false });
+    expect(events.at(-1)).toMatchObject({ type: 'dead' });
+  });
+
   it('o quique não alcança o andar de cima', () => {
     const t = fixedTower([all('solid')]);
     const b: BallState = { ...newBall(), y: floorY(1) + FLOOR_THICK + BALL_R, vy: BOUNCE_SPEED };

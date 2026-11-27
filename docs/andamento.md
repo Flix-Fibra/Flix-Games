@@ -60,6 +60,12 @@ Portal (`web/`) e API (`api/`): comandos no README e nas entradas de “Onde par
 
 ## 4. Onde parou
 
+**27/11/2026 — [F]** G14 **Signal Drop** e G04 **Space Ping**, a pedido do solicitante:
+
+- **Avatar do hub no Signal Drop:** o canto superior esquerdo mostra o retrato do personagem do hub (`personagem.retrato` do `init`, SDK 0.2.0), com pulinho ao acertar e tremida ao perder; sem personagem, fica o avatar antigo.
+- **Pouso de impacto (Signal Drop):** depois de quebrar um andar com a sequência (3 seguidos), a bola despencava direto no andar de baixo e morria se houvesse alta tensão ali. Agora esse pouso queima a placa vermelha (vira placa comum) e mostra "Impacto!"; vale só para um pouso (`impacto` em `logic.ts`; 2 testes novos).
+- **Soltar o mouse sem Esc:** botão direito ou P soltam o mouse preso (o Esc do Chrome sai da tela cheia e minimiza a página do hub). Função comum `packages/flix-game-kit/src/soltarMouse.ts`, usada nos dois jogos que prendem o mouse; dica no menu de cada um.
+
 **27/11/2026 — [F]** **Acesso da equipe retirado**, a pedido do solicitante, agora que o login do cliente funciona: rota `/api/entrar-equipe`, tela `/?equipe`, segredo `equipe` do compose e `scripts/deploy/codigo_equipe.py` saíram. As 4 contas `EQUIPE-*` foram apagadas no banco (perfis Rafael1vss e tobiloide junto; backup `backup-flix-games-20261127-1051-antes-apagar-equipe.sql.gz` no servidor). Antes, o perfil Zod (57 partidas) foi movido para a conta de cliente do solicitante. 76 testes da API.
 
 **27/11/2026 — [F]** **Login do cliente ligado:** a chave da API Própria saiu do cofre do .232 para o .226 por uma entrada SSH restrita (só gravar o arquivo, só daquele IP), apagada logo depois, e foi instalada na API. Teste direto na rota: com a chave vem `401 {"erro":"login_invalido"}` (chave aceita); sem a chave, `401 {"error":"API key inválida ou ausente"}`. Como os dois são 401, o site agora só mostra "senha incorreta" com `login_invalido`; qualquer outro 401 vira "tente mais tarde" e um aviso no log (`conferidor.py`; teste em `test_login.py`). [D] Primeiro login real do solicitante voltou `login_invalido`: conferir a senha no Minha Flix.
