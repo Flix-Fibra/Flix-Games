@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Path, Request, Response
 from pydantic import BaseModel, Field, field_validator
 from psycopg.errors import CheckViolation, UniqueViolation
 
-from . import equipe, travas
+from . import travas
 from .conferidor import Situacao, conferir, documento_valido
 from .config import config
 from .consultas import montar_perfil
@@ -143,14 +143,6 @@ class Entrada(BaseModel):
         return d
 
 
-class EntradaEquipe(BaseModel):
-    """Usuário e senha da equipe (cadastrados no servidor). A senha nunca é guardada nem registrada."""
-
-    usuario: str = Field(min_length=2, max_length=30)
-    senha: str = Field(min_length=1, max_length=128, repr=False)
-
-
-MSG_CODIGO = "Usuário ou senha da equipe incorretos."
 
 
 # Mensagens para o cliente (a API Própria pede: com o sistema fora, nunca dizer que a senha está errada)
@@ -189,26 +181,6 @@ def entrar(dados: Entrada, request: Request, response: Response, c: Db) -> None:
     conta = c.execute(
         "INSERT INTO contas (cliente_ref) VALUES (%s) ON CONFLICT (cliente_ref) DO UPDATE SET ativo = TRUE RETURNING id",
         (r.cliente_ref,),
-    ).fetchone()
-    assert conta is not None
-    criar_sessao(c, conta["id"], request, response)
-
-
-# ---------- Acesso da equipe (antes do login do cliente ser liberado) ----------
-@router.post("/entrar-equipe", status_code=204)
-def entrar_equipe(dados: EntradaEquipe, request: Request, response: Response, c: Db) -> None:
-    ip = travas.ip_do_cliente(request)
-    chave = "equipe:" + ip  # trava por IP: um ataque não bloqueia os outros membros da equipe
-    if not travas.pode_tentar(chave, ip):
-        raise HTTPException(429, MSG_ESPERA)
-    nome = equipe.conferir(dados.usuario, dados.senha)
-    if not nome:
-        travas.senha_errada(chave)
-        raise HTTPException(401, MSG_CODIGO)
-    travas.acertou(chave)
-    conta = c.execute(
-        "INSERT INTO contas (cliente_ref) VALUES (%s) ON CONFLICT (cliente_ref) DO UPDATE SET ativo = TRUE RETURNING id",
-        ("EQUIPE-" + nome.upper(),),
     ).fetchone()
     assert conta is not None
     criar_sessao(c, conta["id"], request, response)
