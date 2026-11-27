@@ -1,4 +1,4 @@
-/* Tela de login (Entrar.tsx): visual escuro, limpo e com brilho vermelho suave, no estilo Apple. */
+/* Tela de login (Entrar.tsx): visual escuro, limpo e com sombra escura destacando a marca, no estilo Apple. */
 .gx-entrar {
   /* continua sendo a camada fixa de tela cheia da base (.gx-quem); aqui só o visual */
   position: fixed;
