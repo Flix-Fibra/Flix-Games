@@ -20,8 +20,9 @@ export function Entrar({ onEntrou }: { onEntrou: () => void }) {
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
-  // Acesso da equipe: usuário e senha cadastrados no servidor (antes do login do cliente ser liberado)
-  const [equipe, setEquipe] = useState(false);
+  // Acesso da equipe: usuário e senha cadastrados no servidor. Não aparece para o cliente;
+  // a equipe abre pelo endereço com ?equipe (ex.: games.flixfibra.com.br/?equipe).
+  const [equipe, setEquipe] = useState(() => new URLSearchParams(window.location.search).has('equipe'));
   const [usuario, setUsuario] = useState('');
 
   async function enviar(e: FormEvent) {
@@ -77,7 +78,6 @@ export function Entrar({ onEntrou }: { onEntrou: () => void }) {
         <button className="btn" type="submit" disabled={enviando || (digitos !== 11 && digitos !== 14) || !senha}>
           {enviando ? 'Conferindo…' : 'Entrar'}
         </button>
-        <button className="gx-quem-excluir" type="button" onClick={() => { setEquipe(true); setErro(''); setSenha(''); }}>Sou da equipe Flix Games</button>
       </form>
       )}
     </section>
