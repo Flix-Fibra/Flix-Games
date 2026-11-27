@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { ErroApi, servico } from '../dados/servico';
 import '../estilos/entrar.css';
+import { Vitrine } from './Vitrine';
 
 /** Máscara de exibição: CPF 000.000.000-00 ou CNPJ 00.000.000/0000-00 (a API aceita com ou sem pontuação). */
 function mascarar(v: string): string {
@@ -45,6 +46,7 @@ export function Entrar({ onEntrou }: { onEntrou: () => void }) {
   const digitos = documento.replace(/\D/g, '').length;
   return (
     <section className="gx-quem gx-entrar" aria-live="polite">
+      <Vitrine />
       <div className="gx-entrar-brilho" aria-hidden="true" />
       <div className="gx-entrar-marca">
         <img className="gx-quem-logo" src="/logo-flix-chapada.png" alt="Flix" width={218} height={84} />
