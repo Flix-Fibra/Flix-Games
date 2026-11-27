@@ -51,6 +51,11 @@ export interface TelaFimDeJogo {
   depth: number;
   /** Imagem opcional acima do título (ex.: retrato do avatar). */
   retrato?: Phaser.GameObjects.Image;
+  /**
+   * Altura máxima do retrato, em px da cena (padrão: 20% da altura). O retrato pode vir em qualquer tamanho (o
+   * personagem da plataforma é bem maior que o avatar antigo): acima disso, ele é reduzido.
+   */
+  retratoMax?: number;
   titulo?: string;
   /** Texto embaixo do número grande (padrão "PONTOS"; jogos de menor-é-melhor podem usar "TACADAS", por exemplo). */
   rotulo?: string;
@@ -77,7 +82,15 @@ export function telaFimDeJogo(scene: Phaser.Scene, o: TelaFimDeJogo): Phaser.Gam
   // monta a pilha de cima para baixo e depois centraliza na tela
   type Item = Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Transform & { displayHeight: number };
   const itens: { obj: Item; gap: number }[] = [];
-  if (o.retrato) itens.push({ obj: o.retrato.setOrigin(0.5, 0).setPosition(cx, 0), gap: 4 * o.px.texto });
+  if (o.retrato) {
+    const r = o.retrato.setOrigin(0.5, 0).setPosition(cx, 0);
+    const max = o.retratoMax ?? Math.round(o.altura * 0.2);
+    if (r.displayHeight > max) {
+      const s = max / r.height;
+      r.setScale(s >= 1 ? Math.floor(s) : s); // ampliação inteira mantém a pixel art nítida
+    }
+    itens.push({ obj: r, gap: 4 * o.px.texto });
+  }
   const t = (s: string, px: number, cor = 0xffffff) => hudText(scene, cx, 0, s, px).setOrigin(0.5, 0).setTint(cor);
   itens.push({ obj: t(o.titulo ?? 'FIM DE JOGO', o.px.titulo, 0xf6e7c1), gap: 4 * o.px.texto });
   itens.push({ obj: t(String(o.pontos), o.px.pontos), gap: -2 * o.px.texto });
@@ -104,7 +117,15 @@ export function telaFimDeJogo(scene: Phaser.Scene, o: TelaFimDeJogo): Phaser.Gam
   const botao = scene.add.container(cx, 0, [g, rotulo]).setSize(bw, bh);
   itens.push({ obj: botao, gap: 0 });
 
-  const total = itens.reduce((s, i) => s + i.obj.displayHeight + i.gap, 0);
+  // A pilha inteira sempre cabe na tela, com margem: o botão nunca fica para fora (o retrato é a parte que encolhe)
+  const somar = () => itens.reduce((s, i) => s + i.obj.displayHeight + i.gap, 0);
+  const margem = 4 * o.px.texto;
+  let total = somar();
+  if (o.retrato && total > o.altura - 2 * margem) {
+    const sobra = total - (o.altura - 2 * margem);
+    o.retrato.setScale(Math.max(0, (o.retrato.displayHeight - sobra) / o.retrato.height));
+    total = somar();
+  }
   let y = Math.round(o.altura / 2 - total / 2);
   for (const i of itens) {
     i.obj.y = y;
