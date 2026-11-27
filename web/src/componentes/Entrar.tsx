@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { ErroApi, servico } from '../dados/servico';
+import '../estilos/entrar.css';
+import { Vitrine } from './Vitrine';
 
 /** Máscara de exibição: CPF 000.000.000-00 ou CNPJ 00.000.000/0000-00 (a API aceita com ou sem pontuação). */
 function mascarar(v: string): string {
@@ -19,9 +21,6 @@ export function Entrar({ onEntrou }: { onEntrou: () => void }) {
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
-  // Acesso da equipe: usuário e senha cadastrados no servidor (antes do login do cliente ser liberado)
-  const [equipe, setEquipe] = useState(false);
-  const [usuario, setUsuario] = useState('');
 
   async function enviar(e: FormEvent) {
     e.preventDefault();
@@ -29,8 +28,7 @@ export function Entrar({ onEntrou }: { onEntrou: () => void }) {
     setErro('');
     setEnviando(true);
     try {
-      if (equipe) await servico.entrarEquipe(usuario, senha);
-      else await servico.entrar(documento, senha);
+      await servico.entrar(documento, senha);
       setSenha('');
 
       onEntrou();
@@ -42,25 +40,14 @@ export function Entrar({ onEntrou }: { onEntrou: () => void }) {
 
   const digitos = documento.replace(/\D/g, '').length;
   return (
-    <section className="gx-quem" aria-live="polite">
-      <img className="gx-quem-logo" src="/logo-flix-chapada.png" alt="Flix" width={218} height={84} />
-      <h1>Entrar no Flix Games</h1>
-      <p className="gx-quem-sub">{equipe ? 'Acesso da equipe Flix Games.' : 'Use o CPF ou CNPJ e a senha do Minha Flix.'}</p>
-      {equipe ? (
-        <form className="gx-quem-novo" onSubmit={enviar} noValidate>
-          <label className="gx-quem-campo">Usuário
-            <input value={usuario} onChange={(e) => setUsuario(e.target.value)} autoComplete="username" autoCapitalize="none"
-              maxLength={30} required autoFocus />
-          </label>
-          <label className="gx-quem-campo">Senha
-            <input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} autoComplete="current-password"
-              maxLength={128} required />
-          </label>
-          {erro && <p className="perfil-msg erro" role="alert">{erro}</p>}
-          <button className="btn" type="submit" disabled={enviando || usuario.trim().length < 2 || !senha}>{enviando ? 'Conferindo…' : 'Entrar'}</button>
-          <button className="btn light" type="button" onClick={() => { setEquipe(false); setErro(''); setSenha(''); }}>Entrar com CPF ou CNPJ</button>
-        </form>
-      ) : (
+    <section className="gx-quem gx-entrar" aria-live="polite">
+      <Vitrine />
+      <div className="gx-entrar-marca">
+        <img className="gx-quem-logo" src="/logo-flix-hd.png" alt="Flix" width={1200} height={464} decoding="async" />
+        <img className="gx-entrar-games" src="/logo-games.svg" alt="Games" width={64} height={11} />
+      </div>
+      <h1>Seu próximo jogo<br /><span>começa aqui.</span></h1>
+      <p className="gx-quem-sub">Entre com o CPF ou CNPJ e a senha do Minha Flix.</p>
       <form className="gx-quem-novo" onSubmit={enviar} noValidate>
         <label className="gx-quem-campo">CPF ou CNPJ
           <input value={documento} onChange={(e) => setDocumento(mascarar(e.target.value))} inputMode="numeric"
@@ -70,14 +57,12 @@ export function Entrar({ onEntrou }: { onEntrou: () => void }) {
           <input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} autoComplete="current-password"
             maxLength={128} required />
         </label>
-        <p className="gx-quem-sub" style={{ margin: 0, fontSize: 13 }}>No primeiro acesso, a senha é o próprio CPF ou CNPJ, só números.</p>
+        <p className="gx-entrar-dica">No primeiro acesso, a senha é o próprio CPF ou CNPJ, só números.</p>
         {erro && <p className="perfil-msg erro" role="alert">{erro}</p>}
         <button className="btn" type="submit" disabled={enviando || (digitos !== 11 && digitos !== 14) || !senha}>
           {enviando ? 'Conferindo…' : 'Entrar'}
         </button>
-        <button className="gx-quem-excluir" type="button" onClick={() => { setEquipe(true); setErro(''); setSenha(''); }}>Sou da equipe Flix Games</button>
       </form>
-      )}
     </section>
   );
 }

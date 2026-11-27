@@ -11,12 +11,15 @@ chamada pelo servidor (a chave só funciona a partir do IP do servidor). Nenhum 
 """
 import hashlib
 import json
+import logging
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from enum import Enum
 
 from .config import config
+
+log = logging.getLogger(__name__)
 
 
 class Situacao(str, Enum):
@@ -50,9 +53,23 @@ def _chave() -> str | None:
     return v or None
 
 
+def _corpo_json(corpo: bytes) -> dict | None:
+    try:
+        d = json.loads(corpo)
+    except ValueError:
+        return None
+    return d if isinstance(d, dict) else None
+
+
 def _interpretar(status: int, corpo: bytes) -> Resultado:
     if status == 401:
-        return Resultado(Situacao.SENHA_ERRADA)
+        # 401 serve para duas coisas na API Própria: login errado ({"erro": "login_invalido"}) e chave recusada
+        # ({"error": "API key inválida ou ausente"}). Só o primeiro é culpa do cliente; o segundo é nosso.
+        d = _corpo_json(corpo)
+        if d is not None and d.get("erro") == "login_invalido":
+            return Resultado(Situacao.SENHA_ERRADA)
+        log.warning("API Própria respondeu 401 sem login_invalido: chave recusada? (conferir o arquivo da chave)")
+        return Resultado(Situacao.INDISPONIVEL)
     if status == 429:
         return Resultado(Situacao.MUITAS_TENTATIVAS)
     if status != 200:
@@ -88,7 +105,11 @@ def _conferir_api_propria(documento: str, senha: str) -> Resultado:
         with urllib.request.urlopen(req, timeout=TEMPO_LIMITE_S) as r:  # noqa: S310 (URL fixa da configuração, https)
             return _interpretar(r.status, r.read(64 * 1024))
     except urllib.error.HTTPError as e:
-        return _interpretar(e.code, b"")
+        try:
+            corpo = e.read(64 * 1024)
+        except OSError:
+            corpo = b""
+        return _interpretar(e.code, corpo)
     except (urllib.error.URLError, TimeoutError, OSError):
         return Resultado(Situacao.INDISPONIVEL)
 

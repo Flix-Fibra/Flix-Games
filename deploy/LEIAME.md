@@ -34,16 +34,9 @@ sudo sh -c 'umask 077; printf "POSTGRES_PASSWORD=%s\n" "$(openssl rand -hex 32)"
 # Chave da API Própria (o Marcio entrega em mãos). Enquanto não houver chave, um arquivo vazio:
 # o login responde "tente mais tarde" (503), sem dizer que a senha está errada.
 sudo install -m 400 -o 10001 -g 10001 /dev/null /opt/flix-games/segredos/api_propria_chave
-# Usuários da equipe (só os hashes das senhas; vazio = ninguém da equipe entra)
-sudo install -m 400 -o 10001 -g 10001 /dev/null /opt/flix-games/segredos/equipe
 ```
 
-Acesso da equipe ao site antes do login do cliente funcionar: usuário e senha, na opção "Sou da equipe Flix Games" da tela de entrada. Para cadastrar ou trocar uma senha (digitada sem aparecer na tela; vale na hora):
-
-```bash
-sudo python3 /opt/flix-games/app/scripts/deploy/codigo_equipe.py rafael            # cadastra ou troca
-sudo python3 /opt/flix-games/app/scripts/deploy/codigo_equipe.py tobias --remover   # tira o acesso
-```
+O acesso da equipe (usuário e senha) foi retirado em 27/11/2026, quando o login do cliente passou a funcionar: hoje todo mundo entra com CPF ou CNPJ.
 
 Para gravar a chave quando ela chegar, sem que ela vá para o histórico ou para a tela:
 
@@ -99,7 +92,7 @@ Publicar um jogo é uma decisão, não um passo do deploy. Todos nascem sem publ
 - `curl -sI https://games.flixfibra.com.br/` → 200; `curl -sI https://games.flixfibra.com.br/games/snake/` → 200 com `access-control-allow-origin: *`.
 - `curl -s -o /dev/null -w '%{http_code}' https://games.flixfibra.com.br/api/docs` → 404 (sem documentação em produção).
 - `sudo docker compose -p flix-games -f /opt/flix-games/app/compose.producao.yaml logs --tail 50 api` → sem erro, e sem CPF ou senha em linha nenhuma.
-- No celular: tela "Entrar no Flix Games", login de teste, abrir um jogo, terminar uma partida e ver o ranking.
+- No celular: tela de entrada ("Seu próximo jogo começa aqui."), login de teste, abrir um jogo, terminar uma partida e ver o ranking.
 
 ### Voltar atrás
 

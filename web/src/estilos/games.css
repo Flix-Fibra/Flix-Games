@@ -289,18 +289,18 @@ main{position:relative;z-index:2;max-width:1550px;margin:0 auto;padding:4px 16px
 .aparelho-sair{grid-column:2;justify-self:start;padding:6px 12px;min-height:36px;font-size:12px}
 
 /* ---------- Quem vai jogar? (seletor de perfis) ---------- */
-.gx-quem{position:fixed;inset:0;z-index:60;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:6px;
+.gx-quem{position:fixed;inset:0;z-index:60;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;justify-content:safe center;gap:6px;
   padding:calc(24px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));text-align:center;
   background:radial-gradient(90% 60% at 50% 0%,rgba(212,20,44,.28),transparent 70%),var(--bg)}
 /* O fundo entra já opaco (nada da tela de baixo aparece); só o conteúdo anima */
 .gx-quem>*{animation:entra .45s var(--ease) both}
-/* Centralizado na vertical por margens automáticas: com conteúdo maior que a tela, rola desde o topo (com
-   justify-content:center o topo ficaria cortado e inalcançável) */
-.gx-quem>:first-child{margin-top:auto}.gx-quem>:last-child{margin-bottom:auto}
+/* "safe center" (igual ao login, entrar.css): centraliza, mas com conteúdo maior que a tela rola desde o topo em vez
+   de cortá-lo. Navegador antigo fica com o "center" da linha anterior. */
 .gx-quem[hidden]{display:none}
-/* Mesma medida e proporção do logo do menu (.marca img): um tamanho só em toda a plataforma */
-.gx-quem-logo{height:24px;width:auto;aspect-ratio:135/53;object-fit:fill;margin-bottom:18px}
-@media (min-width:768px){.gx-quem-logo{height:28px}}
+/* Mesma medida e proporção do logo do menu (.marca img). O login (entrar.css) tem a marca grande, própria dele. */
+.gx-quem-logo{height:24px;width:auto;margin-bottom:18px}
+.gx-quem:not(.gx-entrar) .gx-quem-logo{aspect-ratio:135/53;object-fit:fill}
+@media (min-width:768px){.gx-quem:not(.gx-entrar) .gx-quem-logo{height:28px}}
 .gx-quem h1{margin:0;font-size:clamp(26px,7vw,40px);font-weight:800;letter-spacing:-.02em}
 .gx-quem-sub{margin:0 0 22px;color:var(--muted)}
 .gx-quem-lista{display:flex;flex-wrap:wrap;justify-content:center;gap:18px 22px}
