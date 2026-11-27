@@ -42,7 +42,6 @@ export function Entrar({ onEntrou }: { onEntrou: () => void }) {
   return (
     <section className="gx-quem gx-entrar" aria-live="polite">
       <Vitrine />
-      <div className="gx-entrar-brilho" aria-hidden="true" />
       <div className="gx-entrar-marca">
         <img className="gx-quem-logo" src="/logo-flix-hd.png" alt="Flix" width={1200} height={464} decoding="async" />
         <img className="gx-entrar-games" src="/logo-games.svg" alt="Games" width={64} height={11} />
