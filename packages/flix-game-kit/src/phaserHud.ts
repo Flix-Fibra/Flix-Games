@@ -56,6 +56,11 @@ export interface TelaFimDeJogo {
    * personagem da plataforma é bem maior que o avatar antigo): acima disso, ele é reduzido.
    */
   retratoMax?: number;
+  /**
+   * Quantos pixels da imagem formam um pixel da arte (padrão 1). O retrato do personagem da plataforma já vem
+   * ampliado 2x: com 2, a redução usa passos de meio (1,5x, 2,5x...) sem deixar pixels de tamanhos diferentes.
+   */
+  retratoPixel?: number;
   titulo?: string;
   /** Texto embaixo do número grande (padrão "PONTOS"; jogos de menor-é-melhor podem usar "TACADAS", por exemplo). */
   rotulo?: string;
@@ -87,7 +92,8 @@ export function telaFimDeJogo(scene: Phaser.Scene, o: TelaFimDeJogo): Phaser.Gam
     const max = o.retratoMax ?? Math.round(o.altura * 0.2);
     if (r.displayHeight > max) {
       const s = max / r.height;
-      r.setScale(s >= 1 ? Math.floor(s) : s); // ampliação inteira mantém a pixel art nítida
+      const passo = 1 / (o.retratoPixel ?? 1);
+      r.setScale(s >= passo ? Math.floor(s / passo) * passo : s); // pixel da arte inteiro: a pixel art fica nítida
     }
     itens.push({ obj: r, gap: 4 * o.px.texto });
   }

@@ -112,6 +112,8 @@ export class BootScene extends Phaser.Scene {
         tex?.setFilter(Phaser.Textures.FilterMode.NEAREST); // o retrato do personagem continua nítido, sem borrar
       }
     };
+    // pixels da imagem por pixel da arte (a tela de fim usa para ampliar o retrato sem distorcer)
+    this.registry.set('retratoPixel', retrato ? 2 : 1);
     if (!retrato) { usarAvatarAntigo(); seguir(); return; }
     const img = new Image();
     img.onload = () => {
@@ -122,7 +124,7 @@ export class BootScene extends Phaser.Scene {
       }
       seguir();
     };
-    img.onerror = () => { usarAvatarAntigo(); seguir(); }; // imagem com defeito: segue com o padrão
+    img.onerror = () => { this.registry.set('retratoPixel', 1); usarAvatarAntigo(); seguir(); }; // imagem com defeito: segue com o padrão
     img.src = retrato;
   }
 }

@@ -50,6 +50,8 @@ export class GameOverScene extends Phaser.Scene {
       largura: GAME_W,
       altura: GAME_H,
       retrato: this.add.image(0, 0, portraitKey(data.expression)).setScale(4),
+      retratoMax: 210, // ~22% da altura: o personagem em destaque, sem empurrar o placar
+      retratoPixel: (this.registry.get('retratoPixel') as number | undefined) ?? 1,
       pontos: data.score,
       linhas: [
         { texto: CAUSE_TEXT[data.cause] },
