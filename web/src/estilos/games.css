@@ -289,13 +289,18 @@ main{position:relative;z-index:2;max-width:1550px;margin:0 auto;padding:4px 16px
 .aparelho-sair{grid-column:2;justify-self:start;padding:6px 12px;min-height:36px;font-size:12px}
 
 /* ---------- Quem vai jogar? (seletor de perfis) ---------- */
-.gx-quem{position:fixed;inset:0;z-index:60;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+.gx-quem{position:fixed;inset:0;z-index:60;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:6px;
   padding:calc(24px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));text-align:center;
   background:radial-gradient(90% 60% at 50% 0%,rgba(212,20,44,.28),transparent 70%),var(--bg)}
 /* O fundo entra já opaco (nada da tela de baixo aparece); só o conteúdo anima */
 .gx-quem>*{animation:entra .45s var(--ease) both}
+/* Centralizado na vertical por margens automáticas: com conteúdo maior que a tela, rola desde o topo (com
+   justify-content:center o topo ficaria cortado e inalcançável) */
+.gx-quem>:first-child{margin-top:auto}.gx-quem>:last-child{margin-bottom:auto}
 .gx-quem[hidden]{display:none}
-.gx-quem-logo{height:30px;width:auto;margin-bottom:18px}
+/* Mesma medida e proporção do logo do menu (.marca img): um tamanho só em toda a plataforma */
+.gx-quem-logo{height:24px;width:auto;aspect-ratio:135/53;object-fit:fill;margin-bottom:18px}
+@media (min-width:768px){.gx-quem-logo{height:28px}}
 .gx-quem h1{margin:0;font-size:clamp(26px,7vw,40px);font-weight:800;letter-spacing:-.02em}
 .gx-quem-sub{margin:0 0 22px;color:var(--muted)}
 .gx-quem-lista{display:flex;flex-wrap:wrap;justify-content:center;gap:18px 22px}
@@ -319,22 +324,44 @@ main{position:relative;z-index:2;max-width:1550px;margin:0 auto;padding:4px 16px
 .gx-quem-novo[hidden]{display:none}
 /* Nome e sobrenome lado a lado (quebram no celular estreito) e a chave de mostrar o nome no ranking */
 .gx-quem-campo{display:grid;gap:5px;min-width:0}
-/* Perfil sendo criado ou editado: prévia (iniciais na cor escolhida) e a paleta de cores logo abaixo */
-.gx-quem-previa{display:grid;justify-items:center;gap:10px;margin-bottom:4px}
-.gx-quem-previa .gx-pf-av{transition:background-color .2s}
-.gx-quem-previa strong{max-width:100%;font-size:17px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.gx-cores{display:grid;grid-template-columns:repeat(8,32px);justify-content:center;gap:10px;margin:4px 0 12px} /* duas fileiras de 8 */
-.gx-cor{width:32px;height:32px;padding:0;border-radius:50%;border:2px solid transparent;background:var(--cor);cursor:pointer;
-  box-shadow:inset 0 0 0 2px rgba(0,0,0,.12);transition:transform .15s}
-.gx-cor.ativa{border-color:var(--ink);box-shadow:inset 0 0 0 3px var(--bg)}
-.gx-cor:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-@media (hover:hover){.gx-cor:hover{transform:scale(1.1)}}
 .gx-quem-campo input,.gx-nome-campos input{width:100%;min-width:0;box-sizing:border-box} /* sem isso a caixa usa a largura padrão e invade a coluna ao lado */
-.gx-quem-novo .gx-switch{margin-top:4px;color:var(--ink);text-align:left}
 .gx-quem-novo label{font-size:12.5px;color:var(--muted);font-weight:500}
 .gx-quem-novo input:not([type=checkbox]){height:48px;padding:0 14px;font-size:16px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:12px;outline:none}
 .gx-quem-novo input:not([type=checkbox]):focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(var(--red-rgb),.15)}
-.gx-quem-botoes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* ---------- Criar e editar perfil: formulário agrupado, no desenho dos Ajustes do iPhone ----------
+   Ritmo: 8 px dentro de um grupo, 24 a 28 px entre grupos. Os campos ficam num cartão, em linhas de 44 px com o
+   rótulo à esquerda e um fio separando as linhas; a explicação do grupo vem logo abaixo, menor e em cinza. */
+.gx-quem.com-formulario .gx-quem-logo{margin-bottom:16px}
+.gx-quem.com-formulario h1{font-size:28px;font-weight:700;letter-spacing:-.015em}
+.gx-quem.com-formulario .gx-quem-sub{max-width:380px;margin:0 0 24px;font-size:15px;line-height:1.4;text-wrap:balance}
+.gx-quem-form{display:flex;flex-direction:column;width:min(380px,100%);text-align:left}
+.gx-quem-previa{align-self:center;width:72px;height:72px;font-size:26px;font-weight:700;border:0;
+  box-shadow:0 6px 18px rgba(0,0,0,.25);transition:background-color .25s}
+.gx-cores{display:grid;grid-template-columns:repeat(8,24px);justify-content:center;gap:12px;margin:18px 0 28px} /* duas fileiras de 8 */
+.gx-cor{width:24px;height:24px;padding:0;border:0;border-radius:50%;background:var(--cor);cursor:pointer;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.18);transition:transform .15s var(--ease)}
+.gx-cor.ativa{outline:2px solid var(--ink);outline-offset:2px} /* anel com folga transparente, sobre qualquer fundo */
+.gx-cor:focus-visible{outline:3px solid rgba(var(--red-rgb),.6);outline-offset:3px}
+@media (hover:hover){.gx-cor:hover{transform:scale(1.12)}}
+.gx-grupo{margin-bottom:24px}
+.gx-grupo-cartao{border-radius:12px;background:var(--card);overflow:hidden}
+:root:not([data-theme=dark]) .gx-grupo-cartao{box-shadow:0 0 0 1px var(--line)}
+.gx-grupo-linha{position:relative;display:flex;align-items:center;gap:12px;min-height:44px;padding:0 16px;font-size:15px;color:var(--ink)}
+.gx-grupo-linha+.gx-grupo-linha::before{content:"";position:absolute;top:0;left:16px;right:0;height:1px;background:var(--line)}
+.gx-grupo-linha>span:first-child{flex:none;width:92px}
+.gx-grupo-linha input{flex:1;min-width:0;height:44px;padding:0;border:0;background:none;font-size:15px;color:var(--ink);outline:none}
+.gx-grupo-linha input::placeholder{color:var(--muted);opacity:.75}
+.gx-grupo-linha:focus-within{box-shadow:inset 3px 0 0 var(--red)} /* linha em edição marcada à esquerda */
+.gx-grupo-nota{margin:8px 16px 0;font-size:12.5px;line-height:1.4;color:var(--muted);text-wrap:pretty}
+/* A chave em linha própria: texto à esquerda, interruptor à direita */
+.gx-switch.gx-grupo-chave{flex-direction:row-reverse;justify-content:space-between;padding:0 16px;border-radius:0;background:none}
+.gx-grupo-chave:focus-within{box-shadow:none}
+.gx-quem-form .perfil-msg{margin:-8px 16px 16px}
+.gx-quem-principal{width:100%;min-height:46px;border-radius:12px;font-size:15px}
+.gx-quem-texto{align-self:center;min-height:44px;margin-top:6px;padding:8px 20px;border:0;background:none;color:var(--muted);font-size:15px;font-weight:500}
+.gx-quem-texto:hover,.gx-quem-texto:focus-visible{color:var(--ink)}
+.gx-quem-form .gx-quem-excluir{align-self:center;margin-top:2px}
 .gx-quem-gerenciar{margin-top:26px;min-height:44px;padding:8px 20px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--muted);font-weight:600;letter-spacing:.04em}
 .gx-quem-gerenciar[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .gx-quem-sair{margin-top:10px;min-height:44px;padding:8px 20px;border:0;background:none;color:var(--muted);font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer}

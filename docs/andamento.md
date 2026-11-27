@@ -60,6 +60,8 @@ Portal (`web/`) e API (`api/`): comandos no README e nas entradas de “Onde par
 
 ## 4. Onde parou
 
+**27/11/2026 — [F]** **Criar e editar perfil no desenho da Apple**, a pedido do solicitante (os elementos estavam grandes e mal espaçados). Formulário agrupado como nos Ajustes do iPhone: título da tarefa ("Criar perfil", "Editar perfil", 28 px), avatar de 72 px e paleta de 24 px, Nickname, Nome e Sobrenome num cartão só (linhas de 44 px, rótulo à esquerda, fio entre linhas, nota explicativa abaixo do grupo), chave "Mostrar nome no ranking" em linha própria com o interruptor à direita, botão principal na largura toda e "Cancelar" só em texto; ritmo de 8 px dentro do grupo e 24 a 28 px entre grupos. A tela cabe sem rolagem no computador e em 390 px. Logo da Flix das telas de perfil e de login com a mesma medida do menu (24 px no celular, 28 px a partir de 768 px). A camada `gx-quem` passa a rolar desde o topo quando o conteúdo é maior que a tela (antes o topo ficava cortado). Conferido no navegador, temas claro e escuro, criação e edição. `web/src/componentes/QuemVaiJogar.tsx`, `web/src/estilos/games.css`.
+
 **26/11/2026 — [F]** G06 **Minigolfe Flix em 3D**, a pedido do solicitante:
 
 - **Física:** a pá do moinho atravessava a bola parada (com a bola parada o passo não checava colisão) e a tratava como parede fixa. Agora pás, blocos móveis e pistões empurram a bola de verdade, inclusive parada, sem contar tacada (`bounceMoving`, `pushResting` em `logic.ts`); teste novo.

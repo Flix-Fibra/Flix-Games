@@ -40,13 +40,16 @@ export function QuemVaiJogar({ perfis, maxPerfis: MAX_PERFIS, cores, atualId, on
   }
 
   const fecharGerenciar = () => { setGerenciando(false); setEditando(null); setErro(''); };
+  const formulario = criando || !!editando;
 
   return (
-    <section className="gx-quem" aria-labelledby="quem-titulo">
+    <section className={'gx-quem' + (formulario ? ' com-formulario' : '')} aria-labelledby="quem-titulo">
       <img className="gx-quem-logo" src="/logo-flix-chapada.png" alt="Flix" width={218} height={84} />
-      <h1 id="quem-titulo">Quem vai jogar?</h1>
+      <h1 id="quem-titulo">{criando ? 'Criar perfil' : editando ? 'Editar perfil' : 'Quem vai jogar?'}</h1>
       <p className="gx-quem-sub">
-        {criando ? 'Novo perfil' : editando ? 'Editar perfil' : gerenciando ? 'Escolha o perfil que quer editar ou excluir' : 'Escolha seu perfil'}
+        {criando ? 'Cada perfil tem ranking e progresso próprios.'
+          : editando ? `Nickname, nome e cor de ${editando.apelido}.`
+          : gerenciando ? 'Escolha o perfil que quer editar ou excluir' : 'Escolha seu perfil'}
       </p>
 
       {!criando && !editando && <div className="gx-quem-lista">
@@ -72,12 +75,12 @@ export function QuemVaiJogar({ perfis, maxPerfis: MAX_PERFIS, cores, atualId, on
 
       {erro && !criando && !editando && <p className="perfil-msg erro" role="alert">{erro}</p>}
       {criando && !gerenciando && (
-        <FormPerfil key="novo" perfis={perfis} cores={cores} titulo="Nickname do novo perfil" botao="Criar perfil"
+        <FormPerfil key="novo" perfis={perfis} cores={cores} botao="Criar perfil"
           onCancelar={() => setCriando(false)}
           onEnviar={(d) => onCriar(d)} />
       )}
       {gerenciando && editando && (
-        <FormPerfil key={editando.id} perfis={perfis} cores={cores} perfil={editando} titulo={`Nickname de ${editando.apelido}`} botao="Salvar"
+        <FormPerfil key={editando.id} perfis={perfis} cores={cores} perfil={editando} botao="Salvar"
           onCancelar={() => setEditando(null)}
           onEnviar={async (d) => { await onEditar(editando.id, d); setEditando(null); }}
           onExcluir={perfis.length > 1 ? async () => { await onExcluir(editando.id); fecharGerenciar(); } : undefined} />
@@ -92,7 +95,7 @@ export function QuemVaiJogar({ perfis, maxPerfis: MAX_PERFIS, cores, atualId, on
       {!criando && !editando && !gerenciando && (
         <button className="gx-quem-sair" type="button" onClick={() => void onSair()}>Sair da conta</button>
       )}
-      <p className="gx-quem-nota">Até {MAX_PERFIS} perfis por conta Flix. Cada perfil tem nickname, ranking, progresso e conquistas próprios.</p>
+      {!formulario && <p className="gx-quem-nota">Até {MAX_PERFIS} perfis por conta Flix. Cada perfil tem nickname, ranking, progresso e conquistas próprios.</p>}
     </section>
   );
 }
@@ -101,7 +104,6 @@ interface FormProps {
   perfis: Perfil[];
   cores: string[];
   perfil?: Perfil; // presente = edição
-  titulo: string;
   botao: string;
   onCancelar: () => void;
   onEnviar: (dados: NovoPerfil) => Promise<void>;
@@ -111,8 +113,10 @@ interface FormProps {
 /**
  * Formulário de perfil (criação e edição): prévia do perfil com a cor de fundo escolhida, nickname, nome e sobrenome
  * obrigatórios e a chave de mostrar o nome. Na criação, a cor sugerida é a primeira da paleta ainda não usada na conta.
+ * Desenho de formulário agrupado (como nos Ajustes do iPhone): os campos num cartão só, em linhas com o rótulo à
+ * esquerda, e a explicação de cada grupo logo abaixo dele, em texto menor.
  */
-function FormPerfil({ perfis, cores, perfil, titulo, botao, onCancelar, onEnviar, onExcluir }: FormProps) {
+function FormPerfil({ perfis, cores, perfil, botao, onCancelar, onEnviar, onExcluir }: FormProps) {
   const usadas = new Set(perfis.filter((p) => p.id !== perfil?.id).map((p) => p.cor.toUpperCase()));
   const [cor, setCor] = useState(perfil?.cor.toUpperCase() ?? cores.find((c) => !usadas.has(c)) ?? cores[0] ?? '#D2232A');
   const [apelido, setApelido] = useState(perfil?.apelido ?? '');
@@ -148,39 +152,50 @@ function FormPerfil({ perfis, cores, perfil, titulo, botao, onCancelar, onEnviar
 
   const id = perfil ? `pf-${perfil.id}` : 'pf-novo';
   return (
-    <form className="gx-quem-novo" onSubmit={enviar} noValidate>
-      <div className="gx-quem-previa" aria-hidden="true">
-        <span className="gx-pf-av" style={{ '--cor': cor } as CSSProperties}>{iniciais(limparApelido(apelido)) || '+'}</span>
-        <strong>{limparApelido(apelido) || (perfil ? perfil.apelido : 'Novo perfil')}</strong>
-      </div>
+    <form className="gx-quem-form" onSubmit={enviar} noValidate>
+      <span className="gx-pf-av gx-quem-previa" aria-hidden="true" style={{ '--cor': cor } as CSSProperties}>
+        {iniciais(limparApelido(apelido)) || '+'}
+      </span>
       <div className="gx-cores" role="radiogroup" aria-label="Cor de fundo do perfil">
         {cores.map((c) => (
           <button key={c} type="button" role="radio" aria-checked={cor === c} aria-label={`Cor ${c}`}
             className={'gx-cor' + (cor === c ? ' ativa' : '')} style={{ '--cor': c } as CSSProperties} onClick={() => setCor(c)} />
         ))}
       </div>
-      <label htmlFor={`${id}-apelido`}>{titulo}</label>
-      <input id={`${id}-apelido`} ref={campo} value={apelido} onChange={(e) => setApelido(e.target.value)} maxLength={20} autoComplete="off"
-        placeholder="Ex.: Ana_Gamer" aria-describedby={`${id}-dica`} required />
-      <p id={`${id}-dica`} className="perfil-dica">Único entre todos os jogadores. É o que todos veem no ranking.</p>
-      <div className="gx-nome-campos">
-        <label className="gx-quem-campo">Nome
-          <input value={nome} onChange={(e) => setNome(e.target.value)} maxLength={40} autoComplete="off" required />
-        </label>
-        <label className="gx-quem-campo">Sobrenome
-          <input value={sobrenome} onChange={(e) => setSobrenome(e.target.value)} maxLength={60} autoComplete="off" required />
-        </label>
+
+      <div className="gx-grupo">
+        <div className="gx-grupo-cartao">
+          <label className="gx-grupo-linha">
+            <span>Nickname</span>
+            <input ref={campo} value={apelido} onChange={(e) => setApelido(e.target.value)} maxLength={20} autoComplete="off"
+              placeholder="Ex.: Ana_Gamer" aria-describedby={`${id}-dica`} required />
+          </label>
+          <label className="gx-grupo-linha">
+            <span>Nome</span>
+            <input value={nome} onChange={(e) => setNome(e.target.value)} maxLength={40} autoComplete="off" placeholder="Obrigatório" required />
+          </label>
+          <label className="gx-grupo-linha">
+            <span>Sobrenome</span>
+            <input value={sobrenome} onChange={(e) => setSobrenome(e.target.value)} maxLength={60} autoComplete="off" placeholder="Obrigatório" required />
+          </label>
+        </div>
+        <p id={`${id}-dica`} className="gx-grupo-nota">O nickname é único e aparece no ranking.</p>
       </div>
-      <label className="gx-switch">
-        <input type="checkbox" checked={mostrarNome} onChange={(e) => setMostrarNome(e.target.checked)} />
-        <span className="gx-switch-trilho" aria-hidden="true" />
-        <span><strong>Mostrar o nome verdadeiro no ranking</strong></span>
-      </label>
+
+      <div className="gx-grupo">
+        <div className="gx-grupo-cartao">
+          <label className="gx-switch gx-grupo-linha gx-grupo-chave">
+            <input type="checkbox" checked={mostrarNome} onChange={(e) => setMostrarNome(e.target.checked)} aria-describedby={`${id}-nome`} />
+            <span className="gx-switch-trilho" aria-hidden="true" />
+            <span>Mostrar nome no ranking</span>
+          </label>
+        </div>
+        <p id={`${id}-nome`} className="gx-grupo-nota">Desligado, o ranking mostra só o nickname.</p>
+      </div>
+
       {erro && <p className="perfil-msg erro" role="alert">{erro}</p>}
-      <div className="gx-quem-botoes">
-        <button className="btn light" type="button" onClick={onCancelar}>Cancelar</button>
-        <button className="btn" type="submit" disabled={enviando}>{enviando ? 'Salvando…' : botao}</button>
-      </div>
+      <button className="btn gx-quem-principal" type="submit" disabled={enviando}>{enviando ? 'Salvando…' : botao}</button>
+      <button className="gx-quem-texto" type="button" onClick={onCancelar}>Cancelar</button>
       {onExcluir && (
         <button type="button" className={'gx-quem-excluir' + (confirmarExclusao ? ' confirmar' : '')} onClick={excluir}>
           {confirmarExclusao ? 'Toque de novo para excluir este perfil' : 'Excluir perfil'}
