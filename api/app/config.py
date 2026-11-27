@@ -24,8 +24,6 @@ class Config:
             raise RuntimeError("FLIX_GAMES_CONFERE_URL precisa ser https")
         # Caminho do arquivo com a chave da API Própria (segredo do compose). O valor nunca fica no ambiente.
         self.chave_api_propria_arquivo: str = os.environ.get("CHAVE_API_PROPRIA_ARQUIVO", "/run/secrets/api_propria_chave")
-        # Códigos de acesso da equipe (só hashes scrypt; cadastrados com scripts/deploy/codigo_equipe.py, no servidor)
-        self.equipe_arquivo: str = os.environ.get("EQUIPE_ARQUIVO", "/run/secrets/equipe")
 
     @property
     def desenvolvimento(self) -> bool:

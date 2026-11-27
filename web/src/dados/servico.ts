@@ -53,8 +53,6 @@ export const servico = {
   },
   /** CPF/CNPJ e senha do Minha Flix; a API confere na API Própria e devolve o cookie de sessão. */
   entrar: (documento: string, senha: string) => api<void>('POST', '/entrar', { documento, senha }),
-  /** Acesso da equipe (usuário e senha cadastrados no servidor), enquanto o login do cliente não está liberado. */
-  entrarEquipe: (usuario: string, senha: string) => api<void>('POST', '/entrar-equipe', { usuario, senha }),
   escolherPerfil: (perfilId: string) => api<void>('PUT', '/sessao/perfil', { perfilId }),
   sairDesteAparelho: () => api<void>('DELETE', '/sessao'),
 
