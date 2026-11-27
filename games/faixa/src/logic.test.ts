@@ -54,6 +54,8 @@ describe('gerador: começo da fase', () => {
 });
 
 describe('gerador: nunca bloqueia a passagem', () => {
+  // 80 mil faixas: leva ~1 s sozinho, mas passa dos 5 s padrão quando a suíte inteira roda em paralelo numa
+  // máquina lenta. Limite próprio para não falhar por tempo (a verificação é a mesma).
   it('toda faixa tem uma coluna alinhada com o alcance da anterior (400 faixas x 200 sementes)', () => {
     for (const seed of SEEDS) {
       const lanes = mundo(seed);
@@ -66,7 +68,7 @@ describe('gerador: nunca bloqueia a passagem', () => {
         expect(alinhada, `semente ${seed}, faixa ${i} (${l.kind})`).toBe(true);
       }
     }
-  });
+  }, 20_000);
   it('grama nunca é bloqueada por inteiro', () => {
     for (const seed of SEEDS) for (const l of mundo(seed)) if (l.kind === 'grass') expect(l.blocked.every(Boolean)).toBe(false);
   });

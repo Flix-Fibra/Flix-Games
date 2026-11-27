@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from 're
 import { formatarPontos } from '../dados/formatar';
 import { ErroApi, servico } from '../dados/servico';
 import type { AvatarConfig, Jogo, ResultadoPartida } from '../dados/tipos';
-import { Fechar, Som, TelaCheia, Trofeu } from './Icones';
+import { Fechar, Pausa, Som, TelaCheia, Trofeu } from './Icones';
 import { fotoDoCorpo, fotoDoRosto, type PersonagemFlix } from '../personagem/flix';
 
 /**
@@ -75,6 +75,14 @@ export function Jogando({ jogo, avatar, personagem, onFechar, entrando = false }
   const quadro = useRef<HTMLIFrameElement>(null);
   const [fase, setFase] = useState<Fase>({ tipo: 'carregando' });
   const [mudo, setMudo] = useState(false);
+  // Pausa pelo botão da barra (ou ao pedir para sair). Refs: lidas dentro de ouvintes de evento sem recriá-los.
+  const [pausado, setPausado] = useState(false);
+  const pausadoRef = useRef(false);
+  const mudoRef = useRef(false);
+  const [confirmarSaida, setConfirmarSaida] = useState(false);
+  const pronto = useRef(false); // o jogo já mandou `ready` (antes disso, sair não perde nada)
+  const botaoAlerta = useRef<HTMLButtonElement>(null);
+  const botaoContinuar = useRef<HTMLButtonElement>(null);
   // Jogo imersivo (pedido pelo próprio jogo): sem a barra do hub; o jogo tem o próprio botão de voltar
   const [imersivo, setImersivo] = useState(false);
   const runAtual = useRef<string | null>(null);   // partida aberta (registrada no "started")
@@ -103,13 +111,14 @@ export function Jogando({ jogo, avatar, personagem, onFechar, entrando = false }
       const m = lerMensagem(e.data);
       if (!m) return;
       if (m.type === 'ready') {
+        pronto.current = true;
         // avatar null = jogo usa o personagem padrão; personagem null = o jogador não criou (ou "Sem avatar")
         void imagens.current.catch(() => null).then((p) => enviar({ type: 'init', avatar, personagem: p, muted: mudo, locale: 'pt-BR' }));
         setFase((f) => (f.tipo === 'carregando' ? { tipo: 'jogando' } : f));
       } else if (m.type === 'layout') {
         setImersivo(m.imersivo);
       } else if (m.type === 'exit') {
-        onFechar(houvePartida.current);
+        pedirSaidaRef.current(); // botão de sair do próprio jogo (imersivo): mesma confirmação do X
       } else if (m.type === 'started') {
         runAtual.current = m.runId;
         houvePartida.current = true;
@@ -138,16 +147,55 @@ export function Jogando({ jogo, avatar, personagem, onFechar, entrando = false }
     return () => window.clearTimeout(t);
   }, [fase.tipo]);
 
-  // App em segundo plano: pausa; voltou: retoma
+  // ---------- Pausa e confirmação de saída ----------
+  // Pausado, o jogo também fica mudo: game.pause() do Phaser congela o jogo, mas não necessariamente a música.
+  const pausar = useCallback(() => {
+    if (pausadoRef.current) return;
+    pausadoRef.current = true;
+    setPausado(true);
+    enviar({ type: 'pause' });
+    enviar({ type: 'mute', muted: true });
+  }, [enviar]);
+  const continuar = useCallback(() => {
+    pausadoRef.current = false;
+    setPausado(false);
+    setConfirmarSaida(false);
+    enviar({ type: 'resume' });
+    enviar({ type: 'mute', muted: mudoRef.current });
+    quadro.current?.focus(); // teclado volta para o jogo
+  }, [enviar]);
+  /** X, Esc ou o botão de sair do jogo: pausa e pergunta. Jogo que nem carregou fecha direto (nada a perder). */
+  const pedirSaida = useCallback(() => {
+    if (!pronto.current) { onFechar(houvePartida.current); return; }
+    pausar();
+    setConfirmarSaida(true);
+  }, [pausar, onFechar]);
+  const pedirSaidaRef = useRef(pedirSaida);
+  pedirSaidaRef.current = pedirSaida;
+  // "Não": volta ao jogo, mas pausado (o jogador retoma quando quiser)
+  const ficar = useCallback(() => {
+    setConfirmarSaida(false);
+    window.setTimeout(() => botaoContinuar.current?.focus(), 0);
+  }, []);
+  useEffect(() => { if (confirmarSaida) botaoAlerta.current?.focus(); }, [confirmarSaida]);
+  useEffect(() => { if (pausado && !confirmarSaida) botaoContinuar.current?.focus(); }, [pausado, confirmarSaida]);
+
+  // App em segundo plano: pausa; voltou: retoma, a não ser que o jogador tenha pausado
   useEffect(() => {
-    const vis = () => enviar({ type: document.hidden ? 'pause' : 'resume' });
+    const vis = () => {
+      if (document.hidden) enviar({ type: 'pause' });
+      else if (!pausadoRef.current) enviar({ type: 'resume' });
+    };
     document.addEventListener('visibilitychange', vis);
     return () => document.removeEventListener('visibilitychange', vis);
   }, [enviar]);
 
-  // Esc fecha; trava a rolagem da página de trás
+  // Esc: pede para sair (com o alerta aberto, Esc é o "Não"); trava a rolagem da página de trás
   useEffect(() => {
-    const tecla = (e: KeyboardEvent) => { if (e.key === 'Escape') onFechar(houvePartida.current); };
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (confirmarSaida) ficar(); else pedirSaida();
+    };
     document.addEventListener('keydown', tecla);
     // trava a página de trás inteira (no Safari só o body não bastava: a rolagem passava para o documento)
     document.body.style.overflow = 'hidden';
@@ -157,7 +205,7 @@ export function Jogando({ jogo, avatar, personagem, onFechar, entrando = false }
       document.body.style.overflow = '';
       document.documentElement.style.overflow = '';
     };
-  }, [onFechar]);
+  }, [confirmarSaida, ficar, pedirSaida]);
 
   // O aviso de resultado some sozinho (o jogo segue na tela de fim dele)
   useEffect(() => {
@@ -169,8 +217,35 @@ export function Jogando({ jogo, avatar, personagem, onFechar, entrando = false }
   function alternarSom() {
     const novo = !mudo;
     setMudo(novo);
-    enviar({ type: 'mute', muted: novo });
+    mudoRef.current = novo;
+    if (!pausadoRef.current) enviar({ type: 'mute', muted: novo }); // pausado, continua mudo até retomar
   }
+
+  // Altura da parte VISÍVEL da tela. `position: fixed; inset: 0` inclui, em alguns celulares (Safari 26 com a barra
+  // flutuante, navegadores Android com a barra embaixo), o pedaço que fica atrás da barra do navegador: o jogo se
+  // encaixava nessa área e a faixa de baixo (ex.: "jogar de novo" do Snake) ficava coberta. Usa o menor entre a área
+  // que o navegador diz estar visível (visualViewport) e 100svh (altura com as barras abertas); recalcula quando a
+  // barra aparece, some ou a tela gira.
+  useEffect(() => {
+    const el = raiz.current;
+    const vv = window.visualViewport;
+    if (!el) return;
+    const sonda = document.createElement('div');
+    sonda.style.cssText = 'position:fixed;top:0;left:0;width:0;height:100svh;visibility:hidden;pointer-events:none';
+    document.body.appendChild(sonda);
+    const medir = () => {
+      const alturas = [window.innerHeight, sonda.offsetHeight || Infinity, vv ? vv.height : Infinity];
+      el.style.setProperty('--altura-visivel', `${Math.round(Math.min(...alturas))}px`);
+    };
+    medir();
+    vv?.addEventListener('resize', medir);
+    window.addEventListener('resize', medir);
+    return () => {
+      vv?.removeEventListener('resize', medir);
+      window.removeEventListener('resize', medir);
+      sonda.remove();
+    };
+  }, []);
 
   // O jogo abre dentro do navegador (sem tela cheia automática); o botão ⛶ deixa o cliente escolher.
   // Ao sair do jogo, sai da tela cheia se ela estiver ligada.
@@ -196,9 +271,13 @@ export function Jogando({ jogo, avatar, personagem, onFechar, entrando = false }
       className={'gx-jogo' + (computador ? ' pc' : '') + (telaCheia ? ' cheia' : '') + (computador && proporcao ? ' proporcional' : '') + (comEntrada ? ' entrando' : '') + (imersivo ? ' imersivo' : '')}
       style={{ '--t1': jogo.cor1, '--t2': jogo.cor2, '--prop': proporcao ?? 1 } as CSSProperties}>
       <div className="gx-jogo-barra">
-        <button className="gx-jogo-btn" type="button" onClick={() => onFechar(houvePartida.current)} aria-label="Sair do jogo"><Fechar /></button>
+        <button className="gx-jogo-btn" type="button" onClick={pedirSaida} aria-label="Sair do jogo"><Fechar /></button>
         <strong>{jogo.nome}</strong>
         <span className="gx-jogo-dir">
+          <button className="gx-jogo-btn" type="button" onClick={pausado ? continuar : pausar} disabled={fase.tipo === 'carregando'}
+            aria-pressed={pausado} aria-label={pausado ? 'Continuar o jogo' : 'Pausar o jogo'} title={pausado ? 'Continuar' : 'Pausar'}>
+            <Pausa pausado={pausado} />
+          </button>
           {computador && (
             <button className="gx-jogo-btn" type="button" onClick={alternarTelaCheia} aria-pressed={telaCheia}
               aria-label={telaCheia ? 'Sair da tela cheia' : 'Tela cheia'} title={telaCheia ? 'Sair da tela cheia (Esc)' : 'Tela cheia'}>
@@ -220,7 +299,29 @@ export function Jogando({ jogo, avatar, personagem, onFechar, entrando = false }
         allow="gamepad; fullscreen"
         referrerPolicy="no-referrer"
       />
+      {pausado && !confirmarSaida && (
+        <div className="gx-jogo-pausa">
+          <button ref={botaoContinuar} type="button" className="gx-jogo-continuar" onClick={continuar} aria-label="Continuar o jogo">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" /></svg>
+          </button>
+          <strong>Jogo pausado</strong>
+        </div>
+      )}
       </div>
+      {confirmarSaida && (
+        <div className="gx-jogo-alerta" role="alertdialog" aria-modal="true" aria-labelledby="sair-titulo" aria-describedby="sair-texto">
+          <div className="gx-jogo-alerta-caixa">
+            <div className="gx-jogo-alerta-texto">
+              <h2 id="sair-titulo">Deseja sair do jogo?</h2>
+              <p id="sair-texto">{runAtual.current ? 'A partida em andamento não vai contar para o ranking.' : 'Você pode voltar a jogar quando quiser.'}</p>
+            </div>
+            <div className="gx-jogo-alerta-botoes">
+              <button ref={botaoAlerta} type="button" onClick={ficar}>Não</button>
+              <button type="button" className="sair" onClick={() => onFechar(houvePartida.current)}>Sair</button>
+            </div>
+          </div>
+        </div>
+      )}
       {fase.tipo === 'carregando' && <div className="gx-jogo-aviso">Carregando…</div>}
       {/* Fim de partida: a tela de fim e o "jogar de novo" são do próprio jogo. O hub só avisa, discreto e sem
           bloquear, a posição no ranking (ou por que a partida não contou). */}

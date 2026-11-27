@@ -109,6 +109,10 @@ function Traco({ children }: { children: ReactNode }) {
   );
 }
 export const Fechar = () => <Traco><path d="M6 6l12 12M18 6 6 18" /></Traco>;
+/** Pausar e continuar o jogo (barra do jogo): duas barras / triângulo. */
+export const Pausa = ({ pausado }: { pausado: boolean }) => (
+  <Traco>{pausado ? <path d="M8 5.5v13l10.5-6.5z" /> : <path d="M9 6v12M15 6v12" />}</Traco>
+);
 export const TelaCheia = ({ ligada }: { ligada: boolean }) => (
   <Traco>{ligada
     ? <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
