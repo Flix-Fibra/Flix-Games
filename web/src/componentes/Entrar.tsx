@@ -49,8 +49,8 @@ export function Entrar({ onEntrou }: { onEntrou: () => void }) {
       <Vitrine />
       <div className="gx-entrar-brilho" aria-hidden="true" />
       <div className="gx-entrar-marca">
-        <img className="gx-quem-logo" src="/logo-flix-chapada.png" alt="Flix" width={218} height={84} />
-        <span className="gx-entrar-games" aria-label="Games">GAME<b>S</b></span>
+        <img className="gx-quem-logo" src="/logo-flix-hd.png" alt="Flix" width={1200} height={464} decoding="async" />
+        <img className="gx-entrar-games" src="/logo-games.svg" alt="Games" width={64} height={11} />
       </div>
       <h1>{equipe ? 'Bem-vindo, equipe.' : <>Seu próximo jogo<br /><span>começa aqui.</span></>}</h1>
       <p className="gx-quem-sub">{equipe ? 'Acesso da equipe Flix Games.' : 'Entre com o CPF ou CNPJ e a senha do Minha Flix.'}</p>
