@@ -1,23 +1,28 @@
 /* Tela de login (Entrar.tsx): visual escuro, limpo e com brilho vermelho suave, no estilo Apple. */
 .gx-entrar {
-  position: relative;
+  /* continua sendo a camada fixa de tela cheia da base (.gx-quem); aqui só o visual */
+  position: fixed;
+  inset: 0;
+  z-index: 60;
   isolation: isolate;
-  min-height: 100dvh;
   max-width: none;
   margin: 0;
+  gap: 0;
   padding: 72px 24px 48px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  justify-content: safe center; /* em tela baixa, rola em vez de cortar o topo */
   text-align: center;
   background: #000;
   color: #f5f5f7;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", system-ui, sans-serif;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 .gx-entrar-brilho {
-  position: absolute;
+  position: fixed;
   inset: -20% -10% auto;
   height: 80%;
   z-index: -1;
@@ -32,7 +37,7 @@
 @keyframes gx-entrar-respira { from { opacity: .75; transform: scale(1); } to { opacity: 1; transform: scale(1.08); } }
 @keyframes gx-entrar-sobe { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 
-.gx-entrar > * { animation: gx-entrar-sobe .8s cubic-bezier(.2, .8, .2, 1) both; }
+.gx-entrar > :not(.gx-vitrine):not(.gx-entrar-brilho) { animation: gx-entrar-sobe .8s cubic-bezier(.2, .8, .2, 1) both; }
 .gx-entrar > h1 { animation-delay: .08s; }
 .gx-entrar > .gx-quem-sub { animation-delay: .16s; }
 .gx-entrar > form { animation-delay: .24s; }
@@ -50,7 +55,6 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  padding-left: .62em; /* compensa o espaçamento da última letra para centralizar */
   font-size: 15px;
   font-weight: 600;
   letter-spacing: .62em;
@@ -64,7 +68,8 @@
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(255, 77, 94, .9));
 }
-.gx-entrar-games::after { background: linear-gradient(90deg, rgba(255, 77, 94, .9), transparent); margin-left: -.62em; }
+.gx-entrar-games::after { background: linear-gradient(90deg, rgba(255, 77, 94, .9), transparent); }
+.gx-entrar-games b { font: inherit; margin-right: -.62em; } /* tira o espaço depois do S: fica centrado */
 .gx-entrar h1 {
   margin: 0;
   font-size: clamp(28px, 4.2vw, 42px);
@@ -88,6 +93,7 @@
 }
 
 .gx-entrar form {
+  margin: 0;
   width: 100%;
   max-width: 380px;
   display: flex;
@@ -110,7 +116,8 @@
   font-weight: 500;
   color: #a1a1a6;
 }
-.gx-entrar .gx-quem-campo input {
+.gx-entrar .gx-quem-campo input,
+:root .gx-entrar .gx-quem-novo input:not([type=checkbox]) {
   height: 50px;
   padding: 0 16px;
   border-radius: 14px;
@@ -122,7 +129,8 @@
   transition: border-color .2s, background .2s, box-shadow .2s;
 }
 .gx-entrar .gx-quem-campo input::placeholder { color: #6e6e73; }
-.gx-entrar .gx-quem-campo input:focus {
+.gx-entrar .gx-quem-campo input:focus,
+:root .gx-entrar .gx-quem-novo input:not([type=checkbox]):focus {
   border-color: rgba(255, 77, 94, .8);
   background: rgba(255, 255, 255, .09);
   box-shadow: 0 0 0 4px rgba(229, 20, 43, .22);
@@ -175,7 +183,7 @@
 
 /* Vitrine: 6 colunas de capas atrás do login, inclinadas, subindo e descendo alternadas */
 .gx-entrar .gx-vitrine {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: -2;
   overflow: hidden;
