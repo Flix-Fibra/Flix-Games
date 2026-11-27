@@ -647,6 +647,51 @@ function closestOnSeg(s: Seg, p: Vec): Vec {
 }
 
 /**
+ * Caminho previsto da mira: pontos a cada `passo` ao longo de `comprimento`, saindo de `de` no ângulo dado. Ao encostar
+ * numa parede (com o raio da bola) a linha rebate como a física rebate (reflexão na normal do ponto mais próximo).
+ * Só paredes fixas: moinho, blocos e postes se mexem ou têm efeito próprio, e a mira não tenta adivinhar.
+ */
+export function caminhoDaMira(l: Level, de: Vec, angle: number, comprimento: number, passo: number, inicio = 0): Vec[] {
+  const pts: Vec[] = [];
+  let x = de.x;
+  let y = de.y;
+  let dx = Math.cos(angle);
+  let dy = Math.sin(angle);
+  const sub = 0.02;
+  let andado = 0;
+  let proximo = inicio;
+  let rebotes = 0;
+  while (andado < comprimento && pts.length < 64) {
+    x += dx * sub;
+    y += dy * sub;
+    andado += sub;
+    for (const s of l.walls) {
+      const c = closestOnSeg(s, { x, y });
+      const nx = x - c.x;
+      const ny = y - c.y;
+      const d = Math.hypot(nx, ny);
+      if (d >= BALL_R || d < 1e-9) continue;
+      const ux = nx / d;
+      const uy = ny / d;
+      const dot = dx * ux + dy * uy;
+      if (dot < 0) {
+        dx -= 2 * dot * ux;
+        dy -= 2 * dot * uy;
+        rebotes++;
+      }
+      x = c.x + ux * BALL_R; // volta para fora da parede
+      y = c.y + uy * BALL_R;
+    }
+    if (rebotes > 3) break;
+    if (andado >= proximo) {
+      pts.push({ x, y });
+      proximo += passo;
+    }
+  }
+  return pts;
+}
+
+/**
  * Avança o relógio da fase e, se a bola estiver andando, um passo da física. Chame sempre (mesmo com a bola parada):
  * é o que faz a bomba girar, o moinho rodar e a lava piscar. Devolve os eventos do passo (para som e efeitos).
  */
