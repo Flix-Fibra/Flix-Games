@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {
-  BALL_R, BLADE_R, BUMPER_R, CANNON_CAPTURE, HOLE_R, MAGNET_R, WINDMILL_HUB, blockRect, cannonAngle, lavaHot, lavaWarning, pistonHeight,
+  caminhoDaMira, BALL_R, BLADE_R, BUMPER_R, CANNON_CAPTURE, HOLE_R, MAGNET_R, WINDMILL_HUB, blockRect, cannonAngle, lavaHot, lavaWarning, pistonHeight,
   type HoleState, type Level,
 } from './logic';
 import { PORTAL_COLORS } from './theme';
@@ -746,14 +746,13 @@ export class Mundo3D {
     }
     const b = h.ball;
     const cor = new THREE.Color(0xffffff).lerp(new THREE.Color(0xff3d5e), mira.power);
-    const dx = Math.cos(mira.angle);
-    const dy = Math.sin(mira.angle);
     const len = 0.6 + mira.power * 4.2;
-    const n = Math.min(24, Math.floor(len / 0.22));
+    // a linha para na parede e segue na direção do rebote, como a bola vai fazer
+    const pts = caminhoDaMira(l, b, mira.angle, 0.45 + len, 0.22, 0.45).slice(0, 24);
+    const n = pts.length;
     const mat = new THREE.Matrix4();
     for (let i = 0; i < n; i++) {
-      const s = 0.45 + i * 0.22;
-      const p = W(l, b.x + dx * s, b.y + dy * s, 0.02);
+      const p = W(l, pts[i]!.x, pts[i]!.y, 0.02);
       const k = 1 - (i / n) * 0.6;
       mat.makeScale(k, 1, k).setPosition(p);
       this.aimDots.setMatrixAt(i, mat);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BALL_R, DT, HOLE_CAPTURE_SPEED, JUMP_AIR_MAX, MAX_ROLL_SECONDS, HOLE_R, LEGEND, MAX_SPEED, MAX_STROKES, MIN_DRAG, MIN_SPEED, STOP_SPEED,
-  aimFromDrag, blockRect, canShoot, cannonAngle, createHole, lavaHot, pistonHeight, shootFromCannon, windmillBlades, createRun, finishHole, holeDone, parseLevel, resultName, settle, shoot, speedFor, speedOf,
+  aimFromDrag, caminhoDaMira, blockRect, canShoot, cannonAngle, createHole, lavaHot, pistonHeight, shootFromCannon, windmillBlades, createRun, finishHole, holeDone, parseLevel, resultName, settle, shoot, speedFor, speedOf,
   step, totalPar, totalStrokes, validateLevel,
   type HoleEvent, type HoleState, type LevelDef,
 } from './logic';
@@ -552,5 +552,24 @@ describe('percurso real', () => {
   });
   it('o par de cada fase fica entre 1 e 6', () => {
     for (const l of LEVELS) expect(l.par).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('mira', () => {
+  it('não atravessa a parede: rebate e segue para dentro do campo', () => {
+    const l = lvl(ABERTA);
+    // bola perto da parede de baixo (y = 5), mirando para baixo e para a direita
+    const pts = caminhoDaMira(l, { x: 3, y: 4.5 }, Math.PI / 4, 4, 0.22);
+    expect(pts.length).toBeGreaterThan(5);
+    for (const p of pts) {
+      expect(p.y).toBeLessThanOrEqual(5 - BALL_R + 1e-6);
+      expect(p.x).toBeLessThanOrEqual(10 - BALL_R + 1e-6);
+    }
+    // depois de encostar, a linha sobe (rebateu)
+    expect(pts[pts.length - 1]!.y).toBeLessThan(Math.max(...pts.map((p) => p.y)));
+  });
+  it('sem parede no caminho é uma reta', () => {
+    const pts = caminhoDaMira(lvl(ABERTA), { x: 2, y: 3 }, 0, 3, 0.5);
+    for (const p of pts) expect(p.y).toBeCloseTo(3);
   });
 });
