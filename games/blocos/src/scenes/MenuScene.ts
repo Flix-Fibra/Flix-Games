@@ -62,7 +62,7 @@ export class MenuScene extends Phaser.Scene {
       .setDepth(DEPTH.hud);
     this.tweens.add({ targets: prompt, alpha: 0.45, duration: 800, yoyo: true, repeat: -1 });
     this.add
-      .text(GAME_W / 2, 650, 'Mova o mouse (ou arraste o dedo) para levar\na jogadora. A bola sai sozinha.\nJunte 20 bolas-raio e ganhe uma vida extra!', {
+      .text(GAME_W / 2, 650, 'Mova o mouse (ou arraste o dedo) para levar\na jogadora. A bola sai sozinha.\nJunte 20 bolas-raio e ganhe uma vida extra!' + (this.sys.game.device.input.touch ? '' : '\nBotão direito ou P solta o mouse.'), {
         fontFamily: FONT_TEXT, fontSize: '28px', color: '#E2E8FF', stroke: '#0a0d1f', strokeThickness: 6, align: 'center', lineSpacing: 8,
       })
       .setOrigin(0.5, 0)

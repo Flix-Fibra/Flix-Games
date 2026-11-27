@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { soltarMouseSemEsc } from '@flix/game-kit/src/soltarMouse';
 import type { HubBridge } from '@flix/game-sdk';
 import {
   BALL_R, ballSpeed, BOSS_H, BOSS_HIT_POINTS, BOSS_KILL_POINTS, BOSS_W, BOSS_Y, bossHp, brickHp, brickPoints, brickRect,
@@ -154,6 +155,8 @@ export class PlayScene extends Phaser.Scene {
     this.makeHud();
 
     this.input.mouse?.requestPointerLock(); // TESTE
+    // botão direito ou P soltam o mouse (o Esc do Chrome sai da tela cheia e minimiza a página do hub)
+    const desligarSoltar = soltarMouseSemEsc();
     this.input.on('pointerdown', this.onPointer, this);
     this.input.on('pointermove', this.onPointer, this);
     this.input.on('pointerup', this.onUp, this);
@@ -172,6 +175,8 @@ export class PlayScene extends Phaser.Scene {
     // o mouse some enquanto controla a personagem (volta no fim de jogo e ao sair da partida)
     this.input.setDefaultCursor('none');
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      desligarSoltar();
+      if (document.pointerLockElement) document.exitPointerLock();
       this.input.setDefaultCursor('default');
       this.game.events.off('hub-restart', onRestart);
       kb.off('keydown-SPACE');

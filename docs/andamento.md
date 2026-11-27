@@ -60,6 +60,12 @@ Portal (`web/`) e API (`api/`): comandos no README e nas entradas de “Onde par
 
 ## 4. Onde parou
 
+**27/11/2026 — [F]** G14 **Signal Drop** e G04 **Space Ping**, a pedido do solicitante:
+
+- **Avatar do hub no Signal Drop:** o canto superior esquerdo mostra o retrato do personagem do hub (`personagem.retrato` do `init`, SDK 0.2.0), com pulinho ao acertar e tremida ao perder; sem personagem, fica o avatar antigo.
+- **Pouso de impacto (Signal Drop):** depois de quebrar um andar com a sequência (3 seguidos), a bola despencava direto no andar de baixo e morria se houvesse alta tensão ali. Agora esse pouso queima a placa vermelha (vira placa comum) e mostra "Impacto!"; vale só para um pouso (`impacto` em `logic.ts`; 2 testes novos).
+- **Soltar o mouse sem Esc:** botão direito ou P soltam o mouse preso (o Esc do Chrome sai da tela cheia e minimiza a página do hub). Função comum `packages/flix-game-kit/src/soltarMouse.ts`, usada nos dois jogos que prendem o mouse; dica no menu de cada um.
+
 **27/11/2026 — [F]** **Deploy com um comando**, a pedido do solicitante. `sudo /usr/local/sbin/deploy-flix-games` publica a `Principal` do GitHub (repositório público, sem chave), e `--voltar` volta para a versão anterior. Uma regra do sudoers libera esses dois comandos sem senha, hoje para `rodrigo`, seguindo o precedente das regras de deploy que o servidor já tem. O código vem sempre do GitHub, nunca de quem roda: o deploy sobe contêineres como root, e aceitar código de quem roda tornaria a regra equivalente a root total. Tudo que pode falhar (baixar, montar o site com o usuário sem privilégios `flixgames-build`, construir a imagem) acontece antes de tocar no ar; depois vêm o backup do banco (14 guardados), a troca com `.anterior`, a espera da API e o catálogo. Um deploy por vez (trava) e log em `/var/log/flix-games-deploy.log`. Arquivos em `deploy/` (script, regra, instalador; regra conferida com `visudo`). [D] Instalar uma vez com sudo no 226.
 
 **27/11/2026 — [F]** **Acesso da equipe retirado**, a pedido do solicitante, agora que o login do cliente funciona: rota `/api/entrar-equipe`, tela `/?equipe`, segredo `equipe` do compose e `scripts/deploy/codigo_equipe.py` saíram. As 4 contas `EQUIPE-*` foram apagadas no banco (perfis Rafael1vss e tobiloide junto; backup `backup-flix-games-20261127-1051-antes-apagar-equipe.sql.gz` no servidor). Antes, o perfil Zod (57 partidas) foi movido para a conta de cliente do solicitante. 76 testes da API.

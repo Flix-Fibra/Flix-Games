@@ -1,5 +1,6 @@
 import { DEFAULT_AVATAR, composePortrait, type AvatarConfig, type Expression } from '@flix/avatar';
-import { createHubBridge, type HubToGame } from '@flix/game-sdk';
+import { createHubBridge, type HubToGame, type PersonagemImagens } from '@flix/game-sdk';
+import { DICA_SOLTAR_MOUSE, soltarMouseSemEsc } from '@flix/game-kit/src/soltarMouse';
 import game_json from '../game.json';
 import { setMuted, sfx, unlockAudio } from './audio';
 import {
@@ -52,12 +53,14 @@ hud.innerHTML = `
   <div class="overlay on" data-menu>
     <h1 class="logo"><img src="./img/logo.png" alt="Signal Drop" width="512" height="512" /></h1>
     <p>Arraste para girar a torre.<br />Passe pelos vãos e fuja da <span class="hot">alta tensão</span>.</p>
-    <p class="muted">3 andares seguidos sem quicar quebram o próximo.<br />O <span class="sig">sinal</span> dá um escudo.</p>
+    <p class="muted">3 andares seguidos sem quicar quebram o próximo,<br />e o pouso de impacto queima a alta tensão.<br />O <span class="sig">sinal</span> dá um escudo.</p>
+    <p class="muted so-mouse">${DICA_SOLTAR_MOUSE}.</p>
     <button data-start>Toque para começar</button>
   </div>
   <div class="overlay fim" data-pausa>
     <div class="fim-titulo">PAUSADO</div>
     <div class="fim-linha">O mouse está livre.</div>
+    <div class="fim-linha" style="opacity:.7">Na partida: ${DICA_SOLTAR_MOUSE.toLowerCase()}.</div>
     <button class="fim-botao" data-continuar>CONTINUAR</button>
   </div>
   <div class="overlay fim" data-over>
@@ -97,6 +100,8 @@ let pausaMouse = false; // computador: a pessoa soltou o mouse (Esc) no meio da 
 const parado = () => paused || pausaMouse;
 let avatar: AvatarConfig = DEFAULT_AVATAR;
 const portraits = new Map<Expression, HTMLCanvasElement>();
+/** Retrato do personagem que o jogador criou no hub (SDK 0.2.0). Quando existe, é ele que aparece no canto. */
+let retratoHub: HTMLImageElement | null = null;
 let portraitTimer = 0;
 
 const world = new World(document.getElementById('game')!);
@@ -113,10 +118,33 @@ let acc = 0;
 let toastTimer = 0;
 
 function setPortrait(expr: Expression, holdSeconds = 0): void {
+  portraitTimer = holdSeconds;
+  if (retratoHub) {
+    // o retrato do hub não tem expressões: a reação aparece como um pulinho (feliz) ou tremida (triste)
+    el.portrait.classList.remove('feliz', 'triste');
+    if (expr !== 'neutral') {
+      void el.portrait.offsetWidth;
+      el.portrait.classList.add(expr === 'happy' ? 'feliz' : 'triste');
+    }
+    if (el.portrait.firstChild !== retratoHub) el.portrait.replaceChildren(retratoHub);
+    return;
+  }
   const c = portraits.get(expr);
   if (!c) return;
   el.portrait.replaceChildren(c);
-  portraitTimer = holdSeconds;
+}
+
+/** Usa o personagem do hub; sem ele (jogador sem personagem ou fora do hub), cai no avatar antigo. */
+function applyPersonagem(p: PersonagemImagens | null): void {
+  if (!p) {
+    retratoHub = null;
+    return;
+  }
+  const img = new Image();
+  img.alt = '';
+  img.decoding = 'async';
+  img.src = p.retrato;
+  retratoHub = img;
 }
 
 function applyAvatar(a: AvatarConfig): void {
@@ -236,6 +264,13 @@ function simulate(dt: number): void {
         case 'rocket-end':
           world.setRocket(false);
           break;
+        case 'impact':
+          world.refazerAndar(tower, e.floor);
+          world.onShock(false);
+          sfx('break');
+          showToast('Impacto! A alta tensão queimou');
+          setPortrait('happy', 1.2);
+          break;
         case 'shield-used':
           world.onShock(false);
           sfx('shieldUsed');
@@ -329,11 +364,13 @@ document.addEventListener('pointerlockchange', () => {
   if (soltandoPeloJogo) soltandoPeloJogo = false;
   else pausarPeloMouse();
 });
-// sem trava (navegador não deu): Esc também pausa; com a pausa aberta, Esc ou Espaço continuam
+// Botão direito ou P também soltam (o Esc do Chrome sai da tela cheia e minimiza a página do hub)
+if (comMouse) soltarMouseSemEsc();
+// sem trava (navegador não deu): Esc ou P também pausam; com a pausa aberta, Esc ou Espaço continuam
 window.addEventListener('keydown', (e) => {
   if (!comMouse || mode !== 'play') return;
   if (pausaMouse && (e.key === 'Escape' || e.key === ' ')) continuarPeloMouse();
-  else if (e.key === 'Escape') {
+  else if (e.key === 'Escape' || (e.code === 'KeyP' && !document.pointerLockElement)) {
     // com a trava, o navegador costuma soltar sozinho (e a pausa vem pelo pointerlockchange); se não soltar, solta aqui
     if (document.pointerLockElement) document.exitPointerLock();
     else pausarPeloMouse();
@@ -371,10 +408,11 @@ window.addEventListener('contextmenu', (e) => e.preventDefault());
 
 // ---------- Hub ----------
 let initDone = false;
-function finishInit(a: AvatarConfig, muted: boolean): void {
+function finishInit(a: AvatarConfig, muted: boolean, p: PersonagemImagens | null = null): void {
   if (initDone) return;
   initDone = true;
   setMuted(muted);
+  applyPersonagem(p);
   applyAvatar(a);
   mode = 'menu';
   updateHud();
@@ -384,9 +422,10 @@ bridge.onHubMessage((msg: HubToGame) => {
   switch (msg.type) {
     case 'init':
       if (initDone) {
+        applyPersonagem(msg.personagem ?? null);
         applyAvatar(msg.avatar);
         setMuted(msg.muted);
-      } else finishInit(msg.avatar, msg.muted);
+      } else finishInit(msg.avatar, msg.muted, msg.personagem ?? null);
       break;
     case 'mute':
       setMuted(msg.muted);

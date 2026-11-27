@@ -24,6 +24,12 @@
       #hud .portrait { justify-self: start; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; background: rgba(12,14,20,.45);
                        border: 2px solid rgba(255,255,255,.75); }
       #hud .portrait canvas { width: 100%; height: 100%; image-rendering: pixelated; }
+      @media (pointer: coarse) { .so-mouse { display: none; } }
+      #hud .portrait img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      #hud .portrait.feliz { animation: retrato-pulo .5s ease-out; }
+      #hud .portrait.triste { animation: retrato-treme .45s ease-in-out; filter: grayscale(.6); }
+      @keyframes retrato-pulo { 30% { transform: translateY(-6px) scale(1.08); } 60% { transform: translateY(0) scale(.97); } }
+      @keyframes retrato-treme { 20%, 60% { transform: translateX(-3px); } 40%, 80% { transform: translateX(3px); } }
       /* Placar de fliperama (fonte pixel dos jogos Flix, branca com contorno): direto sobre o céu, sem caixa */
       /* Placar do Signal Drop (só neste jogo): fonte lisa do sistema, número numa caixa escura, troféu no recorde */
       #hud .top, #hud .stats { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Helvetica, Arial, sans-serif; }
