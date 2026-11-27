@@ -60,6 +60,8 @@ Portal (`web/`) e API (`api/`): comandos no README e nas entradas de “Onde par
 
 ## 4. Onde parou
 
+**27/11/2026 — [F]** **Login: correção e ajustes visuais**, a pedido do solicitante. (1) **Correção:** depois de um login certo, a tela ficava em "Conferindo…" e só entrava ao atualizar a página. Causa: o portal recarregava com `location.replace(caminho + #)`, e com # no endereço (ex.: `/#inicio`, o normal depois de navegar ou sair) o navegador trata isso como troca de âncora e não recarrega. Em desenvolvimento não aparecia, porque o `?entrar` saía do endereço e a troca virava navegação de verdade. Agora o portal abre na mesma página, refazendo a abertura (sessão e catálogo; `abrir` em `App.tsx`); se falhar, a mensagem aparece no formulário. Reproduzido no build de produção (`/#inicio`, preso em "Conferindo…" com a sessão já criada) e conferido depois da correção (abre "Quem vai jogar?" sem recarregar). (2) **Visual:** conjunto menor (marca até 136 px, título 32 px, subtítulo 14 px numa linha, formulário de 360 px, campos de 44 px), título "Sua próxima fase / começa aqui.", sem brilho colorido no fundo, sombra escura leve só atrás da marca. O título nunca tinha usado o tamanho do `entrar.css` (a regra genérica `.gx-quem h1` vencia); seletor reforçado. Corrigido também o título colado ("fasecomeça") em telas de até 380 px.
+
 **27/11/2026 — [F]** G14 **Signal Drop** e G04 **Space Ping**, a pedido do solicitante:
 
 - **Avatar do hub no Signal Drop:** o canto superior esquerdo mostra o retrato do personagem do hub (`personagem.retrato` do `init`, SDK 0.2.0), com pulinho ao acertar e tremida ao perder; sem personagem, fica o avatar antigo.

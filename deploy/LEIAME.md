@@ -127,7 +127,7 @@ Publicar um jogo é uma decisão, não um passo do deploy. Todos nascem sem publ
 - `curl -sI https://games.flixfibra.com.br/` → 200; `curl -sI https://games.flixfibra.com.br/games/snake/` → 200 com `access-control-allow-origin: *`.
 - `curl -s -o /dev/null -w '%{http_code}' https://games.flixfibra.com.br/api/docs` → 404 (sem documentação em produção).
 - `sudo docker compose -p flix-games -f /opt/flix-games/app/compose.producao.yaml logs --tail 50 api` → sem erro, e sem CPF ou senha em linha nenhuma.
-- No celular: tela de entrada ("Seu próximo jogo começa aqui."), login de teste, abrir um jogo, terminar uma partida e ver o ranking.
+- No celular: tela de entrada ("Sua próxima fase começa aqui."), login de teste, abrir um jogo, terminar uma partida e ver o ranking.
 
 ### Voltar atrás
 

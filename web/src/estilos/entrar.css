@@ -1,4 +1,5 @@
-/* Tela de login (Entrar.tsx): visual escuro, limpo e com sombra escura destacando a marca, no estilo Apple. */
+/* Tela de login (Entrar.tsx): visual escuro e limpo, no estilo Apple, sem brilho colorido; uma sombra escura leve
+   atrás da marca a separa das capas em movimento. */
 .gx-entrar {
   /* continua sendo a camada fixa de tela cheia da base (.gx-quem); aqui só o visual */
   position: fixed;
@@ -37,35 +38,37 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(12px, 1.2vw + 6px, 18px);
-  margin: 0 0 clamp(22px, 3vh, 38px);
+  gap: clamp(10px, .8vw + 6px, 14px);
+  margin: 0 0 clamp(18px, 2.5vh, 28px);
 }
-.gx-entrar .gx-quem-logo { width: clamp(132px, 13vw + 70px, 210px); height: auto; margin: 0; filter: drop-shadow(0 12px 28px rgba(0, 0, 0, .85)); }
-/* sombra escura e difusa atrás de FLIX GAMES: destaca a marca sobre as capas em movimento */
+.gx-entrar .gx-quem-logo { width: clamp(96px, 7.5vw + 52px, 136px); height: auto; margin: 0; filter: drop-shadow(0 6px 18px rgba(0, 0, 0, .55)); }
+/* Sombra escura leve e compacta só atrás de FLIX GAMES: separa a marca das capas em movimento. */
 .gx-entrar-marca::before {
   content: "";
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 260%;
-  height: 230%;
+  width: 170%;
+  height: 160%;
   z-index: -1;
   transform: translate(-50%, -50%);
-  background: radial-gradient(closest-side, rgba(0, 0, 0, .92), rgba(0, 0, 0, .6) 50%, transparent);
+  background: radial-gradient(closest-side, rgba(0, 0, 0, .55), rgba(0, 0, 0, .25) 55%, transparent);
   pointer-events: none;
 }
 /* "GAMES" em pixel (SVG vetorial): nítido em qualquer tela; mesma largura visual do FLIX abaixo dele */
 .gx-entrar-games {
-  width: clamp(92px, 9vw + 50px, 148px);
+  width: clamp(68px, 5vw + 38px, 96px);
   height: auto;
   image-rendering: pixelated;
-  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .9));
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, .6));
 }
-.gx-entrar h1 {
+/* Dois seletores de classe: a regra genérica .gx-quem h1 (games.css, 40 px) tem a mesma força e é carregada depois;
+   com um só, ela prevalecia e o tamanho daqui nunca valia. Peso 800: o que a tela sempre mostrou. */
+.gx-quem.gx-entrar h1 {
   margin: 0;
-  font-size: clamp(26px, 2.4vw + 16px, 48px);
+  font-size: clamp(24px, 1.2vw + 15px, 32px);
   line-height: 1.1;
-  font-weight: 600;
+  font-weight: 800;
   letter-spacing: -0.025em;
   color: #f5f5f7;
 }
@@ -76,24 +79,26 @@
   color: transparent;
 }
 .gx-entrar > .gx-quem-sub {
-  margin: 12px 0 clamp(24px, 3.5vh, 38px);
-  font-size: clamp(15px, .3vw + 14px, 18px);
-  max-width: 34ch;
+  /* Legenda do título: mais perto dele (12 px) que do formulário (28 px), numa linha só e mais estreita que o
+     cartão (cerca de 300 px contra 360), para ler como parte do cabeçalho. Em tela muito estreita, quebra equilibrada. */
+  margin: 12px 0 clamp(22px, 3.2vh, 28px);
+  font-size: 14px;
+  max-width: 46ch;
   text-wrap: balance;
-  line-height: 1.5;
+  line-height: 1.45;
   color: #a1a1a6;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.005em;
 }
 
 .gx-entrar form {
   margin: 0;
   width: 100%;
-  max-width: clamp(320px, 12vw + 300px, 420px);
+  max-width: clamp(300px, 8vw + 260px, 360px);
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: clamp(20px, 2vw + 12px, 32px);
-  border-radius: clamp(20px, 1vw + 16px, 28px);
+  gap: 12px;
+  padding: clamp(18px, 1.2vw + 12px, 24px);
+  border-radius: clamp(18px, .8vw + 14px, 22px);
   background: rgba(22, 22, 24, .72);
   border: 1px solid rgba(255, 255, 255, .08);
   box-shadow: 0 30px 80px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .05);
@@ -104,20 +109,20 @@
 .gx-entrar .gx-quem-campo {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  font-size: 13px;
+  gap: 6px;
+  font-size: 12.5px;
   font-weight: 500;
   color: #a1a1a6;
 }
 .gx-entrar .gx-quem-campo input,
 :root .gx-entrar .gx-quem-novo input:not([type=checkbox]) {
-  height: 50px;
-  padding: 0 16px;
-  border-radius: 14px;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, .1);
   background: rgba(255, 255, 255, .06);
   color: #f5f5f7;
-  font-size: 17px;
+  font-size: 16px; /* 16 px: abaixo disso o iPhone dá zoom ao tocar no campo */
   outline: none;
   transition: border-color .2s, background .2s, box-shadow .2s;
 }
@@ -128,16 +133,16 @@
   background: rgba(255, 255, 255, .09);
   box-shadow: 0 0 0 4px rgba(229, 20, 43, .22);
 }
-.gx-entrar-dica { margin: -2px 0 4px; font-size: 12.5px; line-height: 1.45; color: #86868b; }
+.gx-entrar-dica { margin: -2px 0 4px; font-size: 12px; line-height: 1.45; color: #86868b; }
 
 .gx-entrar .btn {
-  height: 50px;
+  height: 44px;
   margin-top: 4px;
   border: 0;
   border-radius: 999px;
   background: linear-gradient(180deg, #f0283d, #d10f24);
   color: #fff;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
   letter-spacing: -0.01em;
   cursor: pointer;
@@ -169,18 +174,14 @@
 /* ---------- Responsivo ---------- */
 /* Celular pequeno (iPhone SE, Androids de 360 px) */
 @media (max-width: 380px) {
-  .gx-entrar .gx-quem-campo input,
-  :root .gx-entrar .gx-quem-novo input:not([type=checkbox]),
-  .gx-entrar .btn { height: 48px; }
-  .gx-entrar form { gap: 12px; }
-  .gx-entrar h1 br { display: none; } /* uma frase corrida quebra melhor em tela estreita */
+  .gx-entrar form { gap: 10px; }
 }
 /* Tela baixa em pé (teclado aberto, celulares curtos): compacta a marca */
 @media (max-height: 700px) and (orientation: portrait) {
   .gx-entrar { padding-top: max(28px, env(safe-area-inset-top)); }
   .gx-entrar-marca { margin-bottom: 18px; gap: 10px; }
-  .gx-entrar .gx-quem-logo { width: 120px; }
-  .gx-entrar-games { width: 84px; }
+  .gx-entrar .gx-quem-logo { width: 92px; }
+  .gx-entrar-games { width: 64px; }
   .gx-entrar > .gx-quem-sub { margin-bottom: 20px; }
 }
 /* Celular deitado e tablets baixos: marca à esquerda, formulário à direita */
@@ -200,9 +201,9 @@
   }
   .gx-entrar::before { content: ""; position: fixed; inset: 0; z-index: -3; background: #000; }
   .gx-entrar-marca { grid-column: 1; grid-row: 2; margin: 0 0 14px; gap: 10px; }
-  .gx-entrar .gx-quem-logo { width: 130px; }
-  .gx-entrar-games { width: 90px; }
-  .gx-entrar h1 { grid-column: 1; grid-row: 3; font-size: clamp(24px, 3.4vw, 34px); }
+  .gx-entrar .gx-quem-logo { width: 96px; }
+  .gx-entrar-games { width: 68px; }
+  .gx-quem.gx-entrar h1 { grid-column: 1; grid-row: 3; font-size: clamp(22px, 3vw, 30px); }
   .gx-entrar > .gx-quem-sub { grid-column: 1; grid-row: 4; margin: 10px auto 0; }
   .gx-entrar form { grid-column: 2; grid-row: 1 / -1; align-self: center; padding: 20px; gap: 10px; }
   .gx-entrar .gx-quem-campo input,

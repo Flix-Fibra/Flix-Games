@@ -16,7 +16,8 @@ function mascarar(v: string): string {
  * Entrada do cliente: CPF/CNPJ e senha do Minha Flix. A senha vai só para a nossa API (que confere na API Própria
  * da Flix) e não fica guardada no aparelho; o aparelho guarda só o cookie de sessão (HttpOnly).
  */
-export function Entrar({ onEntrou }: { onEntrou: () => void }) {
+/** `onEntrou` abre o portal depois do login; se falhar, a mensagem aparece aqui e o botão volta a funcionar. */
+export function Entrar({ onEntrou }: { onEntrou: () => Promise<void> }) {
   const [documento, setDocumento] = useState('');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
@@ -30,8 +31,7 @@ export function Entrar({ onEntrou }: { onEntrou: () => void }) {
     try {
       await servico.entrar(documento, senha);
       setSenha('');
-
-      onEntrou();
+      await onEntrou(); // em caso de sucesso, esta tela sai e dá lugar ao portal
     } catch (x) {
       setErro(x instanceof ErroApi ? x.message : 'Sem conexão. Verifique a internet e tente de novo.');
       setEnviando(false);
@@ -46,7 +46,7 @@ export function Entrar({ onEntrou }: { onEntrou: () => void }) {
         <img className="gx-quem-logo" src="/logo-flix-hd.png" alt="Flix" width={1200} height={464} decoding="async" />
         <img className="gx-entrar-games" src="/logo-games.svg" alt="Games" width={64} height={11} />
       </div>
-      <h1>Seu próximo jogo<br /><span>começa aqui.</span></h1>
+      <h1>Sua próxima fase<br /><span>começa aqui.</span></h1>
       <p className="gx-quem-sub">Entre com o CPF ou CNPJ e a senha do Minha Flix.</p>
       <form className="gx-quem-novo" onSubmit={enviar} noValidate>
         <label className="gx-quem-campo">CPF ou CNPJ
