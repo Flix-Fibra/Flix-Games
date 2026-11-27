@@ -38,7 +38,7 @@ sudo install -m 400 -o 10001 -g 10001 /dev/null /opt/flix-games/segredos/api_pro
 sudo install -m 400 -o 10001 -g 10001 /dev/null /opt/flix-games/segredos/equipe
 ```
 
-Acesso da equipe ao site antes do login do cliente funcionar: usuário e senha, na opção "Sou da equipe Flix Games" da tela de entrada. Para cadastrar ou trocar uma senha (digitada sem aparecer na tela; vale na hora):
+Acesso da equipe ao site antes do login do cliente funcionar: usuário e senha, pelo endereço `https://games.flixfibra.com.br/?equipe` (o link não aparece para o cliente). Para cadastrar ou trocar uma senha (digitada sem aparecer na tela; vale na hora):
 
 ```bash
 sudo python3 /opt/flix-games/app/scripts/deploy/codigo_equipe.py rafael            # cadastra ou troca
@@ -99,7 +99,7 @@ Publicar um jogo é uma decisão, não um passo do deploy. Todos nascem sem publ
 - `curl -sI https://games.flixfibra.com.br/` → 200; `curl -sI https://games.flixfibra.com.br/games/snake/` → 200 com `access-control-allow-origin: *`.
 - `curl -s -o /dev/null -w '%{http_code}' https://games.flixfibra.com.br/api/docs` → 404 (sem documentação em produção).
 - `sudo docker compose -p flix-games -f /opt/flix-games/app/compose.producao.yaml logs --tail 50 api` → sem erro, e sem CPF ou senha em linha nenhuma.
-- No celular: tela "Entrar no Flix Games", login de teste, abrir um jogo, terminar uma partida e ver o ranking.
+- No celular: tela de entrada ("Seu próximo jogo começa aqui."), login de teste, abrir um jogo, terminar uma partida e ver o ranking.
 
 ### Voltar atrás
 
