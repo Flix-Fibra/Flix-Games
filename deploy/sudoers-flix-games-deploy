@@ -1,0 +1,6 @@
+# Deploy do Flix Games sem senha, só por este comando (deploy/LEIAME.md, "Deploy com um comando").
+# Instalado como /etc/sudoers.d/zzz-flix-games-deploy (root:root, 440) por deploy/instalar-deploy.sh.
+# Sem argumentos: publica a Principal do GitHub. --voltar: volta à versão anterior. Nenhuma outra forma é aceita
+# ("" = sem argumentos), e o script é do root: quem usa a regra não consegue alterá-lo.
+Cmnd_Alias FLIX_GAMES_DEPLOY = /usr/local/sbin/deploy-flix-games "", /usr/local/sbin/deploy-flix-games --voltar
+rodrigo ALL=(root) NOPASSWD: FLIX_GAMES_DEPLOY

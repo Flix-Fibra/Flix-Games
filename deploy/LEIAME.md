@@ -52,7 +52,42 @@ sudo docker compose -p flix-games -f /opt/flix-games/app/compose.producao.yaml -
 3. Emita o certificado: `sudo certbot certonly --webroot -w /var/www/flix-games-acme -d games.flixfibra.com.br`.
 4. Instale o arquivo completo e rode `nginx -t` e o reload de novo.
 
-## Cada deploy (a partir do commit)
+## Deploy com um comando (o caminho normal)
+
+```bash
+ssh flix-226 sudo /usr/local/sbin/deploy-flix-games            # publica a Principal do GitHub
+ssh flix-226 sudo /usr/local/sbin/deploy-flix-games --voltar   # volta para a versão anterior
+```
+
+Quem está na regra do sudoers (hoje, `rodrigo`) roda esses dois comandos **sem senha**, e só eles: o script é do
+root e não aceita outros argumentos. O que ele faz, nesta ordem:
+
+1. Busca a `Principal` no GitHub, num espelho em `/var/lib/flix-games-deploy`. O repositório é público, então
+   não precisa de chave.
+2. Monta o site (portal e jogos) com o usuário sem privilégios `flixgames-build`.
+3. Constrói a imagem nova da API. Até aqui nada no ar mudou, e qualquer falha para o deploy.
+4. Faz o backup do banco em `/var/backups/flix-games`, guardando os 14 mais recentes.
+5. Troca código e site; a versão do ar vira `app.anterior` e `site.anterior`.
+6. Sobe a API (as migrações rodam ao iniciar) e espera até 90 s pela resposta em `/api/saude`.
+7. Atualiza o catálogo.
+
+**Por que vem do GitHub e não da máquina de quem roda:** o deploy sobe contêineres como root. Se quem roda pudesse
+entregar o código, a regra sem senha equivaleria a dar root total. Assim, quem roda escolhe só *quando* publicar; *o
+quê* é sempre a `Principal`, onde só entra o que a equipe aceitou.
+
+**Um deploy por vez:** um segundo deploy, enquanto o primeiro roda, recusa e avisa. Cada execução fica em
+`/var/log/flix-games-deploy.log`, com data, quem rodou, o commit e o resultado.
+
+Arquivos: `deploy/deploy-flix-games.sh` (o script), `deploy/sudoers-flix-games-deploy` (a regra) e
+`deploy/instalar-deploy.sh`. Para instalar ou atualizar, uma vez com sudo, copie os três para uma pasta do servidor
+e rode `sudo bash instalar-deploy.sh`. A regra só é gravada se o `visudo` aprovar. Para dar o comando a outra
+pessoa, acrescente uma linha `<usuário> ALL=(root) NOPASSWD: FLIX_GAMES_DEPLOY` à regra e reinstale.
+
+## Deploy manual (sem o script)
+
+O roteiro abaixo continua valendo para quem tem sudo, mas o comando acima já faz tudo isto.
+
+### Cada deploy (a partir do commit)
 
 No Mac, na pasta do repositório:
 
