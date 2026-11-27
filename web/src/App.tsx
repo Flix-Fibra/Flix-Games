@@ -41,16 +41,31 @@ function Portal() {
 
   // Abertura: sessão deste aparelho + catálogo. Links diretos: #perfis abre a escolha;
   // #inicio, #ranking e #perfil abrem a aba (se já houver perfil escolhido neste aparelho).
-  useEffect(() => {
-    Promise.all([servico.sessao(), servico.jogos()])
-      .then(([s, jogos]) => {
-        const hash = window.location.hash.slice(1);
-        setCarga({ estado: 'pronto', jogos, perfis: s.perfis, perfilId: s.perfilId, maxPerfis: s.maxPerfis, cores: s.cores ?? [] });
-        if ((ABAS as string[]).includes(hash)) setAba(hash as Aba);
-        setQuemAberto(hash === 'perfis' || !s.perfilId);
-      })
-      .catch((e) => setCarga({ estado: e instanceof ErroApi && e.status === 401 ? 'sem-sessao' : 'erro' }));
+  // Usada ao abrir e logo depois do login (sem recarregar a página). Devolve se abriu.
+  const abrir = useCallback(async (): Promise<boolean> => {
+    try {
+      const [s, jogos] = await Promise.all([servico.sessao(), servico.jogos()]);
+      const hash = window.location.hash.slice(1);
+      setCarga({ estado: 'pronto', jogos, perfis: s.perfis, perfilId: s.perfilId, maxPerfis: s.maxPerfis, cores: s.cores ?? [] });
+      if ((ABAS as string[]).includes(hash)) setAba(hash as Aba);
+      setQuemAberto(hash === 'perfis' || !s.perfilId);
+      return true;
+    } catch (e) {
+      setCarga({ estado: e instanceof ErroApi && e.status === 401 ? 'sem-sessao' : 'erro' });
+      return false;
+    }
   }, []);
+  useEffect(() => { void abrir(); }, [abrir]);
+
+  /**
+   * Depois do login: abre o portal na mesma página. Antes recarregava com location.replace(caminho + #), o que não
+   * recarrega nada quando o endereço já tem # (ex.: /#inicio): o navegador trata como troca de âncora, e a tela
+   * ficava em "Conferindo…" até a pessoa atualizar. O ?entrar (só para ver esta tela em desenvolvimento) sai do endereço.
+   */
+  const entrou = useCallback(async () => {
+    history.replaceState(null, '', window.location.pathname + window.location.hash);
+    if (!(await abrir())) throw new ErroApi(401, 'Não foi possível abrir sua sessão. Tente de novo.');
+  }, [abrir]);
 
   // Troca de # sem recarregar (link direto, botão voltar do celular): segue a aba
   useEffect(() => {
@@ -71,8 +86,7 @@ function Portal() {
 
   if (carga.estado === 'carregando') return null;
   if (carga.estado === 'sem-sessao') {
-    // Entrou: recarrega sem o ?entrar (que em desenvolvimento só serve para ver esta tela)
-    return <Entrar onEntrou={() => window.location.replace(window.location.pathname + window.location.hash)} />;
+    return <Entrar onEntrou={entrou} />;
   }
   if (carga.estado === 'erro') {
     return (
