@@ -22,7 +22,8 @@ export function Vitrine() {
             <div key={c} className={`gx-vitrine-coluna ${c % 2 ? 'desce' : 'sobe'}`} style={{ animationDuration: `${70 + c * 6}s` }}>
               {/* duas voltas da lista: a animação anda metade da altura e recomeça sem emenda */}
               {[...lista, ...lista].map((j, i) => (
-                <img key={i} src={`/vitrine/${j.id}.webp`} alt="" width={240} height={240} loading="eager" decoding="async" draggable={false} />
+                <img key={i} src={`/vitrine/${j.id}.webp`} srcSet={`/vitrine/${j.id}.webp 240w, /vitrine/${j.id}@512.webp 512w`}
+                  sizes="(max-width: 640px) 34vw, 22vw" alt="" width={240} height={240} loading="eager" decoding="async" draggable={false} />
               ))}
             </div>
           );

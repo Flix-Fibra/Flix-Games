@@ -27,14 +27,14 @@
   height: 80%;
   z-index: -1;
   background:
-    radial-gradient(45% 55% at 50% 30%, rgba(229, 20, 43, .38), transparent 70%),
+    radial-gradient(50% 60% at 50% 30%, rgba(229, 20, 43, .36), rgba(229, 20, 43, .12) 45%, transparent 75%),
     radial-gradient(30% 40% at 30% 10%, rgba(255, 80, 60, .16), transparent 70%),
     radial-gradient(30% 40% at 72% 15%, rgba(160, 0, 40, .22), transparent 70%);
-  filter: blur(40px);
   animation: gx-entrar-respira 9s ease-in-out infinite alternate;
   pointer-events: none;
+  will-change: opacity;
 }
-@keyframes gx-entrar-respira { from { opacity: .75; transform: scale(1); } to { opacity: 1; transform: scale(1.08); } }
+@keyframes gx-entrar-respira { from { opacity: .7; } to { opacity: 1; } }
 @keyframes gx-entrar-sobe { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 
 .gx-entrar > :not(.gx-vitrine):not(.gx-entrar-brilho) { animation: gx-entrar-sobe .8s cubic-bezier(.2, .8, .2, 1) both; }
@@ -46,30 +46,17 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 16px;
   margin: 0 0 34px;
 }
-.gx-entrar .gx-quem-logo { width: 150px; height: auto; margin: 0; filter: drop-shadow(0 10px 30px rgba(229, 20, 43, .45)); }
-/* "GAMES": letras finas e bem espaçadas, com traços dos lados, como uma assinatura da marca */
+.gx-entrar .gx-quem-logo { width: 168px; height: auto; margin: 0; filter: drop-shadow(0 10px 30px rgba(229, 20, 43, .45)); }
+/* "GAMES" em pixel (SVG vetorial): nítido em qualquer tela; mesma largura visual do FLIX abaixo dele */
 .gx-entrar-games {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: .62em;
-  color: #f5f5f7;
-  text-shadow: 0 0 18px rgba(255, 77, 94, .55);
+  width: 118px;
+  height: auto;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 14px rgba(255, 77, 94, .35));
 }
-.gx-entrar-games::before,
-.gx-entrar-games::after {
-  content: "";
-  width: 34px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 77, 94, .9));
-}
-.gx-entrar-games::after { background: linear-gradient(90deg, rgba(255, 77, 94, .9), transparent); }
-.gx-entrar-games b { font: inherit; margin-right: -.62em; } /* tira o espaço depois do S: fica centrado */
 .gx-entrar h1 {
   margin: 0;
   font-size: clamp(28px, 4.2vw, 42px);
@@ -101,11 +88,11 @@
   gap: 14px;
   padding: 28px;
   border-radius: 24px;
-  background: rgba(28, 28, 30, .55);
+  background: rgba(22, 22, 24, .72);
   border: 1px solid rgba(255, 255, 255, .08);
   box-shadow: 0 30px 80px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .05);
-  backdrop-filter: blur(24px) saturate(160%);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
   text-align: left;
 }
 .gx-entrar .gx-quem-campo {
@@ -208,6 +195,8 @@
   gap: clamp(14px, 1.6vw, 24px);
   animation: gx-vitrine-sobe 80s linear infinite;
   will-change: transform;
+  backface-visibility: hidden;
+  contain: layout paint;
 }
 .gx-vitrine-coluna.desce { animation-name: gx-vitrine-desce; }
 .gx-vitrine-coluna img {
@@ -220,8 +209,8 @@
   box-shadow: 0 18px 40px rgba(0, 0, 0, .55), inset 0 0 0 1px rgba(255, 255, 255, .08);
   user-select: none;
 }
-@keyframes gx-vitrine-sobe { from { transform: translateY(0); } to { transform: translateY(-50%); } }
-@keyframes gx-vitrine-desce { from { transform: translateY(-50%); } to { transform: translateY(0); } }
+@keyframes gx-vitrine-sobe { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(0, -50%, 0); } }
+@keyframes gx-vitrine-desce { from { transform: translate3d(0, -50%, 0); } to { transform: translate3d(0, 0, 0); } }
 /* escurece o centro e as bordas: as capas aparecem, mas o formulário continua legível */
 .gx-entrar .gx-vitrine::after {
   content: "";
