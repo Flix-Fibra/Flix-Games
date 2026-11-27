@@ -172,3 +172,63 @@
 @media (prefers-reduced-motion: reduce) {
   .gx-entrar > *, .gx-entrar-brilho { animation: none; }
 }
+
+/* Vitrine: 6 colunas de capas atrás do login, inclinadas, subindo e descendo alternadas */
+.gx-entrar .gx-vitrine {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  pointer-events: none;
+  animation: gx-vitrine-surge 1.6s ease both;
+}
+@keyframes gx-vitrine-surge { from { opacity: 0; } to { opacity: 1; } }
+.gx-vitrine-palco {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(1500px, 150vw);
+  height: 220vh;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: clamp(14px, 1.6vw, 24px);
+  transform: translate(-50%, -50%) rotate(-14deg);
+}
+.gx-vitrine-coluna {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(14px, 1.6vw, 24px);
+  animation: gx-vitrine-sobe 80s linear infinite;
+  will-change: transform;
+}
+.gx-vitrine-coluna.desce { animation-name: gx-vitrine-desce; }
+.gx-vitrine-coluna img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 22%;
+  object-fit: cover;
+  opacity: .55;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, .55), inset 0 0 0 1px rgba(255, 255, 255, .08);
+  user-select: none;
+}
+@keyframes gx-vitrine-sobe { from { transform: translateY(0); } to { transform: translateY(-50%); } }
+@keyframes gx-vitrine-desce { from { transform: translateY(-50%); } to { transform: translateY(0); } }
+/* escurece o centro e as bordas: as capas aparecem, mas o formulário continua legível */
+.gx-entrar .gx-vitrine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 42% 60% at 50% 50%, rgba(0, 0, 0, .88) 0%, rgba(0, 0, 0, .55) 55%, rgba(0, 0, 0, .25) 100%),
+    linear-gradient(180deg, rgba(0, 0, 0, .6), transparent 25%, transparent 75%, rgba(0, 0, 0, .75));
+}
+@media (max-width: 640px) {
+  .gx-vitrine-palco { width: 220vw; }
+  .gx-entrar .gx-vitrine::after {
+    background: radial-gradient(ellipse 70% 55% at 50% 50%, rgba(0, 0, 0, .9), rgba(0, 0, 0, .45));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gx-vitrine-coluna, .gx-entrar .gx-vitrine { animation: none; }
+}
